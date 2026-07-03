@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import productRoutes from "./routes/productRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 
 // Register API routes
 app.use("/api", productRoutes);
+app.use("/api", cartRoutes);
 
 // Fallback for unmatched routes
 app.use((req, res) => {

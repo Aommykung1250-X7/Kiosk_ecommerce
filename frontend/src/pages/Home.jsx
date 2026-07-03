@@ -3,13 +3,35 @@ import { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import ProductCard from "../components/ProductCard";
+import ProductDetailModal from "../components/ProductDetailModal";
+import CartDrawer from "../components/CartDrawer";
+import { ShoppingCartIcon } from "@heroicons/react/24/solid";
+
+
+
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [cartCount, setCartCount] = useState(0);
+  const [cart, setCart] = useState({ items: [], totalPrice: 0, totalItems: 0 });
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Fetch cart details on mount
+  const fetchCart = () => {
+    fetch("/api/cart")
+      .then((res) => res.json())
+      .then((data) => setCart(data))
+      .catch((err) => console.error("Error loading cart:", err));
+  };
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+
 
   useEffect(() => {
     let active = true;
@@ -42,18 +64,54 @@ export default function Home() {
     };
   }, [selectedCategory]);
 
-  const handleAddToCart = () => {
-    setCartCount((prev) => prev + 1);
+  const handleAddToCart = (product) => {
+    fetch("/api/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: product.id, quantity: 1 })
+    })
+      .then((res) => res.json())
+      .then((data) => setCart(data))
+      .catch((err) => console.error("Error adding to cart:", err));
+  };
+
+  const handleUpdateQuantity = (productId, quantity) => {
+    fetch("/api/cart", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, quantity })
+    })
+      .then((res) => res.json())
+      .then((data) => setCart(data))
+      .catch((err) => console.error("Error updating quantity:", err));
+  };
+
+  const handleRemoveItem = (productId) => {
+    fetch(`/api/cart/${productId}`, {
+      method: "DELETE"
+    })
+      .then((res) => res.json())
+      .then((data) => setCart(data))
+      .catch((err) => console.error("Error removing item:", err));
+  };
+
+  const handleClearCart = () => {
+    fetch("/api/cart/clear", {
+      method: "POST"
+    })
+      .then((res) => res.json())
+      .then((data) => setCart(data))
+      .catch((err) => console.error("Error clearing cart:", err));
   };
 
   const handleCartClick = () => {
-    // Cart page / drawer to be implemented separately
-    console.log("Cart opened");
+    setIsCartOpen(true);
   };
+
 
   return (
     <div className="w-screen h-screen bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt']">
-      <Header cartCount={cartCount} onCartClick={handleCartClick} />
+      <Header />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -89,6 +147,7 @@ export default function Home() {
                     key={product.id}
                     product={product}
                     onAddToCart={handleAddToCart}
+                    onSelectProduct={setSelectedProduct}
                   />
                 ))}
               </div>
@@ -102,6 +161,56 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={handleAddToCart}
+        />
+      )}
+
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        onUpdateQuantity={handleUpdateQuantity}
+        onRemoveItem={handleRemoveItem}
+        onClearCart={handleClearCart}
+      />
+
+      {/* Floating Cart Pop-up Bar at Bottom */}
+      {cart.totalItems > 0 && (
+        <div 
+          onClick={handleCartClick}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 
+                     w-[90%] max-w-lg h-16 bg-[#2B2B2B] text-white rounded-2xl 
+                     shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-white/10
+                     flex items-center justify-between px-6 cursor-pointer 
+                     hover:bg-[#3A3A3A] active:scale-[0.98] transition-all duration-200
+                     animate-in slide-in-from-bottom-10"
+        >
+          <div className="flex items-center gap-3">
+            <div className="relative p-2 bg-[#F8C032] rounded-xl text-[#2B2B2B]">
+              <ShoppingCartIcon className="w-6 h-6" />
+              <span className="absolute -top-1.5 -right-1.5 bg-[#E53935] text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
+                {cart.totalItems}
+              </span>
+            </div>
+            <span className="font-bold text-[clamp(14px,1.5vw,16px)]">ดูตะกร้าสินค้าของคุณ</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-white/60">ยอดรวม:</span>
+            <span className="text-xl font-extrabold text-[#F8C032]">
+              ฿{cart.totalPrice.toFixed(0)}
+            </span>
+            <span className="text-xs font-semibold text-[#F8C032] bg-[#F8C032]/10 px-2 py-0.5 rounded-lg ml-1">
+              เปิด {'>'}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

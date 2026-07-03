@@ -20,7 +20,7 @@ function PagodaMark() {
 
 // Fixed 100px bar height + fluid clamp() sizing inside, so the header
 // scales down smoothly on smaller displays without changing structure.
-export default function Header({ cartCount = 0, onCartClick }) {
+export default function Header() {
   return (
     <header
       className="w-full h-[100px] bg-[#F8C032] flex items-center justify-between 
@@ -44,29 +44,6 @@ export default function Header({ cartCount = 0, onCartClick }) {
           </span>
         </div>
       </div>
-
-      {/* Right: Cart button */}
-      <button
-        onClick={onCartClick}
-        className="relative h-[clamp(60px,5.5vw,68px)] px-[clamp(12px,2vw,28px)] 
-                   rounded-full bg-white 
-                   hover:bg-[#FFFBF0] active:scale-95 shadow-md
-                   flex items-center gap-[clamp(6px,1vw,12px)] shrink-0 transition-transform duration-150"
-        aria-label="Open cart"
-      >
-        <ShoppingCartIcon className="w-[clamp(18px,2vw,28px)] h-[clamp(18px,2vw,28px)] text-[#2B2B2B]" />
-        <span className="text-[clamp(12px,1.3vw,18px)] font-semibold text-[#2B2B2B]">Cart</span>
-
-        {cartCount > 0 && (
-          <span
-            className="absolute -top-2.5 -right-2.5 min-w-[clamp(20px,2.2vw,30px)] h-[clamp(20px,2.2vw,30px)] px-1.5 
-                       rounded-full bg-[#E53935] text-white text-[clamp(10px,1.1vw,14px)] font-bold 
-                       flex items-center justify-center shadow-md border-2 border-white"
-          >
-            {cartCount > 99 ? "99+" : cartCount}
-          </span>
-        )}
-      </button>
     </header>
   );
 }

@@ -112,15 +112,17 @@ const ILLUSTRATIONS = {
 // No fixed px width/height on the card — it fills its grid column and every
 // internal dimension is a clamp(), so the whole card shrinks in proportion
 // as the column narrows instead of wrapping/reflowing content.
-export default function ProductCard({ product, onAddToCart }) {
-  const { name, price, illustration, promotion } = product;
-  const Illustration = ILLUSTRATIONS[illustration] || WaterBottle;
+export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
+  const { name, price, image, promotion, status, quantity } = product;
+  const Illustration = ILLUSTRATIONS[image] || WaterBottle;
 
   return (
     <div
+      onClick={() => onSelectProduct(product)}
       className="w-full bg-white rounded-[clamp(14px,1.8vw,24px)]
-                 border border-[#EAEAEA] shadow-[0_4px_16px_rgba(0,0,0,0.06)]
-                 flex flex-col overflow-hidden relative"
+                 border border-[#EAEAEA] hover:border-[#F8C032] shadow-[0_4px_16px_rgba(0,0,0,0.06)]
+                 hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] cursor-pointer
+                 flex flex-col overflow-hidden relative transition-all duration-200"
     >
       {promotion && (
         <div
@@ -134,6 +136,21 @@ export default function ProductCard({ product, onAddToCart }) {
         </div>
       )}
 
+      {/* Status Badge */}
+      {status && (
+        <div
+          className={`absolute top-[clamp(8px,1vw,16px)] right-[clamp(8px,1vw,16px)] z-10 
+                     flex items-center gap-1 text-[clamp(9px,0.85vw,12px)] font-bold
+                     px-[clamp(8px,1vw,14px)] py-[clamp(4px,0.6vw,8px)] rounded-full shadow-sm ${
+                       status === "In Stock"
+                         ? "bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9]"
+                         : "bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2]"
+                     }`}
+        >
+          {status}
+        </div>
+      )}
+
       {/* Image area */}
       <div className="w-full aspect-[8/5] bg-white flex items-center justify-center p-[10%]">
         <Illustration />
@@ -143,20 +160,32 @@ export default function ProductCard({ product, onAddToCart }) {
       <div className="flex-1 flex flex-col items-center justify-between 
                        px-[clamp(10px,1.6vw,24px)] py-[clamp(10px,1.4vw,20px)] text-center
                        gap-[clamp(8px,1.2vw,14px)]">
-        <div className="flex flex-col items-center gap-[clamp(4px,0.5vw,6px)]">
+        <div className="flex flex-col items-center gap-[clamp(4px,0.5vw,6px)] w-full">
           <h3 className="text-[clamp(12px,1.15vw,18px)] font-semibold text-[#2B2B2B] leading-snug line-clamp-2">
             {name}
           </h3>
-          <p className="text-[clamp(16px,1.7vw,24px)] font-bold text-[#E53935]">
+          <p className="text-[clamp(16px,1.7vw,24px)] font-bold text-[#E53935] mt-[clamp(2px,0.3vw,6px)]">
             ฿{price.toFixed(0)}
           </p>
+          <span className="text-[clamp(10px,0.9vw,12px)] text-[#2B2B2B]/60 font-medium">
+            คงเหลือ: {quantity} ชิ้น
+          </span>
         </div>
 
+        {status === "Pre-Order" && (
+          <div className="text-[clamp(9px,0.8vw,11px)] text-[#E65100] bg-[#FFF3E0] py-1.5 px-2 rounded-xl font-medium border border-[#FFE0B2] w-full leading-tight">
+            สินค้าสั่งจองล่วงหน้า (Pre-Order) โปรดรอประมาณ 15-20 วัน
+          </div>
+        )}
+
         <button
-          onClick={() => onAddToCart(product)}
-          className="h-[clamp(60px,6vw,72px)] w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420]
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddToCart(product);
+          }}
+          className="h-[clamp(44px,4.5vw,56px)] w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420]
                      active:scale-[0.97] flex items-center justify-center gap-[clamp(4px,0.7vw,8px)]
-                     transition-transform duration-150 shadow-sm"
+                     transition-transform duration-150 shadow-sm shrink-0"
         >
           <ShoppingCartIcon className="w-[clamp(14px,1.3vw,20px)] h-[clamp(14px,1.3vw,20px)] text-[#2B2B2B]" />
           <span className="text-[clamp(11px,1.1vw,16px)] font-semibold text-[#2B2B2B]">
