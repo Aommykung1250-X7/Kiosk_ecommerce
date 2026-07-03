@@ -37,7 +37,7 @@ export default function Home() {
 
         <main className="flex-1 overflow-y-auto min-w-0">
           <div
-            className="grid grid-cols-4 
+            className="grid grid-cols-2 
                        gap-[clamp(12px,2vw,32px)] 
                        p-[clamp(12px,2vw,32px)]"
           >
