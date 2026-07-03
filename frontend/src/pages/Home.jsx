@@ -70,7 +70,7 @@ export default function Home() {
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#E53935]">
               <p className="text-xl font-semibold">Error: {error}</p>
-              <button 
+              <button
                 onClick={() => setSelectedCategory(selectedCategory)}
                 className="mt-4 px-6 py-2 bg-[#F8C032] text-[#2B2B2B] rounded-xl font-semibold active:scale-95 transition-transform shadow-sm"
               >
@@ -80,7 +80,7 @@ export default function Home() {
           ) : (
             <>
               <div
-                className="grid grid-cols-4 
+                className="grid grid-cols-2
                            gap-[clamp(12px,2vw,32px)] 
                            p-[clamp(12px,2vw,32px)]"
               >
