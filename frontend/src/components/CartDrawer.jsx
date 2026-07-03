@@ -108,7 +108,7 @@ const ILLUSTRATIONS = {
   notebook: Notebook,
 };
 
-export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart }) {
+export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout }) {
   if (!isOpen) return null;
 
   const { items = [], totalPrice = 0, totalItems = 0 } = cart || {};
@@ -245,8 +245,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
             <div className="flex flex-col gap-2">
               <button 
                 onClick={() => {
-                  alert("ดำเนินการชำระเงินสำเร็จ (Kiosk Payment Simulator)");
-                  onClearCart();
+                  onCheckout();
                   onClose();
                 }}
                 className="h-12 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95

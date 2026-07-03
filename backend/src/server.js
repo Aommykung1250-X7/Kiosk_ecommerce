@@ -2,8 +2,10 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 dotenv.config();
 
@@ -16,9 +18,13 @@ app.use(cors());
 // Parse JSON request bodies
 app.use(express.json());
 
+// Serve slip uploads directory statically
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 // Register API routes
 app.use("/api", productRoutes);
 app.use("/api", cartRoutes);
+app.use("/api", orderRoutes);
 
 // Fallback for unmatched routes
 app.use((req, res) => {

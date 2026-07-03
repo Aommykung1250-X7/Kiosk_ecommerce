@@ -5,7 +5,9 @@ import Sidebar from "../components/Sidebar";
 import ProductCard from "../components/ProductCard";
 import ProductDetailModal from "../components/ProductDetailModal";
 import CartDrawer from "../components/CartDrawer";
+import KioskPayment from "../components/KioskPayment";
 import { ShoppingCartIcon } from "@heroicons/react/24/solid";
+
 
 
 
@@ -18,6 +20,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [activeOrder, setActiveOrder] = useState(null);
+
 
   // Fetch cart details on mount
   const fetchCart = () => {
@@ -108,6 +112,30 @@ export default function Home() {
     setIsCartOpen(true);
   };
 
+  const handleCheckout = () => {
+    if (cart.items.length === 0) return;
+
+    fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: cart.items, totalPrice: cart.totalPrice })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("ไม่สามารถสร้างออเดอร์ได้");
+        return res.json();
+      })
+      .then((data) => {
+        setActiveOrder({ orderId: data.orderId, totalPrice: data.totalPrice });
+      })
+      .catch((err) => alert(err.message));
+  };
+
+  const handlePaymentSuccess = () => {
+    handleClearCart();
+    setActiveOrder(null);
+  };
+
+
 
   return (
     <div className="w-screen h-screen bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt']">
@@ -177,6 +205,7 @@ export default function Home() {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
         onClearCart={handleClearCart}
+        onCheckout={handleCheckout}
       />
 
       {/* Floating Cart Pop-up Bar at Bottom */}
@@ -210,6 +239,22 @@ export default function Home() {
             </span>
           </div>
         </div>
+      )}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={handleAddToCart}
+        />
+      )}
+
+      {activeOrder && (
+        <KioskPayment
+          orderId={activeOrder.orderId}
+          totalPrice={activeOrder.totalPrice}
+          onPaymentSuccess={handlePaymentSuccess}
+          onCancel={() => setActiveOrder(null)}
+        />
       )}
     </div>
   );
