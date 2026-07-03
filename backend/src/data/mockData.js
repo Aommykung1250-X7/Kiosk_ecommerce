@@ -1,0 +1,68 @@
+// backend/src/data/mockData.js
+
+export const products = [
+  {
+    id: "p01",
+    name: "น้ำดื่มคริสตัล 600 มล.",
+    price: 10,
+    category: "drinks",
+    illustration: "water",
+    promotion: false,
+  },
+  {
+    id: "p02",
+    name: "โค้ก กระป๋อง 325 มล.",
+    price: 20,
+    category: "drinks",
+    illustration: "cola",
+    promotion: false,
+  },
+  {
+    id: "p03",
+    name: "เลย์มันฝรั่งแท้ รสOriginal",
+    price: 20,
+    category: "snacks",
+    illustration: "chips",
+    promotion: true,
+  },
+  {
+    id: "p04",
+    name: "ทิวลี่กรอบ รสชีส",
+    price: 15,
+    category: "snacks",
+    illustration: "wafer",
+    promotion: false,
+  },
+  {
+    id: "p05",
+    name: "มาม่าคัพ รสต้มยำกุ้ง",
+    price: 15,
+    category: "instant",
+    illustration: "noodle",
+    promotion: true,
+  },
+  {
+    id: "p06",
+    name: "ไมโล ยูเอชที 180 มล.",
+    price: 12,
+    category: "drinks",
+    illustration: "milo",
+    promotion: false,
+  },
+  {
+    id: "p07",
+    name: "ปากกาลูกลื่น Pilot 0.5 mm",
+    price: 12,
+    category: "stationery",
+    illustration: "pen",
+    promotion: false,
+  },
+  {
+    id: "p08",
+    name: "สมุดโน้ต DIIC",
+    price: 25,
+    category: "stationery",
+    illustration: "notebook",
+    promotion: false,
+  },
+];
