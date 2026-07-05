@@ -27,7 +27,7 @@ class CartService {
    */
   async addItemToCart(productId, quantity = 1) {
     const products = await productRepository.getAll();
-    const product = products.find(p => p.id === productId);
+    const product = products.find(p => String(p.id) === String(productId));
 
     if (!product) {
       throw new Error(`Product with ID ${productId} not found`);

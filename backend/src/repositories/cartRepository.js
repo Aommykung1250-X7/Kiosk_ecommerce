@@ -20,7 +20,7 @@ class CartRepository {
    * @returns {object}
    */
   addItem(product, quantity = 1) {
-    const existingIndex = this.cart.findIndex(item => item.product.id === product.id);
+    const existingIndex = this.cart.findIndex(item => String(item.product.id) === String(product.id));
 
     if (existingIndex > -1) {
       this.cart[existingIndex].quantity += quantity;
@@ -39,7 +39,7 @@ class CartRepository {
    * @returns {object|null}
    */
   updateQuantity(productId, quantity) {
-    const index = this.cart.findIndex(item => item.product.id === productId);
+    const index = this.cart.findIndex(item => String(item.product.id) === String(productId));
 
     if (index > -1) {
       if (quantity <= 0) {
@@ -58,7 +58,7 @@ class CartRepository {
    * @returns {object|null}
    */
   removeItem(productId) {
-    const index = this.cart.findIndex(item => item.product.id === productId);
+    const index = this.cart.findIndex(item => String(item.product.id) === String(productId));
 
     if (index > -1) {
       const removed = this.cart.splice(index, 1);

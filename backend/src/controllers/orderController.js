@@ -5,7 +5,7 @@ class OrderController {
   /**
    * Handle POST /api/orders
    */
-  createOrder(req, res) {
+  async createOrder(req, res) {
     try {
       const { items, totalPrice } = req.body;
 
@@ -17,7 +17,7 @@ class OrderController {
         return res.status(400).json({ error: "Invalid total price." });
       }
 
-      const order = orderService.createOrder(items, totalPrice);
+      const order = await orderService.createOrder(items, totalPrice);
       return res.status(201).json({
         orderId: order.id,
         totalPrice: order.totalPrice,
@@ -32,10 +32,10 @@ class OrderController {
   /**
    * Handle GET /api/orders/:orderId/status
    */
-  getOrderStatus(req, res) {
+  async getOrderStatus(req, res) {
     try {
       const { orderId } = req.params;
-      const order = orderService.getOrder(orderId);
+      const order = await orderService.getOrder(orderId);
 
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
@@ -51,10 +51,10 @@ class OrderController {
   /**
    * Handle GET /api/orders/:orderId
    */
-  getOrderDetails(req, res) {
+  async getOrderDetails(req, res) {
     try {
       const { orderId } = req.params;
-      const order = orderService.getOrder(orderId);
+      const order = await orderService.getOrder(orderId);
 
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
@@ -70,9 +70,9 @@ class OrderController {
   /**
    * Handle GET /api/orders/:orderId/sse
    */
-  sseOrder(req, res) {
+  async sseOrder(req, res) {
     const { orderId } = req.params;
-    const order = orderService.getOrder(orderId);
+    const order = await orderService.getOrder(orderId);
 
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
@@ -95,6 +95,39 @@ class OrderController {
     req.on("close", () => {
       orderService.removeSseListener(orderId, res);
     });
+  }
+
+  /**
+   * Get all paid and unfulfilled orders (GET /api/orders/queue)
+   */
+  async getOrderQueue(req, res) {
+    try {
+      const queue = await orderService.getOrderQueue();
+      return res.json(queue);
+    } catch (error) {
+      console.error("Error in OrderController.getOrderQueue:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+
+  /**
+   * Fulfill an order (POST /api/orders/:orderId/fulfill)
+   */
+  async fulfillOrder(req, res) {
+    try {
+      const { orderId } = req.params;
+      const handlerId = req.user.id; // พนักงานที่ล็อกอินอยู่
+
+      const order = await orderService.fulfillOrder(orderId, handlerId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+
+      return res.json({ message: "Order fulfilled successfully.", order });
+    } catch (error) {
+      console.error("Error in OrderController.fulfillOrder:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
   }
 }
 

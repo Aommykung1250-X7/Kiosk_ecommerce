@@ -1,8 +1,8 @@
 // backend/src/repositories/orderRepository.js
+import pool from "../data/db.js";
 
 class OrderRepository {
   constructor() {
-    this.orders = []; // Array of orders
     this.orderCounter = 1;
     this.lastCounterDate = this.getDateString();
   }
@@ -37,50 +37,161 @@ class OrderRepository {
   }
 
   /**
-   * Create a new order
+   * Create a new order in PostgreSQL
    * @param {Array} items 
    * @param {number} totalPrice 
-   * @returns {object}
+   * @returns {Promise<object>}
    */
-  create(items, totalPrice) {
+  async create(items, totalPrice) {
     const orderId = this.generateOrderId();
-    const newOrder = {
-      id: orderId,
-      items: [...items],
-      totalPrice,
-      status: "pending",
-      customerName: null,
-      customerPhone: null,
-      slipUrl: null,
-      createdAt: new Date(),
-    };
-    this.orders.push(newOrder);
-    return newOrder;
-  }
+    const query = `
+      INSERT INTO orders (order_uuid, total_amount, payment_status, items)
+      VALUES ($1, $2, 'pending', $3)
+      RETURNING *
+    `;
+    const values = [orderId, totalPrice, JSON.stringify(items)];
 
-  /**
-   * Fetch order by ID
-   * @param {string} id 
-   * @returns {object|null}
-   */
-  get(id) {
-    const order = this.orders.find(o => o.id === id);
-    return order ? { ...order } : null;
-  }
-
-  /**
-   * Update order status and details
-   * @param {string} id 
-   * @param {object} updates 
-   * @returns {object|null}
-   */
-  update(id, updates) {
-    const index = this.orders.findIndex(o => o.id === id);
-    if (index > -1) {
-      this.orders[index] = { ...this.orders[index], ...updates };
-      return { ...this.orders[index] };
+    try {
+      const res = await pool.query(query, values);
+      return this.mapOrderRow(res.rows[0]);
+    } catch (error) {
+      console.error("Error creating order in DB:", error);
+      throw error;
     }
-    return null;
+  }
+
+  /**
+   * Fetch order by ID from PostgreSQL
+   * @param {string} orderUuid 
+   * @returns {Promise<object|null>}
+   */
+  async get(orderUuid) {
+    const query = `SELECT * FROM orders WHERE order_uuid = $1`;
+    try {
+      const res = await pool.query(query, [orderUuid]);
+      if (res.rows.length === 0) return null;
+      return this.mapOrderRow(res.rows[0]);
+    } catch (error) {
+      console.error("Error fetching order from DB:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update order status and details in PostgreSQL
+   * @param {string} orderUuid 
+   * @param {object} updates 
+   * @returns {Promise<object|null>}
+   */
+  async update(orderUuid, updates) {
+    // แมปสถานะ 'success' ฝั่งแอปพลิเคชันเป็น 'paid' ในฐานข้อมูล PostgreSQL
+    const paymentStatus = updates.status === "success" ? "paid" : updates.status;
+    const paidAt = paymentStatus === "paid" ? new Date() : null;
+
+    let addressStr = "";
+    if (updates.customerAddress) {
+      const addr = updates.customerAddress;
+      addressStr = `${addr.street || ""}, ${addr.subdistrict || ""}, ${addr.district || ""}, ${addr.province || ""} ${addr.zipcode || ""}`;
+    }
+
+    const query = `
+      UPDATE orders 
+      SET 
+        payment_status = COALESCE($1, payment_status),
+        paid_at = COALESCE($2, paid_at),
+        customer_name = COALESCE($3, customer_name),
+        customer_phone = COALESCE($4, customer_phone),
+        customer_email = COALESCE($5, customer_email),
+        customer_address = COALESCE($6, customer_address),
+        slip_url = COALESCE($7, slip_url)
+      WHERE order_uuid = $8
+      RETURNING *
+    `;
+    const values = [
+      paymentStatus || null,
+      paidAt,
+      updates.customerName || null,
+      updates.customerPhone || null,
+      updates.customerEmail || null,
+      addressStr || null,
+      updates.slipUrl || null,
+      orderUuid
+    ];
+
+    try {
+      const res = await pool.query(query, values);
+      if (res.rows.length === 0) return null;
+      return this.mapOrderRow(res.rows[0]);
+    } catch (error) {
+      console.error("Error updating order in DB:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper เพื่อแมปคอลัมน์จาก DB เป็นออบเจกต์ที่ใช้งานในระบบ
+   */
+  mapOrderRow(row) {
+    return {
+      id: row.order_uuid,
+      items: typeof row.items === "string" ? JSON.parse(row.items) : row.items,
+      totalPrice: parseFloat(row.total_amount),
+      status: row.payment_status === "paid" ? "success" : row.payment_status,
+      customerName: row.customer_name,
+      customerPhone: row.customer_phone,
+      customerEmail: row.customer_email,
+      customerAddress: row.customer_address,
+      slipUrl: row.slip_url,
+      createdAt: row.created_at,
+      paidAt: row.paid_at,
+      fulfillmentStatus: row.fulfillment_status,
+      fulfilledAt: row.fulfilled_at
+    };
+  }
+
+  /**
+   * Fetch all paid and unfulfilled orders
+   * @returns {Promise<Array>}
+   */
+  async getQueue() {
+    const query = `
+      SELECT * FROM orders 
+      WHERE payment_status = 'paid' AND fulfillment_status = 'pending' 
+      ORDER BY created_at ASC
+    `;
+    try {
+      const res = await pool.query(query);
+      return res.rows.map(row => this.mapOrderRow(row));
+    } catch (error) {
+      console.error("Error fetching order queue from DB:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark order as fulfilled by a staff/admin
+   * @param {string} orderUuid 
+   * @param {number} handlerId 
+   * @returns {Promise<object|null>}
+   */
+  async fulfill(orderUuid, handlerId) {
+    const query = `
+      UPDATE orders 
+      SET 
+        fulfillment_status = 'fulfilled',
+        handler_id = $1,
+        fulfilled_at = NOW()
+      WHERE order_uuid = $2
+      RETURNING *
+    `;
+    try {
+      const res = await pool.query(query, [handlerId, orderUuid]);
+      if (res.rows.length === 0) return null;
+      return this.mapOrderRow(res.rows[0]);
+    } catch (error) {
+      console.error("Error fulfilling order in DB:", error);
+      throw error;
+    }
   }
 }
 

@@ -6,6 +6,8 @@ import path from "path";
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import { initDb } from "./data/db.js";
 
 dotenv.config();
 
@@ -22,9 +24,12 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Register API routes
+app.use("/api/auth", authRoutes);
 app.use("/api", productRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
+
+await initDb();
 
 // Fallback for unmatched routes
 app.use((req, res) => {

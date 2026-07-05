@@ -1,5 +1,6 @@
 // backend/src/services/orderService.js
 import orderRepository from "../repositories/orderRepository.js";
+import productRepository from "../repositories/productRepository.js";
 
 class OrderService {
   constructor() {
@@ -12,20 +13,20 @@ class OrderService {
    * @param {number} totalPrice 
    * @returns {object}
    */
-  createOrder(items, totalPrice) {
+  async createOrder(items, totalPrice) {
     if (!items || items.length === 0) {
       throw new Error("Cannot create an order with empty items");
     }
-    return orderRepository.create(items, totalPrice);
+    return await orderRepository.create(items, totalPrice);
   }
 
   /**
    * Get order details by ID
    * @param {string} orderId 
-   * @returns {object|null}
+   * @returns {Promise<object|null>}
    */
-  getOrder(orderId) {
-    return orderRepository.get(orderId);
+  async getOrder(orderId) {
+    return await orderRepository.get(orderId);
   }
 
   /**
@@ -77,24 +78,48 @@ class OrderService {
     }
   }
 
-  /**
-   * Update order status (called on checkout submit)
-   * @param {string} orderId 
-   * @param {object} updates 
-   * @returns {object|null}
-   */
-  updateOrderPayment(orderId, updates) {
-    const updatedOrder = orderRepository.update(orderId, {
+  async updateOrderPayment(orderId, updates) {
+    // ดึงรายละเอียดออเดอร์ก่อนเพื่อดูรายการสินค้าที่ซื้อ
+    const order = await orderRepository.get(orderId);
+    if (!order) {
+      return null;
+    }
+
+    const updatedOrder = await orderRepository.update(orderId, {
       ...updates,
       status: "success"
     });
 
     if (updatedOrder) {
+      // หักสต็อกของสินค้าแต่ละรายการในออเดอร์
+      for (const item of order.items) {
+        const productId = item.product.id;
+        const quantity = item.quantity;
+        await productRepository.decreaseStock(productId, quantity);
+      }
+
       // Notify all Kiosk listeners of this order
       this.notifyKiosk(orderId, "success");
     }
 
     return updatedOrder;
+  }
+
+  /**
+   * Get all paid, unfulfilled orders
+   * @returns {Promise<Array>}
+   */
+  async getOrderQueue() {
+    return await orderRepository.getQueue();
+  }
+
+  /**
+   * Fulfill an order by orderId and handlerId
+   * @param {string} orderId 
+   * @param {number} handlerId 
+   */
+  async fulfillOrder(orderId, handlerId) {
+    return await orderRepository.fulfill(orderId, handlerId);
   }
 }
 

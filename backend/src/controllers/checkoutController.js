@@ -56,7 +56,7 @@ class CheckoutController {
         return res.status(400).json({ error: "Order ID is required." });
       }
 
-      const order = orderService.getOrder(orderId);
+      const order = await orderService.getOrder(orderId);
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
       }
@@ -70,7 +70,7 @@ class CheckoutController {
       const slipUrl = `/${relativePath}`;
 
       // Update order and trigger SSE signal to Kiosk
-      const updatedOrder = orderService.updateOrderPayment(orderId, {
+      const updatedOrder = await orderService.updateOrderPayment(orderId, {
         customerName: name || "Customer",
         customerPhone: phone || "",
         customerEmail: email || "",

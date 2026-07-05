@@ -21,8 +21,7 @@ class CartController {
   async addItem(req, res) {
     try {
       const { productId, quantity } = req.body;
-
-      if (!productId || typeof productId !== "string") {
+      if (!productId || (typeof productId !== "string" && typeof productId !== "number")) {
         return res.status(400).json({ error: "Invalid product ID format." });
       }
 
@@ -31,7 +30,7 @@ class CartController {
         return res.status(400).json({ error: "Quantity must be a positive integer." });
       }
 
-      const cart = await cartService.addItemToCart(productId, qty);
+      const cart = await cartService.addItemToCart(String(productId), qty);
       return res.json(cart);
     } catch (error) {
       console.error("Error in CartController.addItem:", error);
@@ -48,8 +47,7 @@ class CartController {
   updateQuantity(req, res) {
     try {
       const { productId, quantity } = req.body;
-
-      if (!productId || typeof productId !== "string") {
+      if (!productId || (typeof productId !== "string" && typeof productId !== "number")) {
         return res.status(400).json({ error: "Invalid product ID format." });
       }
 
@@ -58,7 +56,7 @@ class CartController {
         return res.status(400).json({ error: "Quantity must be a non-negative integer." });
       }
 
-      const cart = cartService.updateItemQuantity(productId, qty);
+      const cart = cartService.updateItemQuantity(String(productId), qty);
       return res.json(cart);
     } catch (error) {
       console.error("Error in CartController.updateQuantity:", error);
@@ -72,12 +70,11 @@ class CartController {
   removeItem(req, res) {
     try {
       const { productId } = req.params;
-
-      if (!productId || typeof productId !== "string") {
+      if (!productId || (typeof productId !== "string" && typeof productId !== "number")) {
         return res.status(400).json({ error: "Invalid product ID format." });
       }
 
-      const cart = cartService.removeItemFromCart(productId);
+      const cart = cartService.removeItemFromCart(String(productId));
       return res.json(cart);
     } catch (error) {
       console.error("Error in CartController.removeItem:", error);

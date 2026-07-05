@@ -21,6 +21,31 @@ class ProductService {
     // Otherwise, filter by the specific category
     return await productRepository.getByCategory(category);
   }
+
+  /**
+   * Create a new product
+   * @param {object} productData 
+   */
+  async createProduct(productData) {
+    return await productRepository.create(productData);
+  }
+
+  /**
+   * Update a product by ID
+   * @param {number} id 
+   * @param {object} productData 
+   */
+  async updateProduct(id, productData) {
+    return await productRepository.update(id, productData);
+  }
+
+  /**
+   * Delete a product by ID
+   * @param {number} id 
+   */
+  async deleteProduct(id) {
+    return await productRepository.delete(id);
+  }
 }
 
 export default new ProductService();
