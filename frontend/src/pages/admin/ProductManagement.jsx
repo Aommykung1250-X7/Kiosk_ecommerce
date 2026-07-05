@@ -17,7 +17,7 @@ export default function ProductManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
-  
+
   // State สำหรับควบคุม Modal ฟอร์ม
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null); // NULL = สร้างใหม่, มีค่า = แก้ไขตาม ID นั้น
@@ -48,12 +48,31 @@ export default function ProductManagement() {
     name: ""
   });
 
+  const [kioskStats, setKioskStats] = useState({ wakeups: 0, totalViews: 0 });
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/kiosk/stats", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setKioskStats(data);
+      }
+    } catch (err) {
+      console.error("Error loading stats:", err);
+    }
+  };
+
   useEffect(() => {
     const userString = localStorage.getItem("user");
     if (userString) {
       setCurrentUser(JSON.parse(userString));
     }
     fetchProducts();
+    fetchStats();
   }, []);
 
   // ดึงข้อมูลเมื่อแท็บสมาชิกเปิดทำงาน
@@ -69,6 +88,9 @@ export default function ProductManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error("ไม่สามารถเรียกรายการสินค้าได้");
       setProducts(data);
+      if (token) {
+        fetchStats();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -266,7 +288,7 @@ export default function ProductManagement() {
             <ClipboardDocumentListIcon className="w-4.5 h-4.5" />
             <span>ไปหน้าจัดการคิว</span>
           </button>
-          
+
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all"
@@ -278,19 +300,27 @@ export default function ProductManagement() {
       </nav>
 
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
-        
+
         {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-400 uppercase">สินค้าทั้งหมด</span>
             <span className="text-3xl font-black text-gray-700">{totalProducts} รายการ</span>
+          </div>
+          <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-400 uppercase">จำนวนผู้เข้าใช้งาน (ตู้ Kiosk)</span>
+            <span className="text-3xl font-black text-indigo-650">{kioskStats.wakeups} ครั้ง</span>
+          </div>
+          <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-400 uppercase">ยอดการเข้าชมสินค้าสะสม</span>
+            <span className="text-3xl font-black text-emerald-600">{kioskStats.totalViews} ครั้ง</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-400 uppercase">สินค้าหมดสต็อก</span>
             <span className="text-3xl font-black text-red-600">{outOfStock} รายการ</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-400 uppercase">สินค้าใกล้หมด (เหลือน้อยกว่า 5)</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase">สินค้าใกล้หมด</span>
             <span className="text-3xl font-black text-orange-500">{lowStock} รายการ</span>
           </div>
         </div>
@@ -299,21 +329,19 @@ export default function ProductManagement() {
         <div className="flex border-b border-gray-200 gap-6 mt-2">
           <button
             onClick={() => setActiveTab("products")}
-            className={`pb-3 font-bold text-sm border-b-2 px-1 transition-all ${
-              activeTab === "products"
-                ? "border-[#F8C032] text-[#2B2B2B]"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+            className={`pb-3 font-bold text-sm border-b-2 px-1 transition-all ${activeTab === "products"
+              ? "border-[#F8C032] text-[#2B2B2B]"
+              : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
           >
             จัดการคลังสินค้า
           </button>
           <button
             onClick={() => setActiveTab("users")}
-            className={`pb-3 font-bold text-sm border-b-2 px-1 transition-all ${
-              activeTab === "users"
-                ? "border-[#F8C032] text-[#2B2B2B]"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+            className={`pb-3 font-bold text-sm border-b-2 px-1 transition-all ${activeTab === "users"
+              ? "border-[#F8C032] text-[#2B2B2B]"
+              : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
           >
             จัดการพนักงาน & สมาชิก
           </button>
@@ -353,6 +381,7 @@ export default function ProductManagement() {
                         <th className="py-4 px-6">ราคา</th>
                         <th className="py-4 px-6">จำนวนสต็อก</th>
                         <th className="py-4 px-6">สถานะ</th>
+                        <th className="py-4 px-6">ยอดการเข้าชม</th>
                         <th className="py-4 px-6 text-center">จัดการ</th>
                       </tr>
                     </thead>
@@ -389,13 +418,15 @@ export default function ProductManagement() {
                               </div>
                             </td>
                             <td className="py-4 px-6">
-                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                                p.status === "In Stock" 
-                                  ? "bg-green-50 text-green-700 border border-green-150" 
-                                  : "bg-orange-50 text-orange-700 border border-orange-150"
-                              }`}>
+                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${p.status === "In Stock"
+                                ? "bg-green-50 text-green-700 border border-green-150"
+                                : "bg-orange-50 text-orange-700 border border-orange-150"
+                                }`}>
                                 {p.status}
                               </span>
+                            </td>
+                            <td className="py-4 px-6 font-bold text-gray-700 font-mono">
+                              {p.views || 0} ครั้ง
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center justify-center gap-3">
@@ -457,11 +488,10 @@ export default function ProductManagement() {
                           <td className="py-4 px-6 font-semibold text-gray-800">{u.name}</td>
                           <td className="py-4 px-6 font-mono text-xs">{u.username}</td>
                           <td className="py-4 px-6">
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                              u.role === "admin" 
-                                ? "bg-purple-50 text-purple-700 border border-purple-150" 
-                                : "bg-blue-50 text-blue-700 border border-blue-150"
-                            }`}>
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${u.role === "admin"
+                              ? "bg-purple-50 text-purple-700 border border-purple-150"
+                              : "bg-blue-50 text-blue-700 border border-blue-150"
+                              }`}>
                               {u.role === "admin" ? "ผู้ดูแลระบบ (Admin)" : "พนักงาน (Staff)"}
                             </span>
                           </td>

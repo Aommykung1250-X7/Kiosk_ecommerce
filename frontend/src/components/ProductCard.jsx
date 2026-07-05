@@ -115,14 +115,17 @@ const ILLUSTRATIONS = {
 export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
   const { name, price, image, promotion, status, quantity } = product;
   const Illustration = ILLUSTRATIONS[image] || WaterBottle;
+  const isOutOfStock = status === "In Stock" && quantity <= 0;
 
   return (
     <div
       onClick={() => onSelectProduct(product)}
-      className="w-full bg-white rounded-[clamp(14px,1.8vw,24px)]
-                 border border-[#EAEAEA] hover:border-[#F8C032] shadow-[0_4px_16px_rgba(0,0,0,0.06)]
+      className={`w-full bg-white rounded-[clamp(14px,1.8vw,24px)]
+                 border hover:border-[#F8C032] shadow-[0_4px_16px_rgba(0,0,0,0.06)]
                  hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] cursor-pointer
-                 flex flex-col overflow-hidden relative transition-all duration-200"
+                 flex flex-col overflow-hidden relative transition-all duration-200 ${
+                   isOutOfStock ? "border-gray-200" : "border-[#EAEAEA]"
+                 }`}
     >
       {promotion && (
         <div
@@ -142,18 +145,38 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
           className={`absolute top-[clamp(8px,1vw,16px)] right-[clamp(8px,1vw,16px)] z-10 
                      flex items-center gap-1 text-[clamp(9px,0.85vw,12px)] font-bold
                      px-[clamp(8px,1vw,14px)] py-[clamp(4px,0.6vw,8px)] rounded-full shadow-sm ${
-                       status === "In Stock"
-                         ? "bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9]"
-                         : "bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2]"
+                       isOutOfStock
+                         ? "bg-red-50 text-red-600 border border-red-200"
+                         : status === "In Stock"
+                           ? "bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9]"
+                           : "bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2]"
                      }`}
         >
-          {status}
+          {isOutOfStock ? "Out of Stock" : status}
         </div>
       )}
 
       {/* Image area */}
-      <div className="w-full aspect-[8/5] bg-white flex items-center justify-center p-[10%]">
-        <Illustration />
+      <div className="w-full aspect-[8/5] bg-white flex items-center justify-center p-[10%] relative overflow-hidden">
+        <div className={`w-full h-full flex items-center justify-center ${isOutOfStock ? "opacity-30 grayscale" : ""}`}>
+          <Illustration />
+        </div>
+        {isOutOfStock && (
+          <>
+            {/* Red Diagonal Strike-through Line */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <svg className="w-full h-full text-red-500/70" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <line x1="0" y1="100" x2="100" y2="0" stroke="currentColor" strokeWidth="2.5" />
+              </svg>
+            </div>
+            {/* Out of Stock Label overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="bg-red-600 text-white text-[clamp(10px,1vw,15px)] font-black px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transform -rotate-12 border-2 border-white">
+                สินค้าหมด
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Info area */}
@@ -167,9 +190,15 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
           <p className="text-[clamp(16px,1.7vw,24px)] font-bold text-[#E53935] mt-[clamp(2px,0.3vw,6px)]">
             ฿{price.toFixed(0)}
           </p>
-          <span className="text-[clamp(10px,0.9vw,12px)] text-[#2B2B2B]/60 font-medium">
-            คงเหลือ: {quantity} ชิ้น
-          </span>
+          {status !== "Pre-Order" ? (
+            <span className="text-[clamp(10px,0.9vw,12px)] text-[#2B2B2B]/60 font-medium">
+              คงเหลือ: {quantity} ชิ้น
+            </span>
+          ) : (
+            <span className="text-[clamp(9px,0.85vw,11.5px)] text-[#E65100] font-bold bg-[#FFF3E0] px-3 py-0.5 rounded-full border border-[#FFE0B2]/60">
+              Pre-Order (ผลิตตามสั่ง)
+            </span>
+          )}
         </div>
 
         {status === "Pre-Order" && (
@@ -179,17 +208,21 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
         )}
 
         <button
+          disabled={isOutOfStock}
           onClick={(e) => {
             e.stopPropagation();
             onAddToCart(product);
           }}
-          className="h-[clamp(44px,4.5vw,56px)] w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420]
-                     active:scale-[0.97] flex items-center justify-center gap-[clamp(4px,0.7vw,8px)]
-                     transition-transform duration-150 shadow-sm shrink-0"
+          className={`h-[clamp(44px,4.5vw,56px)] w-full rounded-2xl flex items-center justify-center gap-[clamp(4px,0.7vw,8px)]
+                     transition-transform duration-150 shadow-sm shrink-0 ${
+                       isOutOfStock
+                         ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                         : "bg-[#F8C032] hover:bg-[#F0B420] active:scale-[0.97]"
+                     }`}
         >
-          <ShoppingCartIcon className="w-[clamp(14px,1.3vw,20px)] h-[clamp(14px,1.3vw,20px)] text-[#2B2B2B]" />
-          <span className="text-[clamp(11px,1.1vw,16px)] font-semibold text-[#2B2B2B]">
-            Add to Cart
+          <ShoppingCartIcon className={`w-[clamp(14px,1.3vw,20px)] h-[clamp(14px,1.3vw,20px)] ${isOutOfStock ? "text-gray-400" : "text-[#2B2B2B]"}`} />
+          <span className="text-[clamp(11px,1.1vw,16px)] font-semibold">
+            {isOutOfStock ? "สินค้าหมด" : "Add to Cart"}
           </span>
         </button>
       </div>

@@ -73,6 +73,23 @@ class ProductController {
       return res.status(500).json({ error: "Internal server error occurred." });
     }
   }
+
+  /**
+   * Handle POST /api/products/:id/view
+   */
+  async viewProduct(req, res) {
+    try {
+      const { id } = req.params;
+      const product = await productService.incrementProductViews(id);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      return res.json({ message: "Product view incremented successfully", product });
+    } catch (error) {
+      console.error("Error in ProductController.viewProduct:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
 }
 
 export default new ProductController();

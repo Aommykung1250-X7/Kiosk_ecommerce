@@ -118,6 +118,7 @@ export default function MobileCheckout() {
     e.preventDefault();
     if (!name.trim()) return alert("กรุณากรอกชื่อของคุณ");
     if (!phone.trim()) return alert("กรุณากรอกเบอร์โทรศัพท์");
+    if (!/^\d{10}$/.test(phone)) return alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
     if (!email.trim()) return alert("กรุณากรอกอีเมล");
     if (!addressStreet.trim()) return alert("กรุณากรอกบ้านเลขที่ / ถนน");
     if (!subdistrict.trim()) return alert("กรุณากรอกตำบล / แขวง");
@@ -266,8 +267,15 @@ export default function MobileCheckout() {
             <input
               type="tel"
               required
+              maxLength={10}
+              pattern="[0-9]{10}"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "");
+                if (val.length <= 10) {
+                  setPhone(val);
+                }
+              }}
               placeholder="กรอกเบอร์โทรศัพท์ 10 หลัก"
               className="h-12 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] transition-colors text-sm font-medium"
             />

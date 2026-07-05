@@ -111,6 +111,19 @@ class OrderController {
   }
 
   /**
+   * Get all paid and fulfilled orders (GET /api/orders/history)
+   */
+  async getOrderHistory(req, res) {
+    try {
+      const history = await orderService.getOrderHistory();
+      return res.json(history);
+    } catch (error) {
+      console.error("Error in OrderController.getOrderHistory:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+
+  /**
    * Fulfill an order (POST /api/orders/:orderId/fulfill)
    */
   async fulfillOrder(req, res) {
@@ -126,6 +139,46 @@ class OrderController {
       return res.json({ message: "Order fulfilled successfully.", order });
     } catch (error) {
       console.error("Error in OrderController.fulfillOrder:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+
+  /**
+   * Fulfill the In Stock portion of an order (POST /api/orders/:orderId/fulfill/instock)
+   */
+  async fulfillOrderInStock(req, res) {
+    try {
+      const { orderId } = req.params;
+      const handlerId = req.user.id;
+
+      const order = await orderService.fulfillOrderInStock(orderId, handlerId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+
+      return res.json({ message: "In-stock items fulfilled successfully.", order });
+    } catch (error) {
+      console.error("Error in OrderController.fulfillOrderInStock:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+
+  /**
+   * Fulfill the Pre-Order portion of an order (POST /api/orders/:orderId/fulfill/preorder)
+   */
+  async fulfillOrderPreOrder(req, res) {
+    try {
+      const { orderId } = req.params;
+      const handlerId = req.user.id;
+
+      const order = await orderService.fulfillOrderPreOrder(orderId, handlerId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+
+      return res.json({ message: "Pre-order items fulfilled successfully.", order });
+    } catch (error) {
+      console.error("Error in OrderController.fulfillOrderPreOrder:", error);
       return res.status(500).json({ error: "Internal server error occurred." });
     }
   }

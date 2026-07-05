@@ -5,6 +5,18 @@ import productRepository from "../repositories/productRepository.js";
 class OrderService {
   constructor() {
     this.sseListeners = new Map(); // Map of orderId -> Set of Express Response objects
+
+    // Start background routine to clean up expired pending orders every 5 minutes
+    setInterval(async () => {
+      try {
+        const count = await orderRepository.deleteExpiredPending();
+        if (count > 0) {
+          console.log(`[Order Cleanup] Removed ${count} expired pending orders older than 30 minutes.`);
+        }
+      } catch (error) {
+        console.error("[Order Cleanup] Failed to run expired pending orders cleanup:", error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
   }
 
   /**
@@ -114,12 +126,38 @@ class OrderService {
   }
 
   /**
+   * Get all paid, fulfilled orders
+   * @returns {Promise<Array>}
+   */
+  async getOrderHistory() {
+    return await orderRepository.getHistory();
+  }
+
+  /**
    * Fulfill an order by orderId and handlerId
    * @param {string} orderId 
    * @param {number} handlerId 
    */
   async fulfillOrder(orderId, handlerId) {
     return await orderRepository.fulfill(orderId, handlerId);
+  }
+
+  /**
+   * Fulfill the In Stock items of an order
+   * @param {string} orderId 
+   * @param {number} handlerId 
+   */
+  async fulfillOrderInStock(orderId, handlerId) {
+    return await orderRepository.fulfillInStock(orderId, handlerId);
+  }
+
+  /**
+   * Fulfill the Pre-Order items of an order
+   * @param {string} orderId 
+   * @param {number} handlerId 
+   */
+  async fulfillOrderPreOrder(orderId, handlerId) {
+    return await orderRepository.fulfillPreOrder(orderId, handlerId);
   }
 }
 
