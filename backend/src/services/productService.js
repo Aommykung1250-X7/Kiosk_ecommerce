@@ -41,10 +41,18 @@ class ProductService {
 
   /**
    * Delete a product by ID
-   * @param {number} id 
+   * @param {number} id
    */
   async deleteProduct(id) {
     return await productRepository.delete(id);
+  }
+
+  /**
+   * Increment view count of a product by 1
+   * @param {number|string} productId
+   */
+  async incrementProductViews(productId) {
+    return await productRepository.incrementViews(productId);
   }
 }
 

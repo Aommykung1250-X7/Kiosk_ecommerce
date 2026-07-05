@@ -20,20 +20,38 @@ class OrderRepository {
   }
 
   /**
-   * Generate unique order ID: CAMT-YYYYMMDD-XXXX
-   * @returns {string}
+   * Generate unique order ID: CAMT-YYYYMMDD-XXXX (Database-backed for restart persistence)
+   * @returns {Promise<string>}
    */
-  generateOrderId() {
+  async generateOrderId() {
     const dateStr = this.getDateString();
     
-    // Reset counter if date changed
-    if (this.lastCounterDate !== dateStr) {
-      this.lastCounterDate = dateStr;
-      this.orderCounter = 1;
+    const query = `
+      SELECT order_uuid FROM orders 
+      WHERE order_uuid LIKE $1
+      ORDER BY order_uuid DESC 
+      LIMIT 1
+    `;
+    const prefix = `CAMT-${dateStr}-%`;
+    try {
+      const res = await pool.query(query, [prefix]);
+      let nextCounter = 1;
+      if (res.rows.length > 0) {
+        const lastUuid = res.rows[0].order_uuid;
+        const parts = lastUuid.split("-");
+        const lastCounter = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastCounter)) {
+          nextCounter = lastCounter + 1;
+        }
+      }
+      const counterStr = String(nextCounter).padStart(4, "0");
+      return `CAMT-${dateStr}-${counterStr}`;
+    } catch (error) {
+      console.error("Error generating order ID:", error);
+      // Fallback fallback if DB query fails
+      const timestamp = Date.now();
+      return `CAMT-${dateStr}-${timestamp}`;
     }
-
-    const counterStr = String(this.orderCounter++).padStart(4, "0");
-    return `CAMT-${dateStr}-${counterStr}`;
   }
 
   /**
@@ -43,13 +61,19 @@ class OrderRepository {
    * @returns {Promise<object>}
    */
   async create(items, totalPrice) {
-    const orderId = this.generateOrderId();
+    const orderId = await this.generateOrderId();
+    const hasInStock = items.some(item => item.product && item.product.status === 'In Stock');
+    const hasPreOrder = items.some(item => item.product && item.product.status === 'Pre-Order');
+    
+    const instockStatus = hasInStock ? 'pending' : 'none';
+    const preorderStatus = hasPreOrder ? 'pending' : 'none';
+
     const query = `
-      INSERT INTO orders (order_uuid, total_amount, payment_status, items)
-      VALUES ($1, $2, 'pending', $3)
+      INSERT INTO orders (order_uuid, total_amount, payment_status, items, fulfillment_status_instock, fulfillment_status_preorder)
+      VALUES ($1, $2, 'pending', $3, $4, $5)
       RETURNING *
     `;
-    const values = [orderId, totalPrice, JSON.stringify(items)];
+    const values = [orderId, totalPrice, JSON.stringify(items), instockStatus, preorderStatus];
 
     try {
       const res = await pool.query(query, values);
@@ -145,6 +169,8 @@ class OrderRepository {
       createdAt: row.created_at,
       paidAt: row.paid_at,
       fulfillmentStatus: row.fulfillment_status,
+      fulfillmentStatusInstock: row.fulfillment_status_instock,
+      fulfillmentStatusPreorder: row.fulfillment_status_preorder,
       fulfilledAt: row.fulfilled_at
     };
   }
@@ -169,6 +195,30 @@ class OrderRepository {
   }
 
   /**
+   * Fetch all paid and fulfilled orders (order history)
+   * @returns {Promise<Array>}
+   */
+  async getHistory() {
+    const query = `
+      SELECT o.*, u.name as handler_name FROM orders o
+      LEFT JOIN users u ON o.handler_id = u.id
+      WHERE o.payment_status = 'paid' AND o.fulfillment_status = 'fulfilled' 
+      ORDER BY o.fulfilled_at DESC
+    `;
+    try {
+      const res = await pool.query(query);
+      return res.rows.map(row => {
+        const order = this.mapOrderRow(row);
+        order.handlerName = row.handler_name;
+        return order;
+      });
+    } catch (error) {
+      console.error("Error fetching order history from DB:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Mark order as fulfilled by a staff/admin
    * @param {string} orderUuid 
    * @param {number} handlerId 
@@ -179,6 +229,8 @@ class OrderRepository {
       UPDATE orders 
       SET 
         fulfillment_status = 'fulfilled',
+        fulfillment_status_instock = 'fulfilled',
+        fulfillment_status_preorder = 'fulfilled',
         handler_id = $1,
         fulfilled_at = NOW()
       WHERE order_uuid = $2
@@ -190,6 +242,85 @@ class OrderRepository {
       return this.mapOrderRow(res.rows[0]);
     } catch (error) {
       console.error("Error fulfilling order in DB:", error);
+      throw error;
+    }
+  }
+
+  async fulfillInStock(orderUuid, handlerId) {
+    const query = `
+      UPDATE orders 
+      SET 
+        fulfillment_status_instock = 'fulfilled',
+        fulfillment_status = CASE 
+          WHEN fulfillment_status_preorder IN ('fulfilled', 'none') THEN 'fulfilled'::varchar
+          ELSE fulfillment_status 
+        END,
+        fulfilled_at = CASE 
+          WHEN fulfillment_status_preorder IN ('fulfilled', 'none') THEN NOW()
+          ELSE fulfilled_at 
+        END,
+        handler_id = CASE 
+          WHEN fulfillment_status_preorder IN ('fulfilled', 'none') THEN $1
+          ELSE handler_id 
+        END
+      WHERE order_uuid = $2
+      RETURNING *
+    `;
+    try {
+      const res = await pool.query(query, [handlerId, orderUuid]);
+      if (res.rows.length === 0) return null;
+      return this.mapOrderRow(res.rows[0]);
+    } catch (error) {
+      console.error("Error fulfilling in-stock order in DB:", error);
+      throw error;
+    }
+  }
+
+  async fulfillPreOrder(orderUuid, handlerId) {
+    const query = `
+      UPDATE orders 
+      SET 
+        fulfillment_status_preorder = 'fulfilled',
+        fulfillment_status = CASE 
+          WHEN fulfillment_status_instock IN ('fulfilled', 'none') THEN 'fulfilled'::varchar
+          ELSE fulfillment_status 
+        END,
+        fulfilled_at = CASE 
+          WHEN fulfillment_status_instock IN ('fulfilled', 'none') THEN NOW()
+          ELSE fulfilled_at 
+        END,
+        handler_id = CASE 
+          WHEN fulfillment_status_instock IN ('fulfilled', 'none') THEN $1
+          ELSE handler_id 
+        END
+      WHERE order_uuid = $2
+      RETURNING *
+    `;
+    try {
+      const res = await pool.query(query, [handlerId, orderUuid]);
+      if (res.rows.length === 0) return null;
+      return this.mapOrderRow(res.rows[0]);
+    } catch (error) {
+      console.error("Error fulfilling pre-order in DB:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete pending orders older than 30 minutes
+   * @returns {Promise<number>} Number of deleted orders
+   */
+  async deleteExpiredPending() {
+    const query = `
+      DELETE FROM orders 
+      WHERE payment_status = 'pending' 
+        AND created_at < NOW() - INTERVAL '30 minutes'
+    `;
+    try {
+      const res = await pool.query(query);
+      return res.rowCount;
+    } catch (error) {
+      console.error("Error deleting expired pending orders:", error);
       throw error;
     }
   }

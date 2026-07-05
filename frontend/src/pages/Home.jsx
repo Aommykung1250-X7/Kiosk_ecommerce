@@ -6,6 +6,7 @@ import ProductCard from "../components/ProductCard";
 import ProductDetailModal from "../components/ProductDetailModal";
 import CartDrawer from "../components/CartDrawer";
 import KioskPayment from "../components/KioskPayment";
+import Screensaver from "../components/Screensaver";
 import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 
 
@@ -21,7 +22,9 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeOrder, setActiveOrder] = useState(null);
-
+  const [isIdle, setIsIdle] = useState(false);
+  const [isWaking, setIsWaking] = useState(false);
+  const [sessionViewedProductIds, setSessionViewedProductIds] = useState([]);
 
   // Fetch cart details on mount
   const fetchCart = () => {
@@ -35,15 +38,12 @@ export default function Home() {
     fetchCart();
   }, []);
 
-
-
-  useEffect(() => {
-    let active = true;
+  // Fetch products catalog
+  const fetchProducts = () => {
     setLoading(true);
     setError(null);
-
     const query = selectedCategory !== "all" ? `?category=${selectedCategory}` : "";
-    fetch(`/api/products${query}`)
+    return fetch(`/api/products${query}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to load products");
@@ -51,24 +51,104 @@ export default function Home() {
         return res.json();
       })
       .then((data) => {
-        if (active) {
-          setProducts(data);
-          setLoading(false);
-        }
+        setProducts(data);
+        setLoading(false);
       })
       .catch((err) => {
-        if (active) {
-          setError(err.message);
-          setLoading(false);
-        }
+        setError(err.message);
+        setLoading(false);
       });
+  };
 
-    return () => {
-      active = false;
-    };
+  useEffect(() => {
+    fetchProducts();
   }, [selectedCategory]);
 
+  // Idle detection timer (2 minutes)
+  useEffect(() => {
+    let idleTimer;
+    const timeoutDuration = 120000; // 2 minutes in ms
+
+    const resetTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        setIsIdle(true);
+      }, timeoutDuration);
+    };
+
+    const activityEvents = ["mousemove", "mousedown", "keypress", "touchstart", "scroll"];
+
+    if (!isIdle) {
+      activityEvents.forEach((event) => {
+        window.addEventListener(event, resetTimer);
+      });
+      resetTimer();
+    }
+
+    return () => {
+      clearTimeout(idleTimer);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [isIdle]);
+
+  // Clear cart and close active modals when entering screensaver mode
+  useEffect(() => {
+    if (isIdle) {
+      fetch("/api/cart/clear", { method: "POST" })
+        .then((res) => res.json())
+        .then((data) => setCart(data))
+        .catch((err) => console.error("Error clearing cart on idle:", err));
+
+      setIsCartOpen(false);
+      setSelectedProduct(null);
+      setActiveOrder(null);
+      setSessionViewedProductIds([]);
+    }
+  }, [isIdle]);
+
+  const handleWakeUp = () => {
+    setIsWaking(true);
+    setIsIdle(false);
+
+    // Increment wakeup statistic in backend
+    fetch("/api/kiosk/wakeup", { method: "POST" })
+      .catch((err) => console.error("Error logging kiosk wakeup:", err));
+
+    // Re-fetch only the updated products catalog on wakeup
+    fetchProducts()
+      .finally(() => {
+        setTimeout(() => {
+          setIsWaking(false);
+        }, 1000); // 1-second transition loader
+      });
+  };
+
+  const trackProductView = (productId) => {
+    if (!productId) return;
+    if (sessionViewedProductIds.includes(productId)) return; // Avoid double-counting in single session
+
+    // Optimistically update local session viewed list
+    setSessionViewedProductIds((prev) => [...prev, productId]);
+
+    // Send tracking request to backend
+    fetch(`/api/products/${productId}/view`, { method: "POST" })
+      .catch((err) => console.error("Error logging product view:", err));
+  };
+
+  const handleSelectProduct = (product) => {
+    setSelectedProduct(product);
+    if (product && product.id) {
+      trackProductView(product.id);
+    }
+  };
+
   const handleAddToCart = (product) => {
+    if (product && product.id) {
+      trackProductView(product.id);
+    }
+
     fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -131,8 +211,12 @@ export default function Home() {
   };
 
   const handlePaymentSuccess = () => {
-    handleClearCart();
-    setActiveOrder(null);
+    fetch("/api/cart/clear", {
+      method: "POST"
+    })
+      .finally(() => {
+        window.location.reload();
+      });
   };
 
 
@@ -175,7 +259,7 @@ export default function Home() {
                     key={product.id}
                     product={product}
                     onAddToCart={handleAddToCart}
-                    onSelectProduct={setSelectedProduct}
+                    onSelectProduct={handleSelectProduct}
                   />
                 ))}
               </div>
@@ -210,7 +294,7 @@ export default function Home() {
 
       {/* Floating Cart Pop-up Bar at Bottom */}
       {cart.totalItems > 0 && (
-        <div 
+        <div
           onClick={handleCartClick}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 
                      w-[90%] max-w-lg h-16 bg-[#2B2B2B] text-white rounded-2xl 
@@ -255,6 +339,19 @@ export default function Home() {
           onPaymentSuccess={handlePaymentSuccess}
           onCancel={() => setActiveOrder(null)}
         />
+      )}
+
+      {/* Screensaver overlay */}
+      {isIdle && (
+        <Screensaver onWake={handleWakeUp} />
+      )}
+
+      {/* Waking / loading transition */}
+      {isWaking && (
+        <div className="fixed inset-0 z-[60] bg-[#0B0B0C]/90 backdrop-blur-md flex flex-col items-center justify-center font-['Prompt'] text-white animate-in fade-in-50 duration-200">
+          <div className="w-16 h-16 rounded-full border-4 border-t-[#F8C032] border-[#F8C032]/20 animate-spin mb-4"></div>
+          <p className="text-lg font-semibold tracking-wider text-gray-200 animate-pulse">กำลังอัปเดตข้อมูลสินค้าล่าสุด...</p>
+        </div>
       )}
     </div>
   );

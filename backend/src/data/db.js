@@ -60,6 +60,7 @@ export const initDb = async () => {
         promotion BOOLEAN DEFAULT FALSE,
         pickup_location VARCHAR(255),
         status VARCHAR(50) DEFAULT 'In Stock',
+        views INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -69,6 +70,8 @@ export const initDb = async () => {
         total_amount NUMERIC(10, 2) NOT NULL,
         payment_status VARCHAR(50) DEFAULT 'pending' CHECK(payment_status IN('pending', 'paid', 'failed')),
         fulfillment_status VARCHAR(50) DEFAULT 'pending' CHECK(fulfillment_status IN('pending', 'fulfilled')),
+        fulfillment_status_instock VARCHAR(50) DEFAULT 'pending',
+        fulfillment_status_preorder VARCHAR(50) DEFAULT 'pending',
         handler_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         customer_name VARCHAR(255),
         customer_phone VARCHAR(50),
@@ -84,6 +87,56 @@ export const initDb = async () => {
 
     try {
         await pool.query(queryText);
+
+        // Add dynamic migrations for existing database rows
+        await pool.query(`
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_status_instock VARCHAR(50) DEFAULT 'pending';
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_status_preorder VARCHAR(50) DEFAULT 'pending';
+        `);
+
+        // Migrate existing fulfilled orders
+        await pool.query(`
+            UPDATE orders 
+            SET fulfillment_status_instock = 'fulfilled', fulfillment_status_preorder = 'fulfilled' 
+            WHERE fulfillment_status = 'fulfilled' 
+              AND (fulfillment_status_instock = 'pending' OR fulfillment_status_preorder = 'pending');
+        `);
+
+        // Clean up pending orders sub-fulfillment statuses based on items content
+        await pool.query(`
+            UPDATE orders 
+            SET 
+              fulfillment_status_instock = CASE 
+                WHEN items::text LIKE '%"status":"In Stock"%' OR items::text LIKE '%"status": "In Stock"%' THEN 'pending'::varchar
+                ELSE 'none'::varchar
+              END,
+              fulfillment_status_preorder = CASE 
+                WHEN items::text LIKE '%"status":"Pre-Order"%' OR items::text LIKE '%"status": "Pre-Order"%' THEN 'pending'::varchar
+                ELSE 'none'::varchar
+              END
+            WHERE fulfillment_status = 'pending';
+        `);
+
+        // Alter products to add views if not exists
+        await pool.query(`
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS views INTEGER DEFAULT 0;
+        `);
+
+        // Create kiosk_stats table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS kiosk_stats(
+                key VARCHAR(100) PRIMARY KEY,
+                value INTEGER DEFAULT 0
+            );
+        `);
+
+        // Seed session_wakeups
+        await pool.query(`
+            INSERT INTO kiosk_stats (key, value) 
+            VALUES ('session_wakeups', 0) 
+            ON CONFLICT (key) DO NOTHING;
+        `);
+
         console.log('Database tables initialized successfully');
         // ตารางถูกสร้างขึ้นหรือมีอยู่แล้วในระบบเรียบร้อย
     } catch (err) {

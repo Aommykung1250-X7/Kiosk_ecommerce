@@ -15,6 +15,10 @@ router.get("/orders/queue", authenticateJWT, checkRole(["staff", "admin"]), (req
   orderController.getOrderQueue(req, res)
 );
 
+router.get("/orders/history", authenticateJWT, checkRole(["staff", "admin"]), (req, res) => 
+  orderController.getOrderHistory(req, res)
+);
+
 router.get("/orders/:orderId", (req, res) => orderController.getOrderDetails(req, res));
 router.get("/orders/:orderId/sse", (req, res) => orderController.sseOrder(req, res));
 
@@ -25,6 +29,14 @@ router.post("/checkout/submit", upload.single("slip"), (req, res) =>
 
 router.post("/orders/:orderId/fulfill", authenticateJWT, checkRole(["staff", "admin"]), (req, res) => 
   orderController.fulfillOrder(req, res)
+);
+
+router.post("/orders/:orderId/fulfill/instock", authenticateJWT, checkRole(["staff", "admin"]), (req, res) => 
+  orderController.fulfillOrderInStock(req, res)
+);
+
+router.post("/orders/:orderId/fulfill/preorder", authenticateJWT, checkRole(["staff", "admin"]), (req, res) => 
+  orderController.fulfillOrderPreOrder(req, res)
 );
 
 export default router;

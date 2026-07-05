@@ -143,6 +143,26 @@ class ProductRepository {
       throw error;
     }
   }
+
+  /**
+   * Increment the view counter of a product by 1
+   * @param {number|string} productId 
+   */
+  async incrementViews(productId) {
+    const query = `
+      UPDATE products 
+      SET views = views + 1 
+      WHERE id = $1
+      RETURNING *
+    `;
+    try {
+      const res = await pool.query(query, [parseInt(productId, 10)]);
+      return res.rows[0];
+    } catch (error) {
+      console.error(`Error incrementing views for product ${productId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export default new ProductRepository();
