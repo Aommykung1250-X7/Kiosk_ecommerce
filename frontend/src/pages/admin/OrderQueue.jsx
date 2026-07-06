@@ -1,5 +1,5 @@
 // frontend/src/pages/admin/OrderQueue.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowPathIcon, CheckIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon, XMarkIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 
@@ -12,6 +12,9 @@ export default function OrderQueue() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // "all", "instock", "preorder", "history"
   const [selectedSlipUrl, setSelectedSlipUrl] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(""); // "" means all days, or YYYY-MM-DD
+  const [toasts, setToasts] = useState([]);
+  const prevOrderIdsRef = useRef(new Set());
   const navigate = useNavigate();
 
   const token = localStorage.getItem("token");
@@ -19,6 +22,32 @@ export default function OrderQueue() {
   // Helper checks
   const hasInStockItem = (order) => order.items.some(item => item.product && item.product.status === 'In Stock');
   const hasPreOrderItem = (order) => order.items.some(item => item.product && item.product.status === 'Pre-Order');
+
+  const getLocalDateString = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const date = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${date}`;
+  };
+
+  const getTodayDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const date = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${date}`;
+  };
+
+  const getYesterdayDateString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const date = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${date}`;
+  };
 
   const fetchData = async () => {
     try {
@@ -57,6 +86,84 @@ export default function OrderQueue() {
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const playNotificationSound = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+      
+      // Ding note (D5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(587.33, now);
+      gain1.gain.setValueAtTime(0.08, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.4);
+
+      // Dong note (E5)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(659.25, now + 0.12);
+      gain2.gain.setValueAtTime(0.08, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.55);
+    } catch (e) {
+      console.warn("Browser blocked audio play:", e);
+    }
+  };
+
+  const addToast = (order) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, order }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 6000);
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  useEffect(() => {
+    if (!queueOrders || queueOrders.length === 0) return;
+
+    const currentIds = queueOrders.map(o => o.id);
+
+    // Initial load: populate ref without alerting
+    if (prevOrderIdsRef.current.size === 0) {
+      prevOrderIdsRef.current = new Set(currentIds);
+      return;
+    }
+
+    // Find new queue orders
+    const newArrivals = queueOrders.filter(o => !prevOrderIdsRef.current.has(o.id));
+
+    if (newArrivals.length > 0) {
+      playNotificationSound();
+      newArrivals.forEach(order => {
+        addToast(order);
+        prevOrderIdsRef.current.add(order.id);
+      });
+    }
+
+    // Clean up IDs that are no longer in the queue
+    const currentIdSet = new Set(currentIds);
+    for (const id of prevOrderIdsRef.current) {
+      if (!currentIdSet.has(id)) {
+        prevOrderIdsRef.current.delete(id);
+      }
+    }
+  }, [queueOrders]);
 
   const handleFulfillInStock = async (orderId) => {
     if (!window.confirm(`ยืนยันการจัดจ่ายสินค้าพร้อมส่งหน้าร้าน สำหรับออเดอร์ ${orderId} หรือไม่?`)) {
@@ -123,15 +230,23 @@ export default function OrderQueue() {
       (order.customerName && order.customerName.toLowerCase().includes(query));
   };
 
+  // Date filter
+  const matchesDate = (order) => {
+    if (!selectedDate) return true;
+    return getLocalDateString(order.createdAt) === selectedDate;
+  };
+
   // Compute lists for each section
-  const allOrdersList = queueOrders.filter(matchesSearch);
+  const allOrdersList = queueOrders.filter(matchesSearch).filter(matchesDate);
   const instockOrdersList = queueOrders
     .filter(order => order.fulfillmentStatusInstock === 'pending' && hasInStockItem(order))
-    .filter(matchesSearch);
+    .filter(matchesSearch)
+    .filter(matchesDate);
   const preorderOrdersList = queueOrders
     .filter(order => order.fulfillmentStatusPreorder === 'pending' && hasPreOrderItem(order))
-    .filter(matchesSearch);
-  const historyOrdersList = historyOrders.filter(matchesSearch);
+    .filter(matchesSearch)
+    .filter(matchesDate);
+  const historyOrdersList = historyOrders.filter(matchesSearch).filter(matchesDate);
 
   // Get active list to display
   const getDisplayOrders = () => {
@@ -193,27 +308,90 @@ export default function OrderQueue() {
       {/* Main Container */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
 
-        {/* Search & Actions Area */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Search box */}
-          <div className="relative w-full sm:max-w-md flex items-center">
-            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-4" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="สแกนหรือค้นหารหัส Order ID หรือชื่อลูกค้า"
-              className="w-full h-11 bg-gray-50 border border-gray-100 hover:border-gray-200 focus:border-[#F8C032] rounded-xl pl-12 pr-4 text-sm outline-none transition-all"
-            />
+        {/* Search & Date Filter Area */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-4 animate-fade-in">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Search box */}
+            <div className="relative w-full sm:max-w-md flex items-center">
+              <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-4" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="สแกนหรือค้นหารหัส Order ID หรือชื่อลูกค้า"
+                className="w-full h-11 bg-gray-50 border border-gray-100 hover:border-gray-200 focus:border-[#F8C032] rounded-xl pl-12 pr-4 text-sm outline-none transition-all"
+              />
+            </div>
+
+            <button
+              onClick={fetchData}
+              className="flex items-center gap-2 px-5 h-11 border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-semibold text-gray-600 transition-all shrink-0 w-full sm:w-auto justify-center"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+              รีเฟรชข้อมูลคิว
+            </button>
           </div>
 
-          <button
-            onClick={fetchData}
-            className="flex items-center gap-2 px-5 h-11 border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-semibold text-gray-600 transition-all"
-          >
-            <ArrowPathIcon className="w-4 h-4" />
-            รีเฟรชข้อมูลคิว
-          </button>
+          {/* Date Filter Row */}
+          <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              กรองคิววันที่:
+            </span>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setSelectedDate("")}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  selectedDate === ""
+                    ? "bg-[#F8C032] text-[#2B2B2B] shadow-sm"
+                    : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
+                }`}
+              >
+                ทั้งหมด
+              </button>
+              
+              <button
+                onClick={() => setSelectedDate(getTodayDateString())}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  selectedDate === getTodayDateString()
+                    ? "bg-[#F8C032] text-[#2B2B2B] shadow-sm"
+                    : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
+                }`}
+              >
+                วันนี้
+              </button>
+              
+              <button
+                onClick={() => setSelectedDate(getYesterdayDateString())}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  selectedDate === getYesterdayDateString()
+                    ? "bg-[#F8C032] text-[#2B2B2B] shadow-sm"
+                    : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
+                }`}
+              >
+                เมื่อวาน
+              </button>
+
+              {/* Custom Date Input */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-gray-50 border border-gray-150 rounded-lg text-gray-700 focus:border-[#F8C032] outline-none cursor-pointer"
+                />
+                {selectedDate && (
+                  <button
+                    onClick={() => setSelectedDate("")}
+                    className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-650 rounded-lg transition-all cursor-pointer"
+                    title="ล้างตัวกรองวันที่"
+                  >
+                    <XMarkIcon className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 4-Tab Navigation System with Real-Time Counts */}
@@ -492,6 +670,54 @@ export default function OrderQueue() {
           </div>
         </div>
       )}
+
+      {/* Toast Notifications Stack */}
+      <div className="fixed top-6 right-6 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className="pointer-events-auto bg-white/95 backdrop-blur-md border-l-4 border-amber-500 shadow-2xl rounded-2xl p-4 flex items-start gap-3.5 transition-all duration-300 transform translate-x-0 animate-slide-in"
+          >
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0 animate-bounce">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-gray-800">มีออเดอร์ใหม่เข้ามา!</h4>
+              <p className="text-xs text-gray-500 font-mono mt-0.5 truncate">
+                REF: {t.order.id.slice(-4)} ({t.order.id})
+              </p>
+              <p className="text-xs text-gray-600 font-semibold mt-1">
+                คุณ {t.order.customerName || "ไม่ระบุชื่อ"} • ฿{t.order.totalAmount}
+              </p>
+            </div>
+            <button
+              onClick={() => removeToast(t.id)}
+              className="text-gray-400 hover:text-gray-650 transition-colors p-1 cursor-pointer"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Custom Styles for Toast Animations */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(100px) scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+        }
+        .animate-slide-in {
+          animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 }

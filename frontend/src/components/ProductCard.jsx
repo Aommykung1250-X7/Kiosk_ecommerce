@@ -119,12 +119,17 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
 
   return (
     <div
-      onClick={() => onSelectProduct(product)}
+      onClick={() => {
+        if (!isOutOfStock) {
+          onSelectProduct(product);
+        }
+      }}
       className={`w-full bg-white rounded-[clamp(14px,1.8vw,24px)]
-                 border hover:border-[#F8C032] shadow-[0_4px_16px_rgba(0,0,0,0.06)]
-                 hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] cursor-pointer
+                 border shadow-[0_4px_16px_rgba(0,0,0,0.06)]
                  flex flex-col overflow-hidden relative transition-all duration-200 ${
-                   isOutOfStock ? "border-gray-200" : "border-[#EAEAEA]"
+                   isOutOfStock
+                     ? "border-gray-200 cursor-not-allowed opacity-75"
+                     : "border-[#EAEAEA] hover:border-[#F8C032] hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] cursor-pointer"
                  }`}
     >
       {promotion && (

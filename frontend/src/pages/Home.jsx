@@ -67,7 +67,7 @@ export default function Home() {
   // Idle detection timer (2 minutes)
   useEffect(() => {
     let idleTimer;
-    const timeoutDuration = 5000; // 2 minutes in ms
+    const timeoutDuration = 120000; // 2 minutes in ms
 
     const resetTimer = () => {
       clearTimeout(idleTimer);

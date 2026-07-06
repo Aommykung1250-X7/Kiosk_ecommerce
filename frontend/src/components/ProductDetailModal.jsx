@@ -113,7 +113,8 @@ const ILLUSTRATIONS = {
 export default function ProductDetailModal({ product, onClose, onAddToCart }) {
   if (!product) return null;
 
-  const { name, price, image, promotion, description, pickupLocation, status } = product;
+  const { name, price, image, promotion, description, pickupLocation, status, quantity } = product;
+  const isOutOfStock = status === "In Stock" && quantity <= 0;
   const Illustration = ILLUSTRATIONS[image] || WaterBottle;
 
   return (
@@ -153,11 +154,13 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
             )}
             {status && (
               <span className={`text-xs font-bold px-3 py-1 rounded-full border shadow-sm ${
-                status === "In Stock"
-                  ? "bg-[#E8F5E9] text-[#2E7D32] border-[#C8E6C9]"
-                  : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
+                isOutOfStock
+                  ? "bg-red-50 text-red-600 border-red-200"
+                  : status === "In Stock"
+                    ? "bg-[#E8F5E9] text-[#2E7D32] border-[#C8E6C9]"
+                    : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
               }`}>
-                {status}
+                {isOutOfStock ? "Out of Stock" : status}
               </span>
             )}
           </div>
@@ -187,15 +190,22 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
 
           {/* Add to Cart Button */}
           <button
+            disabled={isOutOfStock}
             onClick={() => {
-              onAddToCart(product);
-              onClose();
+              if (!isOutOfStock) {
+                onAddToCart(product);
+                onClose();
+              }
             }}
-            className="mt-4 h-14 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-[0.97]
-                       flex items-center justify-center gap-2 transition-transform duration-150 shadow-md font-semibold text-lg text-[#2B2B2B]"
+            className={`mt-4 h-14 w-full rounded-2xl flex items-center justify-center gap-2 
+                       transition-transform duration-150 shadow-md font-semibold text-lg ${
+                         isOutOfStock
+                           ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                           : "bg-[#F8C032] hover:bg-[#F0B420] active:scale-[0.97] text-[#2B2B2B]"
+                       }`}
           >
-            <ShoppingCartIcon className="w-6 h-6 text-[#2B2B2B]" />
-            ใส่ตะกร้าสินค้า
+            <ShoppingCartIcon className={`w-6 h-6 ${isOutOfStock ? "text-gray-400" : "text-[#2B2B2B]"}`} />
+            {isOutOfStock ? "สินค้าหมด" : "ใส่ตะกร้าสินค้า"}
           </button>
         </div>
       </div>
