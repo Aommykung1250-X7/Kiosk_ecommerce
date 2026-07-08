@@ -41,6 +41,9 @@ export default function MobileCheckout() {
         })
         .then((data) => {
           setOrder(data);
+          if (data.status === "success" || data.status === "paid") {
+            setIsSuccess(true);
+          }
           setLoading(false);
         })
         .catch((err) => {
@@ -52,6 +55,15 @@ export default function MobileCheckout() {
       setLoading(false);
     }
   }, []);
+
+  // Clear orderId from URL upon success to prevent back navigation / duplicate submission
+  useEffect(() => {
+    if (isSuccess) {
+      const url = new URL(window.location);
+      url.search = ""; // clear query string
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }, [isSuccess]);
 
   // Client-side image compression using canvas
   const handleFileChange = (e) => {
@@ -120,6 +132,9 @@ export default function MobileCheckout() {
     if (!phone.trim()) return alert("กรุณากรอกเบอร์โทรศัพท์");
     if (!/^\d{10}$/.test(phone)) return alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
     if (!email.trim()) return alert("กรุณากรอกอีเมล");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return alert("รูปแบบอีเมลไม่ถูกต้อง (เช่น example@email.com)");
+    }
     if (!addressStreet.trim()) return alert("กรุณากรอกบ้านเลขที่ / ถนน");
     if (!subdistrict.trim()) return alert("กรุณากรอกตำบล / แขวง");
     if (!district.trim()) return alert("กรุณากรอกอำเภอ / เขต");
