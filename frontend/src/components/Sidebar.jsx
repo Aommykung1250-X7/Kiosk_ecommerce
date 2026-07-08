@@ -64,8 +64,8 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
                         transition-all duration-150 active:scale-[0.97]
                         ${
                           isActive
-                            ? "bg-[#F8C032] shadow-md"
-                            : "bg-white hover:bg-white/70 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+                            ? "bg-[#F8C032] shadow-md active:bg-[#D4A017]"
+                            : "bg-white hover:bg-white/70 active:bg-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
                         }`}
           >
             <Icon

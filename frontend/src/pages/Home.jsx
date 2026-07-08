@@ -51,7 +51,20 @@ export default function Home() {
         return res.json();
       })
       .then((data) => {
-        setProducts(data);
+        const sorted = [...data];
+        if (sorted.length > 0) {
+          let maxIndex = 0;
+          for (let i = 1; i < sorted.length; i++) {
+            if ((sorted[i].views || 0) > (sorted[maxIndex].views || 0)) {
+              maxIndex = i;
+            }
+          }
+          if ((sorted[maxIndex].views || 0) > 0) {
+            const [mostViewed] = sorted.splice(maxIndex, 1);
+            sorted.unshift(mostViewed);
+          }
+        }
+        setProducts(sorted);
         setLoading(false);
       })
       .catch((err) => {
@@ -195,10 +208,14 @@ export default function Home() {
   const handleCheckout = () => {
     if (cart.items.length === 0) return;
 
+    const hasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
+    const shippingFee = hasPreOrder ? 40 : 0;
+    const grandTotal = cart.totalPrice + shippingFee;
+
     fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: cart.items, totalPrice: cart.totalPrice })
+      body: JSON.stringify({ items: cart.items, totalPrice: grandTotal })
     })
       .then((res) => {
         if (!res.ok) throw new Error("ไม่สามารถสร้างออเดอร์ได้");
@@ -220,6 +237,10 @@ export default function Home() {
   };
 
 
+
+  const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
+  const bottomShippingFee = bottomHasPreOrder ? 40 : 0;
+  const bottomDisplayTotal = cart.totalPrice + bottomShippingFee;
 
   return (
     <div className="w-screen h-screen bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt']">
@@ -254,14 +275,18 @@ export default function Home() {
                            gap-[clamp(12px,2vw,32px)] 
                            p-[clamp(12px,2vw,32px)]"
               >
-                {products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAddToCart={handleAddToCart}
-                    onSelectProduct={handleSelectProduct}
-                  />
-                ))}
+                {(() => {
+                  const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
+                  return products.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onAddToCart={handleAddToCart}
+                      onSelectProduct={handleSelectProduct}
+                      isMostViewed={maxViews > 0 && product.views === maxViews}
+                    />
+                  ));
+                })()}
               </div>
 
               {products.length === 0 && (
@@ -313,12 +338,21 @@ export default function Home() {
             <span className="font-bold text-[clamp(14px,1.5vw,16px)]">ดูตะกร้าสินค้าของคุณ</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-white/60">ยอดรวม:</span>
-            <span className="text-xl font-extrabold text-[#F8C032]">
-              ฿{cart.totalPrice.toFixed(0)}
-            </span>
-            <span className="text-xs font-semibold text-[#F8C032] bg-[#F8C032]/10 px-2 py-0.5 rounded-lg ml-1">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end justify-center leading-none">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-white/60">ยอดรวมสุทธิ:</span>
+                <span className="text-xl font-extrabold text-[#F8C032]">
+                  ฿{bottomDisplayTotal.toFixed(0)}
+                </span>
+              </div>
+              {bottomShippingFee > 0 && (
+                <span className="text-[10px] text-red-400 font-bold mt-1">
+                  (รวมค่าส่ง Pre-Order ฿40)
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-semibold text-[#F8C032] bg-[#F8C032]/10 px-2 py-0.5 rounded-lg">
               เปิด {'>'}
             </span>
           </div>

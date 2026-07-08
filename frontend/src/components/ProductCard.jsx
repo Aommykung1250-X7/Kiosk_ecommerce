@@ -112,7 +112,7 @@ const ILLUSTRATIONS = {
 // No fixed px width/height on the card — it fills its grid column and every
 // internal dimension is a clamp(), so the whole card shrinks in proportion
 // as the column narrows instead of wrapping/reflowing content.
-export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
+export default function ProductCard({ product, onAddToCart, onSelectProduct, isMostViewed }) {
   const { name, price, image, promotion, status, quantity } = product;
   const Illustration = ILLUSTRATIONS[image] || WaterBottle;
   const isOutOfStock = status === "In Stock" && quantity <= 0;
@@ -141,6 +141,19 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
         >
           <TagIcon className="w-[clamp(10px,1vw,14px)] h-[clamp(10px,1vw,14px)]" />
           PROMO
+        </div>
+      )}
+
+      {isMostViewed && (
+        <div
+          className={`absolute top-[clamp(8px,1vw,16px)] z-10 
+                     flex items-center gap-1
+                     bg-[#E53935] text-white text-[clamp(9px,0.85vw,12px)] font-bold
+                     px-[clamp(8px,1.2vw,14px)] py-[clamp(4px,0.6vw,8px)] rounded-full shadow-md ${
+                       promotion ? "left-[clamp(80px,8vw,100px)]" : "left-[clamp(8px,1vw,16px)]"
+                     }`}
+        >
+          🔥 ยอดนิยม
         </div>
       )}
 
@@ -222,7 +235,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct }) {
                      transition-transform duration-150 shadow-sm shrink-0 ${
                        isOutOfStock
                          ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-                         : "bg-[#F8C032] hover:bg-[#F0B420] active:scale-[0.97]"
+                         : "bg-[#F8C032] hover:bg-[#F0B420] active:bg-[#D4A017] active:scale-[0.97]"
                      }`}
         >
           <ShoppingCartIcon className={`w-[clamp(14px,1.3vw,20px)] h-[clamp(14px,1.3vw,20px)] ${isOutOfStock ? "text-gray-400" : "text-[#2B2B2B]"}`} />

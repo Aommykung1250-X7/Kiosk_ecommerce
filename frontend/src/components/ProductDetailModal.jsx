@@ -201,7 +201,7 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
                        transition-transform duration-150 shadow-md font-semibold text-lg ${
                          isOutOfStock
                            ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-                           : "bg-[#F8C032] hover:bg-[#F0B420] active:scale-[0.97] text-[#2B2B2B]"
+                           : "bg-[#F8C032] hover:bg-[#F0B420] active:bg-[#D4A017] active:scale-[0.97] text-[#2B2B2B]"
                        }`}
           >
             <ShoppingCartIcon className={`w-6 h-6 ${isOutOfStock ? "text-gray-400" : "text-[#2B2B2B]"}`} />
