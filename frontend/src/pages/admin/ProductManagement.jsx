@@ -3,16 +3,26 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, PencilIcon, TrashIcon, ArrowRightOnRectangleIcon, ClipboardDocumentListIcon, Squares2X2Icon, TagIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
-const CATEGORIES = [
-  { id: "drinks", name: "เครื่องดื่ม" },
-  { id: "snacks", name: "ขนมขบเคี้ยว" },
-  { id: "instant", name: "บะหมี่กึ่งสำเร็จรูป" },
-  { id: "stationery", name: "เครื่องเขียน" }
-];
+// CATEGORIES list is now loaded dynamically in component state
 
 const IMAGES = ["water", "cola", "chips", "wafer", "noodle", "milo", "pen", "notebook"];
 
 export default function ProductManagement() {
+  const [categories, setCategories] = useState(() => {
+    const stored = localStorage.getItem("kiosk_categories");
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {}
+    }
+    return [
+      { id: "drinks", name: "เครื่องดื่ม" },
+      { id: "snacks", name: "ขนมขบเคี้ยว" },
+      { id: "instant", name: "บะหมี่กึ่งสำเร็จรูป" },
+      { id: "stationery", name: "เครื่องเขียน" }
+    ];
+  });
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,6 +42,10 @@ export default function ProductManagement() {
     pickupLocation: "",
     status: "In Stock"
   });
+
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatId, setNewCatId] = useState("");
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -160,8 +174,33 @@ export default function ProductManagement() {
     }
   };
 
+  const handleSaveNewCategoryInline = () => {
+    if (!newCatName.trim() || !newCatId.trim()) {
+      return alert("กรุณากรอกข้อมูลให้ครบถ้วนทั้งชื่อไทยและคีย์ภาษาอังกฤษ");
+    }
+    
+    const formattedId = newCatId.trim().toLowerCase();
+    if (categories.some(c => c.id === formattedId)) {
+      return alert("มีคีย์หมวดหมู่นี้อยู่แล้วในระบบ");
+    }
+
+    const newCategory = { id: formattedId, name: newCatName.trim() };
+    const updatedCategories = [...categories, newCategory];
+    setCategories(updatedCategories);
+    localStorage.setItem("kiosk_categories", JSON.stringify(updatedCategories));
+    
+    setForm(prev => ({ ...prev, category: newCategory.id }));
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
+    alert(`เพิ่มหมวดหมู่ "${newCategory.name}" สำเร็จ!`);
+  };
+
   const handleOpenAddModal = () => {
     setEditingId(null);
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
     setForm({
       name: "",
       description: "",
@@ -178,6 +217,9 @@ export default function ProductManagement() {
 
   const handleOpenEditModal = (p) => {
     setEditingId(p.id);
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
     setForm({
       name: p.name,
       description: p.description || "",
@@ -195,6 +237,9 @@ export default function ProductManagement() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
   };
 
   const handleSubmit = async (e) => {
@@ -404,7 +449,7 @@ export default function ProductManagement() {
                               </div>
                             </td>
                             <td className="py-4 px-6 capitalize">
-                              {CATEGORIES.find(c => c.id === p.category)?.name || p.category}
+                              {categories.find(c => c.id === p.category)?.name || p.category}
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-800">฿{parseFloat(p.price).toFixed(0)}</td>
                             <td className="py-4 px-6">
@@ -581,16 +626,73 @@ export default function ProductManagement() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">หมวดหมู่ (Category)</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
-                >
-                  {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+              {isAddingCategory ? (
+                <div className="col-span-2 bg-[#F8C032]/10 border border-dashed border-[#F8C032]/30 p-4 rounded-2xl flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700">สร้างหมวดหมู่ใหม่</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCategory(false);
+                        setNewCatName("");
+                        setNewCatId("");
+                      }}
+                      className="text-[10px] text-red-500 hover:text-red-700 font-bold hover:underline cursor-pointer select-none"
+                    >
+                      ยกเลิก
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-semibold text-gray-500">ชื่อหมวดหมู่ (ภาษาไทย)</label>
+                      <input
+                        type="text"
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        placeholder="เช่น: ของเล่น"
+                        className="h-9 bg-white border border-gray-150 focus:border-[#F8C032] rounded-lg px-3 text-xs outline-none transition-all"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-semibold text-gray-500">คีย์ภาษาอังกฤษ (อังกฤษพิมพ์เล็ก)</label>
+                      <input
+                        type="text"
+                        value={newCatId}
+                        onChange={(e) => setNewCatId(e.target.value)}
+                        placeholder="เช่น: toys"
+                        className="h-9 bg-white border border-gray-150 focus:border-[#F8C032] rounded-lg px-3 text-xs outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveNewCategoryInline}
+                    className="w-full h-9 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                  >
+                    บันทึกหมวดหมู่ใหม่
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-500">หมวดหมู่ (Category)</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCategory(true)}
+                      className="text-[10px] text-[#F8C032] hover:text-[#F0B420] font-bold hover:underline cursor-pointer select-none"
+                    >
+                      + เพิ่มหมวดหมู่ใหม่
+                    </button>
+                  </div>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
+                  >
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-gray-500">คีย์ภาพประกอบ (Illustration Key)</label>

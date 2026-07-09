@@ -15,15 +15,6 @@ import {
   PencilSquareIcon as PencilSquareSolid,
   TagIcon as TagSolid,
 } from "@heroicons/react/24/solid";
-const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "drinks", label: "Drinks" },
-  { id: "snacks", label: "Snacks" },
-  { id: "instant", label: "Instant Food" },
-  { id: "stationery", label: "Stationery" },
-  { id: "promotion", label: "Promotion" },
-];
-
 const ICONS = {
   all: [Squares2X2Icon, Squares2X2Solid],
   drinks: [BeakerIcon, BeakerSolid],
@@ -33,10 +24,31 @@ const ICONS = {
   promotion: [TagIcon, TagSolid],
 };
 
-// Every dimension below uses clamp(min, fluid, max) so the sidebar scales
-// smoothly with viewport size instead of snapping between layouts at
-// fixed breakpoints. Structure (vertical column, left-docked) never changes.
 export default function Sidebar({ selectedCategory, onSelectCategory }) {
+  const categories = (() => {
+    const stored = localStorage.getItem("kiosk_categories");
+    let custom = [];
+    if (stored) {
+      try {
+        custom = JSON.parse(stored);
+      } catch (e) {}
+    }
+    
+    const defaultList = [
+      { id: "all", label: "All" },
+      { id: "drinks", label: "Drinks" },
+      { id: "snacks", label: "Snacks" },
+      { id: "instant", label: "Instant Food" },
+      { id: "stationery", label: "Stationery" }
+    ];
+    
+    const filteredCustom = custom
+      .filter(c => !["drinks", "snacks", "instant", "stationery"].includes(c.id))
+      .map(c => ({ id: c.id, label: c.name }));
+      
+    return [...defaultList, ...filteredCustom, { id: "promotion", label: "Promotion" }];
+  })();
+
   return (
     <aside
       className="w-[clamp(160px,16vw,260px)] h-full bg-[#F8F8F8] shrink-0 flex flex-col 
@@ -50,9 +62,9 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
         <span className="mt-2 block w-10 h-1 rounded-full bg-[#F8C032]" />
       </div>
 
-      {CATEGORIES.map((cat) => {
+      {categories.map((cat) => {
         const isActive = selectedCategory === cat.id;
-        const [OutlineIcon, SolidIcon] = ICONS[cat.id];
+        const [OutlineIcon, SolidIcon] = ICONS[cat.id] || [ShoppingBagIcon, ShoppingBagSolid];
         const Icon = isActive ? SolidIcon : OutlineIcon;
 
         return (
