@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^if \\(!\\(Test-Path backend\\\\node_modules\\)\\) \\{ Write-Host 'backend deps missing' \\} else \\{ Write-Host 'backend deps present' \\}; if \\(!\\(Test-Path frontend\\\\node_modules\\)\\) \\{ Write-Host 'frontend deps missing' \\} else \\{ Write-Host 'frontend deps present' \\};$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

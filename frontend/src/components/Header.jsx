@@ -1,49 +1,74 @@
-// src/components/Header.jsx
 import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 
-// Simple pagoda-silhouette mark for the store logo (generic, not a
-// reproduction of any specific institution's logo).
-function PagodaMark() {
+function DiamondLogo() {
   return (
-    <svg viewBox="0 0 64 64" className="w-full h-full">
-      <path
-        d="M32 4 L38 12 H26 Z M32 10 v6 M20 20 h24 l4 8 H16 Z M22 28 h20 l3 7 H19 Z
-           M24 35 h16 v20 h-16 Z M18 55 h28 v5 H18 Z"
-        fill="#F8C032"
-        stroke="#2B2B2B"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
+    <svg viewBox="0 0 64 64" className="w-7 h-7 text-[#F9C338]">
+      <rect
+        x="18"
+        y="18"
+        width="28"
+        height="28"
+        rx="2"
+        transform="rotate(45 32 32)"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="4"
       />
     </svg>
   );
 }
 
-// Fixed 100px bar height + fluid clamp() sizing inside, so the header
-// scales down smoothly on smaller displays without changing structure.
-export default function Header() {
+export default function Header({ cart = { totalPrice: 0, totalItems: 0 }, onCartClick }) {
   return (
     <header
-      className="w-full h-[100px] bg-[#F8C032] flex items-center justify-between 
-                 px-[clamp(16px,2.5vw,40px)] shrink-0"
+      className="w-full h-[100px] bg-white border-b border-gray-150 flex items-center justify-between 
+                 px-[clamp(16px,2.5vw,40px)] shrink-0 font-['Prompt']"
     >
       {/* Left: Logo + Store name */}
-      <div className="flex items-center gap-[clamp(8px,1.2vw,16px)] min-w-0">
+      <div className="flex items-center gap-3 min-w-0">
         <div
-          className="w-[clamp(40px,4.5vw,64px)] h-[clamp(40px,4.5vw,64px)] p-2 
-                     rounded-2xl bg-white flex items-center 
+          className="w-12 h-12 rounded-2xl bg-[#1B1B1C] flex items-center 
                      justify-center shrink-0 shadow-sm"
         >
-          <PagodaMark />
+          <DiamondLogo />
         </div>
         <div className="flex flex-col leading-tight min-w-0">
-          <span className="text-[clamp(16px,2vw,30px)] font-bold text-[#2B2B2B] tracking-tight truncate">
+          <span className="text-[clamp(18px,2vw,24px)] font-black text-[#1B1B1C] tracking-tight uppercase">
             DIIC SHOP
           </span>
-          <span className="text-[clamp(9px,0.9vw,14px)] font-medium text-[#2B2B2B]/70 truncate">
-            Digital Innovation and Information Center
+          <span className="text-[10px] font-extrabold text-gray-400 tracking-wider uppercase">
+            Smart Retail Kiosk
           </span>
         </div>
+      </div>
+
+      {/* Right: Total Price & Cart Button */}
+      <div className="flex items-center gap-6 shrink-0">
+        <div className="flex flex-col items-end leading-tight">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            TOTAL
+          </span>
+          <span className="text-[clamp(18px,2.2vw,26px)] font-black text-black mt-0.5">
+            ฿{(cart.totalPrice || 0).toFixed(2)}
+          </span>
+        </div>
+
+        <button
+          onClick={onCartClick}
+          className="flex items-center gap-2 bg-[#1B1B1C] text-white px-5 py-3 rounded-2xl font-bold cursor-pointer hover:bg-black active:scale-[0.98] transition-all"
+        >
+          <div className="relative mr-1">
+            <ShoppingCartIcon className="w-5 h-5 text-white" />
+            <span className="absolute -top-2.5 -right-2.5 bg-[#5EBAA8] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#1B1B1C]">
+              {cart.totalItems || 0}
+            </span>
+          </div>
+          <span className="uppercase text-xs tracking-widest font-black">
+            Cart
+          </span>
+        </button>
       </div>
     </header>
   );
 }
+
