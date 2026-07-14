@@ -3,6 +3,32 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowPathIcon, CheckIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon, XMarkIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 
+const getLocalDateString = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const date = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
+};
+
+const getTodayDateString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const date = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
+};
+
+const getYesterdayDateString = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const date = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
+};
+
 export default function OrderQueue() {
   const [queueOrders, setQueueOrders] = useState([]);
   const [historyOrders, setHistoryOrders] = useState([]);
@@ -12,7 +38,7 @@ export default function OrderQueue() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // "all", "instock", "preorder", "history"
   const [selectedSlipUrl, setSelectedSlipUrl] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(""); // "" means all days, or YYYY-MM-DD
+  const [selectedDate, setSelectedDate] = useState(getTodayDateString()); // Defaults to today's date string
   const [toasts, setToasts] = useState([]);
   const prevOrderIdsRef = useRef(new Set());
   const navigate = useNavigate();
@@ -55,31 +81,7 @@ export default function OrderQueue() {
   const hasInStockItem = (order) => order.items.some(item => item.product && item.product.status === 'In Stock');
   const hasPreOrderItem = (order) => order.items.some(item => item.product && item.product.status === 'Pre-Order');
 
-  const getLocalDateString = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const date = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${date}`;
-  };
 
-  const getTodayDateString = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const date = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${date}`;
-  };
-
-  const getYesterdayDateString = () => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const date = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${date}`;
-  };
 
   const fetchData = async () => {
     try {
@@ -581,17 +583,6 @@ export default function OrderQueue() {
             
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => setSelectedDate("")}
-                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  selectedDate === ""
-                    ? "bg-[#F8C032] text-[#2B2B2B] shadow-sm"
-                    : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
-                }`}
-              >
-                ทั้งหมด
-              </button>
-              
-              <button
                 onClick={() => setSelectedDate(getTodayDateString())}
                 className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   selectedDate === getTodayDateString()
@@ -611,6 +602,17 @@ export default function OrderQueue() {
                 }`}
               >
                 เมื่อวาน
+              </button>
+
+              <button
+                onClick={() => setSelectedDate("")}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  selectedDate === ""
+                    ? "bg-[#F8C032] text-[#2B2B2B] shadow-sm"
+                    : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
+                }`}
+              >
+                ทั้งหมด
               </button>
 
               {/* Custom Date Input */}
