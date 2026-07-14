@@ -90,6 +90,20 @@ class ProductController {
       return res.status(500).json({ error: "Internal server error occurred." });
     }
   }
+
+  /**
+   * Handle GET /api/products/bestsellers
+   */
+  async getBestSellers(req, res) {
+    try {
+      const products = await productService.getBestSellers();
+      return res.json(products);
+    } catch (error) {
+      console.error("Error in ProductController.getBestSellers:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
 }
 
 export default new ProductController();
+
