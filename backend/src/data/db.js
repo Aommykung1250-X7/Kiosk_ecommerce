@@ -1,5 +1,10 @@
 import pkg from 'pg';
-const { Pool } = pkg;
+const { Pool, types } = pkg;
+
+// Force node-postgres to parse TIMESTAMP (without timezone) as UTC
+types.setTypeParser(1114, (val) => {
+    return new Date(val.replace(' ', 'T') + 'Z');
+});
 
 const pool = new Pool({
     user: 'aommykung',
@@ -79,6 +84,8 @@ export const initDb = async () => {
         customer_address TEXT,
         slip_url TEXT,
         items JSONB,
+        courier VARCHAR(100),
+        tracking_number VARCHAR(100),
         paid_at TIMESTAMP,
         fulfilled_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -92,6 +99,8 @@ export const initDb = async () => {
         await pool.query(`
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_status_instock VARCHAR(50) DEFAULT 'pending';
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_status_preorder VARCHAR(50) DEFAULT 'pending';
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier VARCHAR(100);
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_number VARCHAR(100);
         `);
 
         // Migrate existing fulfilled orders

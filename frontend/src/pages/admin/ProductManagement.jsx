@@ -3,16 +3,26 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, PencilIcon, TrashIcon, ArrowRightOnRectangleIcon, ClipboardDocumentListIcon, Squares2X2Icon, TagIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
-const CATEGORIES = [
-  { id: "drinks", name: "เครื่องดื่ม" },
-  { id: "snacks", name: "ขนมขบเคี้ยว" },
-  { id: "instant", name: "บะหมี่กึ่งสำเร็จรูป" },
-  { id: "stationery", name: "เครื่องเขียน" }
-];
+// CATEGORIES list is now loaded dynamically in component state
 
 const IMAGES = ["water", "cola", "chips", "wafer", "noodle", "milo", "pen", "notebook"];
 
 export default function ProductManagement() {
+  const [categories, setCategories] = useState(() => {
+    const stored = localStorage.getItem("kiosk_categories");
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {}
+    }
+    return [
+      { id: "drinks", name: "เครื่องดื่ม" },
+      { id: "snacks", name: "ขนมขบเคี้ยว" },
+      { id: "instant", name: "บะหมี่กึ่งสำเร็จรูป" },
+      { id: "stationery", name: "เครื่องเขียน" }
+    ];
+  });
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,8 +43,11 @@ export default function ProductManagement() {
     status: "In Stock"
   });
 
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatId, setNewCatId] = useState("");
+
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   // แท็บทำงาน: products = จัดการสินค้า, users = จัดการพนักงาน
   const [activeTab, setActiveTab] = useState("products");
@@ -53,9 +66,7 @@ export default function ProductManagement() {
   const fetchStats = async () => {
     try {
       const res = await fetch("/api/kiosk/stats", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: "include"
       });
       const data = await res.json();
       if (res.ok) {
@@ -88,9 +99,7 @@ export default function ProductManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error("ไม่สามารถเรียกรายการสินค้าได้");
       setProducts(data);
-      if (token) {
-        fetchStats();
-      }
+      fetchStats();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -102,9 +111,7 @@ export default function ProductManagement() {
     setLoadingUsers(true);
     try {
       const res = await fetch("/api/auth/users", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: "include"
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "ไม่สามารถดึงข้อมูลรายชื่อพนักงานได้");
@@ -122,9 +129,9 @@ export default function ProductManagement() {
       const res = await fetch("/api/auth/users", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
+        credentials: "include",
         body: JSON.stringify(userForm)
       });
       const data = await res.json();
@@ -146,9 +153,7 @@ export default function ProductManagement() {
     try {
       const res = await fetch(`/api/auth/users/${id}`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: "include"
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการลบพนักงาน");
@@ -160,8 +165,33 @@ export default function ProductManagement() {
     }
   };
 
+  const handleSaveNewCategoryInline = () => {
+    if (!newCatName.trim() || !newCatId.trim()) {
+      return alert("กรุณากรอกข้อมูลให้ครบถ้วนทั้งชื่อไทยและคีย์ภาษาอังกฤษ");
+    }
+    
+    const formattedId = newCatId.trim().toLowerCase();
+    if (categories.some(c => c.id === formattedId)) {
+      return alert("มีคีย์หมวดหมู่นี้อยู่แล้วในระบบ");
+    }
+
+    const newCategory = { id: formattedId, name: newCatName.trim() };
+    const updatedCategories = [...categories, newCategory];
+    setCategories(updatedCategories);
+    localStorage.setItem("kiosk_categories", JSON.stringify(updatedCategories));
+    
+    setForm(prev => ({ ...prev, category: newCategory.id }));
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
+    alert(`เพิ่มหมวดหมู่ "${newCategory.name}" สำเร็จ!`);
+  };
+
   const handleOpenAddModal = () => {
     setEditingId(null);
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
     setForm({
       name: "",
       description: "",
@@ -178,6 +208,9 @@ export default function ProductManagement() {
 
   const handleOpenEditModal = (p) => {
     setEditingId(p.id);
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
     setForm({
       name: p.name,
       description: p.description || "",
@@ -195,6 +228,9 @@ export default function ProductManagement() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setIsAddingCategory(false);
+    setNewCatName("");
+    setNewCatId("");
   };
 
   const handleSubmit = async (e) => {
@@ -213,9 +249,9 @@ export default function ProductManagement() {
       const res = await fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
+        credentials: "include",
         body: JSON.stringify(payload)
       });
 
@@ -238,9 +274,7 @@ export default function ProductManagement() {
     try {
       const res = await fetch(`/api/products/${id}`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: "include"
       });
 
       const data = await res.json();
@@ -404,7 +438,7 @@ export default function ProductManagement() {
                               </div>
                             </td>
                             <td className="py-4 px-6 capitalize">
-                              {CATEGORIES.find(c => c.id === p.category)?.name || p.category}
+                              {categories.find(c => c.id === p.category)?.name || p.category}
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-800">฿{parseFloat(p.price).toFixed(0)}</td>
                             <td className="py-4 px-6">
@@ -526,7 +560,7 @@ export default function ProductManagement() {
       {/* Edit/Add Modal Overlay */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6 backdrop-blur-xs">
-          <div className="max-w-xl w-full bg-white rounded-3xl border border-gray-150 shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="max-w-xl w-full max-h-[90vh] bg-white rounded-3xl border border-gray-150 shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-8 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
             <div>
               <h3 className="text-xl font-bold text-gray-800">
                 {editingId ? "แก้ไขรายละเอียดสินค้า" : "เพิ่มสินค้าชิ้นใหม่ในคลัง"}
@@ -534,122 +568,187 @@ export default function ProductManagement() {
               <p className="text-xs text-gray-400">กรอกข้อมูลให้ครบถ้วนเพื่ออัปเดตลงระบบคีออส</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">ชื่อสินค้า (Name)</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="กรอกชื่อภาษาไทย..."
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
-                />
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              {/* Scrollable inputs container */}
+              <div className="flex-1 overflow-y-auto pr-1.5 grid grid-cols-2 gap-4 max-h-[calc(90vh-220px)] custom-scrollbar">
+                <div className="col-span-2 flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">ชื่อสินค้า (Name)</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="กรอกชื่อภาษาไทย..."
+                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
+                  />
+                </div>
+
+                <div className="col-span-2 flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">รายละเอียดสินค้า (Description)</label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="กรอกรายละเอียดสั้นๆ..."
+                    className="w-full h-20 py-2 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all resize-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">ราคา (Price)</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">จำนวนสต็อก (Stock Count)</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={form.stock}
+                    onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
+                  />
+                </div>
+
+                {isAddingCategory ? (
+                  <div className="col-span-2 bg-[#F8C032]/5 border border-[#F8C032]/35 p-4.5 rounded-2xl flex flex-col gap-3.5 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between border-b border-[#F8C032]/20 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <TagIcon className="w-4 h-4 text-[#F8C032]" />
+                        <span className="text-xs font-bold text-gray-800">สร้างหมวดหมู่ใหม่</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCategory(false);
+                          setNewCatName("");
+                          setNewCatId("");
+                        }}
+                        className="text-xs text-red-500 hover:text-red-700 font-bold hover:underline cursor-pointer select-none"
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-gray-500">ชื่อหมวดหมู่ (ภาษาไทย)</label>
+                        <input
+                          type="text"
+                          value={newCatName}
+                          onChange={(e) => setNewCatName(e.target.value)}
+                          placeholder="เช่น: ของเล่น"
+                          className="h-10 bg-white border border-gray-200 focus:border-[#F8C032] rounded-xl px-3 text-xs outline-none transition-all"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-gray-500">คีย์ภาษาอังกฤษ (อังกฤษพิมพ์เล็ก)</label>
+                        <input
+                          type="text"
+                          value={newCatId}
+                          onChange={(e) => setNewCatId(e.target.value)}
+                          placeholder="เช่น: toys"
+                          className="h-10 bg-white border border-gray-200 focus:border-[#F8C032] rounded-xl px-3 text-xs outline-none transition-all font-mono"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSaveNewCategoryInline}
+                      className="w-full h-9.5 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                    >
+                      บันทึกหมวดหมู่ใหม่
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-gray-500">หมวดหมู่ (Category)</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={form.category}
+                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        className="flex-1 h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
+                      >
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCategory(true)}
+                        className="px-3 h-11 bg-[#F8C032]/10 hover:bg-[#F8C032]/20 text-[#F8C032] hover:text-[#F0B420] font-bold text-xs rounded-xl transition-all flex items-center gap-1 border border-[#F8C032]/25 cursor-pointer active:scale-95"
+                      >
+                        <PlusIcon className="w-4 h-4 text-[#F8C032]" />
+                        <span>เพิ่มหมวดหมู่</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">คีย์ภาพประกอบ (Illustration Key)</label>
+                  <select
+                    value={form.image}
+                    onChange={(e) => setForm({ ...form, image: e.target.value })}
+                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all capitalize"
+                  >
+                    {IMAGES.map(img => <option key={img} value={img}>{img}</option>)}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">จุดรับสินค้า (Pickup Location)</label>
+                  <input
+                    type="text"
+                    value={form.pickupLocation}
+                    onChange={(e) => setForm({ ...form, pickupLocation: e.target.value })}
+                    placeholder="เช่น ตู้จำหน่ายสินค้า A ชั้น 1"
+                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500">สถานะสินค้า (Status)</label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
+                  >
+                    <option value="In Stock">พร้อมจำหน่าย (In Stock)</option>
+                    <option value="Pre-Order">สั่งจองล่วงหน้า (Pre-Order)</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2 flex items-center gap-2 py-2">
+                  <input
+                    type="checkbox"
+                    id="promotion"
+                    checked={form.promotion}
+                    onChange={(e) => setForm({ ...form, promotion: e.target.checked })}
+                    className="w-4 h-4 text-[#F8C032] focus:ring-[#F8C032]"
+                  />
+                  <label htmlFor="promotion" className="text-xs font-semibold text-gray-600 cursor-pointer">
+                    เป็นสินค้าโปรโมชั่น (Promotion Product)
+                  </label>
+                </div>
               </div>
 
-              <div className="col-span-2 flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">รายละเอียดสินค้า (Description)</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="กรอกรายละเอียดสั้นๆ..."
-                  className="w-full h-20 py-2 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all resize-none"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">ราคา (Price)</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">จำนวนสต็อก (Stock Count)</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={form.stock}
-                  onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">หมวดหมู่ (Category)</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
-                >
-                  {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">คีย์ภาพประกอบ (Illustration Key)</label>
-                <select
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all capitalize"
-                >
-                  {IMAGES.map(img => <option key={img} value={img}>{img}</option>)}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">จุดรับสินค้า (Pickup Location)</label>
-                <input
-                  type="text"
-                  value={form.pickupLocation}
-                  onChange={(e) => setForm({ ...form, pickupLocation: e.target.value })}
-                  placeholder="เช่น ตู้จำหน่ายสินค้า A ชั้น 1"
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">สถานะสินค้า (Status)</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
-                >
-                  <option value="In Stock">พร้อมจำหน่าย (In Stock)</option>
-                  <option value="Pre-Order">สั่งจองล่วงหน้า (Pre-Order)</option>
-                </select>
-              </div>
-
-              <div className="col-span-2 flex items-center gap-2 py-2">
-                <input
-                  type="checkbox"
-                  id="promotion"
-                  checked={form.promotion}
-                  onChange={(e) => setForm({ ...form, promotion: e.target.checked })}
-                  className="w-4 h-4 text-[#F8C032] focus:ring-[#F8C032]"
-                />
-                <label htmlFor="promotion" className="text-xs font-semibold text-gray-600 cursor-pointer">
-                  เป็นสินค้าโปรโมชั่น (Promotion Product)
-                </label>
-              </div>
-
-              <div className="col-span-2 flex items-center justify-end gap-3 mt-4 border-t border-gray-100 pt-5">
+              {/* Fixed footer outside scrollable content */}
+              <div className="flex items-center justify-end gap-3 mt-4 border-t border-gray-100 pt-5">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="px-5 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#2B2B2B] font-semibold transition-all text-sm"
+                  className="px-5 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#2B2B2B] font-semibold transition-all text-sm cursor-pointer"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-6 h-11 rounded-xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold transition-all text-sm shadow-sm"
+                  className="px-6 h-11 rounded-xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold transition-all text-sm shadow-sm cursor-pointer"
                 >
                   บันทึกข้อมูล
                 </button>
