@@ -2,104 +2,113 @@
 import { XMarkIcon, MinusIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon, ShoppingBagIcon } from "@heroicons/react/24/solid";
 
-// Re-using flat minimal SVG illustrations for cart view.
-function WaterBottle() {
+function WaterDrop() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="50" y="6" width="20" height="14" rx="3" fill="#4FA8D8" />
-      <path d="M42 24 h36 l4 20 -6 8 v92 a6 6 0 0 1 -6 6 H50 a6 6 0 0 1 -6 -6 V52 l-6 -8 Z"
-        fill="#EAF6FB" stroke="#BFE3F2" strokeWidth="2" />
-      <rect x="38" y="78" width="44" height="30" rx="4" fill="#4FA8D8" opacity="0.85" />
-      <rect x="38" y="78" width="44" height="8" fill="#ffffff" opacity="0.5" />
+    <svg viewBox="0 0 100 100" className="w-16 h-16">
+      <defs>
+        <linearGradient id="waterGradCart" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#80D0FF" />
+          <stop offset="50%" stopColor="#41A5EE" />
+          <stop offset="100%" stopColor="#2568D9" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M50 15 C50 15 78 48 78 65 C78 80 65 90 50 90 C35 90 22 80 22 65 C22 48 50 15 50 15 Z"
+        fill="url(#waterGradCart)"
+      />
+      <ellipse cx="44" cy="55" rx="3" ry="8" fill="#FFFFFF" opacity="0.35" transform="rotate(-20 44 55)" />
+      <ellipse cx="40" cy="45" rx="1.5" ry="4" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 40 45)" />
     </svg>
   );
 }
 
-function ColaCan() {
+function SodaCup() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="30" y="16" width="60" height="128" rx="12" fill="#E5342B" />
-      <ellipse cx="60" cy="16" rx="30" ry="8" fill="#C7C7C7" />
-      <ellipse cx="60" cy="16" rx="24" ry="5" fill="#EDEDED" />
-      <rect x="30" y="70" width="60" height="26" fill="#ffffff" opacity="0.85" />
-      <rect x="30" y="70" width="60" height="7" fill="#E5342B" opacity="0.7" />
-      <rect x="30" y="89" width="60" height="7" fill="#E5342B" opacity="0.7" />
+    <svg viewBox="0 0 120 160" className="w-16 h-20">
+      {/* Cup body with pink/red stripes */}
+      <path d="M35 50 L85 50 L77 140 L43 140 Z" fill="#EAEAEA" />
+      <path d="M48 50 L54 50 L57 140 L51 140 Z" fill="#EC4E63" />
+      <path d="M66 50 L72 50 L69 140 L63 140 Z" fill="#EC4E63" />
+      {/* Lid */}
+      <ellipse cx="60" cy="50" rx="27" ry="8" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
+      <rect x="52" y="42" width="16" height="6" rx="2" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
+      {/* Straw */}
+      <path d="M57 42 L57 20 L75 20" stroke="#EC4E63" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M57 42 L57 20 L75 20" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.3" />
     </svg>
   );
 }
 
 function ChipsBag() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <path d="M28 30 L92 30 L104 140 a8 8 0 0 1 -8 8 H24 a8 8 0 0 1 -8 -8 Z"
-        fill="#F7C531" />
-      <path d="M28 30 l6 -14 h52 l6 14 Z" fill="#E8A800" />
-      <ellipse cx="60" cy="92" rx="30" ry="34" fill="#FFFFFF" opacity="0.9" />
-      <ellipse cx="60" cy="92" rx="22" ry="26" fill="#F0472B" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-14 h-16">
+      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#F4B400" />
+      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#DBA000" />
+      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#DBA000" />
+      <circle cx="50" cy="62" r="14" fill="#FFFFFF" />
+      <ellipse cx="50" cy="62" rx="9" ry="6" fill="#E37400" />
     </svg>
   );
 }
 
 function WaferBag() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <path d="M28 30 L92 30 L104 140 a8 8 0 0 1 -8 8 H24 a8 8 0 0 1 -8 -8 Z"
-        fill="#2E6DB4" />
-      <path d="M28 30 l6 -14 h52 l6 14 Z" fill="#1F5290" />
-      <rect x="34" y="70" width="52" height="46" rx="6" fill="#FFD84D" />
-      <rect x="34" y="70" width="52" height="12" rx="4" fill="#FFE98A" />
+    <svg viewBox="0 0 100 120" className="w-14 h-16">
+      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#4285F4" />
+      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#2A6CD6" />
+      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#2A6CD6" />
+      <rect x="30" y="50" width="40" height="30" rx="3" fill="#FFD600" />
     </svg>
   );
 }
 
 function CupNoodle() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <path d="M34 54 h52 l-8 78 a8 8 0 0 1 -8 7 H50 a8 8 0 0 1 -8 -7 Z" fill="#D6362A" />
-      <ellipse cx="60" cy="54" rx="26" ry="9" fill="#EFEFEF" />
-      <ellipse cx="60" cy="50" rx="26" ry="9" fill="#FFFFFF" />
-      <path d="M40 66 h40 v18 h-40 Z" fill="#F6B23B" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-14 h-16">
+      <path d="M25 35 L75 35 L68 105 L32 105 Z" fill="#EA4335" />
+      <ellipse cx="50" cy="35" rx="25" ry="8" fill="#F1F3F4" />
+      <ellipse cx="50" cy="31" rx="25" ry="8" fill="#FFFFFF" />
+      <rect x="35" y="55" width="30" height="15" rx="2" fill="#F4B400" />
     </svg>
   );
 }
 
 function MiloBox() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="34" y="26" width="52" height="104" rx="6" fill="#1E7A3D" />
-      <rect x="34" y="26" width="52" height="26" rx="6" fill="#2C9B4F" />
-      <path d="M34 52 L86 26" stroke="#166030" strokeWidth="3" />
-      <circle cx="60" cy="94" r="16" fill="#F6B23B" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-12 h-16">
+      <rect x="25" y="15" width="50" height="90" rx="4" fill="#0F9D58" />
+      <rect x="25" y="15" width="50" height="20" rx="4" fill="#0B8043" />
+      <circle cx="50" cy="65" r="12" fill="#F4B400" />
     </svg>
   );
 }
 
 function Pen() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="52" y="18" width="16" height="90" rx="6" fill="#2E6DB4" />
-      <rect x="52" y="18" width="16" height="20" rx="6" fill="#1F5290" />
-      <polygon points="52,108 68,108 60,132" fill="#2B2B2B" />
-      <rect x="56" y="10" width="8" height="14" rx="2" fill="#F7C531" />
+    <svg viewBox="0 0 100 120" className="w-10 h-18">
+      <rect x="44" y="15" width="12" height="75" rx="6" fill="#4285F4" />
+      <rect x="44" y="15" width="12" height="15" rx="3" fill="#1A73E8" />
+      <polygon points="44,90 56,90 50,110" fill="#3C4043" />
     </svg>
   );
 }
 
 function Notebook() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="28" y="20" width="64" height="112" rx="8" fill="#F7C531" />
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <circle key={i} cx="28" cy="34 + i * 17" r="4" fill="#FFFFFF" stroke="#E8A800" strokeWidth="2" />
-      ))}
-      <rect x="42" y="52" width="36" height="36" rx="4" fill="#FFFFFF" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-14 h-16">
+      <rect x="25" y="15" width="55" height="90" rx="4" fill="#FBBC05" />
+      <rect x="20" y="20" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="36" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="52" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="68" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="84" width="8" height="8" rx="2" fill="#3C4043" />
     </svg>
   );
 }
 
 const ILLUSTRATIONS = {
-  water: WaterBottle,
-  cola: ColaCan,
+  water: WaterDrop,
+  cola: SodaCup,
   chips: ChipsBag,
   wafer: WaferBag,
   noodle: CupNoodle,

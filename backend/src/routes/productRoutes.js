@@ -8,6 +8,7 @@ const router = Router();
 
 // Route: GET /api/products
 router.get("/products", (req, res) => productController.getProducts(req, res));
+router.get("/products/bestsellers", (req, res) => productController.getBestSellers(req, res));
 
 // Admin-only CRUD routes
 router.post("/products", authenticateJWT, checkRole(["admin"]), (req, res) => productController.createProduct(req, res));

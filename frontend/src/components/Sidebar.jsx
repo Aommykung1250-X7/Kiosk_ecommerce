@@ -1,4 +1,3 @@
-// src/components/Sidebar.jsx
 import {
   Squares2X2Icon,
   BeakerIcon,
@@ -15,13 +14,14 @@ import {
   PencilSquareIcon as PencilSquareSolid,
   TagIcon as TagSolid,
 } from "@heroicons/react/24/solid";
+
 const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "drinks", label: "Drinks" },
-  { id: "snacks", label: "Snacks" },
-  { id: "instant", label: "Instant Food" },
-  { id: "stationery", label: "Stationery" },
-  { id: "promotion", label: "Promotion" },
+  { id: "all", label: "ทั้งหมด" },
+  { id: "drinks", label: "เครื่องดื่ม" },
+  { id: "snacks", label: "ขนมขบเคี้ยว" },
+  { id: "instant", label: "อาหารพร้อมทาน" },
+  { id: "stationery", label: "เครื่องเขียน" },
+  { id: "promotion", label: "โปรโมชั่น" },
 ];
 
 const ICONS = {
@@ -33,21 +33,16 @@ const ICONS = {
   promotion: [TagIcon, TagSolid],
 };
 
-// Every dimension below uses clamp(min, fluid, max) so the sidebar scales
-// smoothly with viewport size instead of snapping between layouts at
-// fixed breakpoints. Structure (vertical column, left-docked) never changes.
 export default function Sidebar({ selectedCategory, onSelectCategory }) {
   return (
     <aside
-      className="w-[clamp(160px,16vw,260px)] h-full bg-[#F8F8F8] shrink-0 flex flex-col 
-                 py-[clamp(16px,3vw,32px)] px-[clamp(10px,2vw,20px)] 
-                 gap-[clamp(8px,1.2vw,12px)] overflow-y-auto"
+      className="w-[clamp(180px,18vw,260px)] h-full bg-white border-r border-gray-150 shrink-0 flex flex-col 
+                 py-8 px-4 gap-2 overflow-y-auto font-['Prompt']"
     >
-      <div className="px-1 pb-[clamp(10px,2vw,16px)]">
-        <p className="text-[clamp(15px,1.6vw,24px)] font-bold text-[#2B2B2B] tracking-tight">
-          CATEGORY
+      <div className="px-2 pb-4">
+        <p className="text-xs font-black text-gray-400 tracking-widest uppercase">
+          CATEGORIES
         </p>
-        <span className="mt-2 block w-10 h-1 rounded-full bg-[#F8C032]" />
       </div>
 
       {CATEGORIES.map((cat) => {
@@ -59,25 +54,24 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
           <button
             key={cat.id}
             onClick={() => onSelectCategory(cat.id)}
-            className={`h-[clamp(60px,6vw,72px)] w-full rounded-2xl flex items-center 
-                        gap-[clamp(8px,1.5vw,16px)] px-[clamp(10px,2vw,20px)] 
-                        transition-all duration-150 active:scale-[0.97]
+            className={`h-14 w-full rounded-2xl flex items-center 
+                        gap-3 px-4 transition-all duration-150 active:scale-[0.97] cursor-pointer
                         ${
                           isActive
-                            ? "bg-[#F8C032] shadow-md active:bg-[#D4A017]"
-                            : "bg-white hover:bg-white/70 active:bg-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+                            ? "bg-[#5EBAA8] text-white shadow-sm"
+                            : "bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                         }`}
           >
             <Icon
-              className={`w-[clamp(18px,2vw,28px)] h-[clamp(18px,2vw,28px)] shrink-0 ${
-                isActive ? "text-[#2B2B2B]" : "text-[#2B2B2B]/60"
+              className={`w-6 h-6 shrink-0 ${
+                isActive ? "text-white" : "text-gray-400"
               }`}
             />
             <span
-              className={`text-[clamp(12px,1.3vw,18px)] text-left leading-tight ${
+              className={`text-sm text-left leading-tight ${
                 isActive
-                  ? "font-semibold text-[#2B2B2B]"
-                  : "font-medium text-[#2B2B2B]/80"
+                  ? "font-bold text-white"
+                  : "font-semibold"
               }`}
             >
               {cat.label}
@@ -88,3 +82,4 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
     </aside>
   );
 }
+
