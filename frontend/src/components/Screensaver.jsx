@@ -263,16 +263,7 @@ export default function Screensaver({ onWake }) {
           </div>
         </div>
 
-        {/* Action Button Overlay - wiggling and scaling over static button */}
-        <div
-          className="absolute left-[12.2cqw] top-[51.7cqh] w-[75.4cqw] h-[10.7cqh] flex items-center justify-center animate-wiggle-scale"
-        >
-          <img
-            src="/lanna_button.png"
-            className="w-full h-full object-contain"
-            alt="แตะหน้าจอเพื่อเริ่มเลือกซื้อสินค้า"
-          />
-        </div>
+
 
         {/* Dynamic Product Cards Overlays - exactly covering static cards */}
         { [0, 1, 2, 3].map(index => renderCard(index)) }

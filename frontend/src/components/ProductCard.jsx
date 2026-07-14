@@ -145,14 +145,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
   };
   const subText = getSubText(product);
 
-  const getMaxStock = (prod) => {
-    if (prod.id === 1) return 20;
-    if (prod.id === 2) return 24;
-    if (prod.id === 6) return 24;
-    return 20;
-  };
-  const maxStock = getMaxStock(product);
-  const stockPercent = Math.min(100, Math.max(0, Math.round((quantity / maxStock) * 100)));
+
 
   return (
     <div
@@ -230,11 +223,11 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
               </span>
             </div>
             {status !== "Pre-Order" && !isOutOfStock && (
-              <div className="flex flex-col items-end">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">STOCK {stockPercent}%</span>
-                <div className="w-16 bg-[#EAEAEA] h-2 rounded-full overflow-hidden mt-2.5">
-                  <div className="bg-[#5EBAA8] h-full rounded-full" style={{ width: `${stockPercent}%` }}></div>
-                </div>
+              <div className="flex flex-col items-end justify-center">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">STOCK</span>
+                <span className="text-sm font-black text-[#5EBAA8] mt-1.5 leading-none">
+                  คงเหลือ {quantity} ชิ้น
+                </span>
               </div>
             )}
             {status === "Pre-Order" && (

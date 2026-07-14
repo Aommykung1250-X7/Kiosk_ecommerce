@@ -275,12 +275,12 @@ export default function Home() {
                 <div className="flex flex-col">
                   <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Now Showing</span>
                   <h1 className="text-3xl font-black text-black mt-1.5 leading-none">
-                    {selectedCategory === "all" ? "ทั้งหมด" : 
-                     selectedCategory === "drinks" ? "เครื่องดื่ม" :
-                     selectedCategory === "snacks" ? "ขนมขบเคี้ยว" :
-                     selectedCategory === "instant" ? "อาหารพร้อมทาน" :
-                     selectedCategory === "stationery" ? "เครื่องเขียน" :
-                     selectedCategory === "promotion" ? "โปรโมชั่น" : "สินค้า"}
+                    {selectedCategory === "all" ? "ทั้งหมด" :
+                      selectedCategory === "drinks" ? "เครื่องดื่ม" :
+                        selectedCategory === "snacks" ? "ขนมขบเคี้ยว" :
+                          selectedCategory === "instant" ? "อาหารพร้อมทาน" :
+                            selectedCategory === "stationery" ? "เครื่องเขียน" :
+                              selectedCategory === "promotion" ? "โปรโมชั่น" : "สินค้า"}
                   </h1>
                 </div>
                 <span className="text-sm font-black text-gray-400">
@@ -374,13 +374,7 @@ export default function Home() {
           </div>
         </div>
       )}
-      {selectedProduct && (
-        <ProductDetailModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onAddToCart={handleAddToCart}
-        />
-      )}
+
 
       {activeOrder && (
         <KioskPayment
