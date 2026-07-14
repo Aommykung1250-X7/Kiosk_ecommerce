@@ -1,107 +1,113 @@
-// src/components/ProductDetailModal.jsx
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { ShoppingCartIcon, TagIcon } from "@heroicons/react/24/solid";
+import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 
-// Re-using flat minimal SVG illustrations for details view.
-function WaterBottle() {
+function WaterDrop() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="50" y="6" width="20" height="14" rx="3" fill="#4FA8D8" />
-      <path d="M42 24 h36 l4 20 -6 8 v92 a6 6 0 0 1 -6 6 H50 a6 6 0 0 1 -6 -6 V52 l-6 -8 Z"
-            fill="#EAF6FB" stroke="#BFE3F2" strokeWidth="2" />
-      <rect x="38" y="78" width="44" height="30" rx="4" fill="#4FA8D8" opacity="0.85" />
-      <rect x="38" y="78" width="44" height="8" fill="#ffffff" opacity="0.5" />
+    <svg viewBox="0 0 100 100" className="w-28 h-28">
+      <defs>
+        <linearGradient id="waterGradDetail" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#80D0FF" />
+          <stop offset="50%" stopColor="#41A5EE" />
+          <stop offset="100%" stopColor="#2568D9" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M50 15 C50 15 78 48 78 65 C78 80 65 90 50 90 C35 90 22 80 22 65 C22 48 50 15 50 15 Z"
+        fill="url(#waterGradDetail)"
+      />
+      <ellipse cx="44" cy="55" rx="4" ry="10" fill="#FFFFFF" opacity="0.35" transform="rotate(-20 44 55)" />
+      <ellipse cx="40" cy="45" rx="2" ry="5" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 40 45)" />
     </svg>
   );
 }
 
-function ColaCan() {
+function SodaCup() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="30" y="16" width="60" height="128" rx="12" fill="#E5342B" />
-      <ellipse cx="60" cy="16" rx="30" ry="8" fill="#C7C7C7" />
-      <ellipse cx="60" cy="16" rx="24" ry="5" fill="#EDEDED" />
-      <rect x="30" y="70" width="60" height="26" fill="#ffffff" opacity="0.85" />
-      <rect x="30" y="70" width="60" height="7" fill="#E5342B" opacity="0.7" />
-      <rect x="30" y="89" width="60" height="7" fill="#E5342B" opacity="0.7" />
+    <svg viewBox="0 0 120 160" className="w-28 h-36">
+      {/* Cup body with pink/red stripes */}
+      <path d="M35 50 L85 50 L77 140 L43 140 Z" fill="#EAEAEA" />
+      <path d="M48 50 L54 50 L57 140 L51 140 Z" fill="#EC4E63" />
+      <path d="M66 50 L72 50 L69 140 L63 140 Z" fill="#EC4E63" />
+      {/* Lid */}
+      <ellipse cx="60" cy="50" rx="27" ry="8" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
+      <rect x="52" y="42" width="16" height="6" rx="2" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
+      {/* Straw */}
+      <path d="M57 42 L57 20 L75 20" stroke="#EC4E63" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M57 42 L57 20 L75 20" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.3" />
     </svg>
   );
 }
 
 function ChipsBag() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <path d="M28 30 L92 30 L104 140 a8 8 0 0 1 -8 8 H24 a8 8 0 0 1 -8 -8 Z"
-            fill="#F7C531" />
-      <path d="M28 30 l6 -14 h52 l6 14 Z" fill="#E8A800" />
-      <ellipse cx="60" cy="92" rx="30" ry="34" fill="#FFFFFF" opacity="0.9" />
-      <ellipse cx="60" cy="92" rx="22" ry="26" fill="#F0472B" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-24 h-28">
+      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#F4B400" />
+      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#DBA000" />
+      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#DBA000" />
+      <circle cx="50" cy="62" r="16" fill="#FFFFFF" />
+      <ellipse cx="50" cy="62" rx="10" ry="7" fill="#E37400" />
     </svg>
   );
 }
 
 function WaferBag() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <path d="M28 30 L92 30 L104 140 a8 8 0 0 1 -8 8 H24 a8 8 0 0 1 -8 -8 Z"
-            fill="#2E6DB4" />
-      <path d="M28 30 l6 -14 h52 l6 14 Z" fill="#1F5290" />
-      <rect x="34" y="70" width="52" height="46" rx="6" fill="#FFD84D" />
-      <rect x="34" y="70" width="52" height="12" rx="4" fill="#FFE98A" />
+    <svg viewBox="0 0 100 120" className="w-24 h-28">
+      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#4285F4" />
+      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#2A6CD6" />
+      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#2A6CD6" />
+      <rect x="30" y="50" width="40" height="30" rx="3" fill="#FFD600" />
     </svg>
   );
 }
 
 function CupNoodle() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <path d="M34 54 h52 l-8 78 a8 8 0 0 1 -8 7 H50 a8 8 0 0 1 -8 -7 Z" fill="#D6362A" />
-      <ellipse cx="60" cy="54" rx="26" ry="9" fill="#EFEFEF" />
-      <ellipse cx="60" cy="50" rx="26" ry="9" fill="#FFFFFF" />
-      <path d="M40 66 h40 v18 h-40 Z" fill="#F6B23B" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-24 h-28">
+      <path d="M25 35 L75 35 L68 105 L32 105 Z" fill="#EA4335" />
+      <ellipse cx="50" cy="35" rx="25" ry="8" fill="#F1F3F4" />
+      <ellipse cx="50" cy="31" rx="25" ry="8" fill="#FFFFFF" />
+      <rect x="35" y="55" width="30" height="15" rx="2" fill="#F4B400" />
     </svg>
   );
 }
 
 function MiloBox() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="34" y="26" width="52" height="104" rx="6" fill="#1E7A3D" />
-      <rect x="34" y="26" width="52" height="26" rx="6" fill="#2C9B4F" />
-      <path d="M34 52 L86 26" stroke="#166030" strokeWidth="3" />
-      <circle cx="60" cy="94" r="16" fill="#F6B23B" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-20 h-28">
+      <rect x="25" y="15" width="50" height="90" rx="4" fill="#0F9D58" />
+      <rect x="25" y="15" width="50" height="20" rx="4" fill="#0B8043" />
+      <circle cx="50" cy="65" r="14" fill="#F4B400" />
     </svg>
   );
 }
 
-// Visual SVG representing a generic pen
 function Pen() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="52" y="18" width="16" height="90" rx="6" fill="#2E6DB4" />
-      <rect x="52" y="18" width="16" height="20" rx="6" fill="#1F5290" />
-      <polygon points="52,108 68,108 60,132" fill="#2B2B2B" />
-      <rect x="56" y="10" width="8" height="14" rx="2" fill="#F7C531" />
+    <svg viewBox="0 0 100 120" className="w-16 h-32">
+      <rect x="44" y="15" width="12" height="75" rx="6" fill="#4285F4" />
+      <rect x="44" y="15" width="12" height="15" rx="3" fill="#1A73E8" />
+      <polygon points="44,90 56,90 50,110" fill="#3C4043" />
     </svg>
   );
 }
 
-// Visual SVG representing a spiral notebook
 function Notebook() {
   return (
-    <svg viewBox="0 0 120 160" className="w-full h-full">
-      <rect x="28" y="20" width="64" height="112" rx="8" fill="#F7C531" />
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <circle key={i} cx="28" cy="34 + i * 17" r="4" fill="#FFFFFF" stroke="#E8A800" strokeWidth="2" />
-      ))}
-      <rect x="42" y="52" width="36" height="36" rx="4" fill="#FFFFFF" opacity="0.9" />
+    <svg viewBox="0 0 100 120" className="w-24 h-28">
+      <rect x="25" y="15" width="55" height="90" rx="4" fill="#FBBC05" />
+      <rect x="20" y="20" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="36" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="52" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="68" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="84" width="8" height="8" rx="2" fill="#3C4043" />
     </svg>
   );
 }
 
 const ILLUSTRATIONS = {
-  water: WaterBottle,
-  cola: ColaCan,
+  water: WaterDrop,
+  cola: SodaCup,
   chips: ChipsBag,
   wafer: WaferBag,
   noodle: CupNoodle,
@@ -113,9 +119,21 @@ const ILLUSTRATIONS = {
 export default function ProductDetailModal({ product, onClose, onAddToCart }) {
   if (!product) return null;
 
-  const { name, price, image, promotion, description, pickupLocation, status, quantity } = product;
+  const { name, price, image, promotion, description, status, quantity } = product;
   const isOutOfStock = status === "In Stock" && quantity <= 0;
-  const Illustration = ILLUSTRATIONS[image] || WaterBottle;
+  const Illustration = ILLUSTRATIONS[image] || WaterDrop;
+
+  const bgColors = {
+    water: "bg-[#E9F4FA]",
+    cola: "bg-[#FDF1F0]",
+    chips: "bg-[#FEF9EB]",
+    wafer: "bg-[#FFF5F3]",
+    noodle: "bg-[#FFF3E6]",
+    milo: "bg-[#EDF7EE]",
+    pen: "bg-[#F1F0FA]",
+    notebook: "bg-[#FBF6EB]",
+  };
+  const imgBg = bgColors[image] || "bg-gray-50";
 
   return (
     <div 
@@ -124,69 +142,67 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
     >
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
+        className="relative w-full max-w-lg bg-white rounded-[32px] border-2 border-[#1B1B1C] shadow-[8px_8px_0px_0px_#1B1B1C] overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/80 hover:bg-white text-[#2B2B2B]/60 hover:text-[#2B2B2B] shadow-md border border-gray-100 transition-colors"
+          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white text-[#1B1B1C] hover:bg-gray-100 shadow-md border-2 border-[#1B1B1C] transition-colors cursor-pointer"
         >
-          <XMarkIcon className="w-6 h-6" />
+          <XMarkIcon className="w-5 h-5" />
         </button>
 
         {/* Product Image Area */}
-        <div className="w-full aspect-[8/5] bg-gray-50 flex items-center justify-center p-12 border-b border-gray-100">
+        <div className={`w-full aspect-[8/5] ${imgBg} flex items-center justify-center p-12 border-b-2 border-[#1B1B1C]`}>
           <div className="w-full h-full max-w-[200px] flex items-center justify-center">
             <Illustration />
           </div>
         </div>
 
         {/* Content Area */}
-        <div className="p-8 flex flex-col gap-6">
+        <div className="p-8 flex flex-col gap-5">
           {/* Badges */}
           <div className="flex items-center gap-2">
             {promotion && (
-              <span className="flex items-center gap-1 bg-[#F8C032] text-[#2B2B2B] text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                <TagIcon className="w-3.5 h-3.5" />
-                PROMO
+              <span className="bg-[#F9C338] text-black text-[10px] font-black px-3 py-1.5 rounded-full border border-[#1B1B1C] tracking-wider uppercase">
+                馃彿锔� PROMO
               </span>
             )}
             {status && (
-              <span className={`text-xs font-bold px-3 py-1 rounded-full border shadow-sm ${
+              <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${
                 isOutOfStock
                   ? "bg-red-50 text-red-600 border-red-200"
                   : status === "In Stock"
-                    ? "bg-[#E8F5E9] text-[#2E7D32] border-[#C8E6C9]"
+                    ? "bg-[#E0F2F1]/60 text-[#00796B] border-[#80CBC4]/40"
                     : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
               }`}>
-                {isOutOfStock ? "Out of Stock" : status}
+                {isOutOfStock ? "喔�复喔權竸喙夃覆喔�浮喔�" : status === "In Stock" ? "喔炧福喙夃腑喔∴釜喙堗竾" : status}
               </span>
             )}
           </div>
 
           {/* Title and Price */}
-          <div className="flex flex-col gap-2">
-            <h2 className="text-2xl font-bold text-[#2B2B2B] leading-tight">
+          <div className="flex flex-col gap-1.5 text-left">
+            <h2 className="text-2xl font-black text-black leading-tight">
               {name}
             </h2>
-            <div className="text-3xl font-extrabold text-[#E53935]">
-              ฿{price.toFixed(0)}
+            <div className="text-3xl font-black text-[#D99A1C] mt-1">
+              ฿{price.toFixed(2)}
             </div>
           </div>
 
-          <hr className="border-gray-100" />
+          <hr className="border-gray-200" />
 
           {/* Description */}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-bold text-[#2B2B2B]/40 uppercase tracking-wider">
-              รายละเอียดสินค้า
+          <div className="flex flex-col gap-1.5 text-left">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              喔｀覆喔⑧弗喔班箑喔�傅喔⑧笖喔�复喔權竸喙夃覆
             </span>
-            <p className="text-[#2B2B2B]/80 text-sm leading-relaxed font-normal">
+            <p className="text-gray-600 text-sm leading-relaxed font-semibold">
               {description}
             </p>
           </div>
-
 
           {/* Add to Cart Button */}
           <button
@@ -197,15 +213,15 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
                 onClose();
               }
             }}
-            className={`mt-4 h-14 w-full rounded-2xl flex items-center justify-center gap-2 
-                       transition-transform duration-150 shadow-md font-semibold text-lg ${
+            className={`mt-4 h-14 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-[#1B1B1C]
+                       transition-all duration-150 font-black text-sm uppercase cursor-pointer ${
                          isOutOfStock
-                           ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-                           : "bg-[#F8C032] hover:bg-[#F0B420] active:bg-[#D4A017] active:scale-[0.97] text-[#2B2B2B]"
+                           ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                           : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
                        }`}
           >
-            <ShoppingCartIcon className={`w-6 h-6 ${isOutOfStock ? "text-gray-400" : "text-[#2B2B2B]"}`} />
-            {isOutOfStock ? "สินค้าหมด" : "ใส่ตะกร้าสินค้า"}
+            <ShoppingCartIcon className="w-5 h-5" />
+            <span>{isOutOfStock ? "สินค้าหมด" : "ใส่ตะกร้าสินค้า"}</span>
           </button>
         </div>
       </div>

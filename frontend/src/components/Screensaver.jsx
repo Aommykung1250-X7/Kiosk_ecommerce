@@ -1,94 +1,281 @@
 // src/components/Screensaver.jsx
-import React from "react";
-import { SparklesIcon } from "@heroicons/react/24/solid";
+import React, { useState, useEffect } from "react";
+import { ClockIcon } from "@heroicons/react/24/outline";
+
+// SVG Illustrations copied from ProductCard.jsx for self-containment
+function WaterDrop() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <defs>
+        <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#80D0FF" />
+          <stop offset="50%" stopColor="#41A5EE" />
+          <stop offset="100%" stopColor="#2568D9" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M50 15 C50 15 78 48 78 65 C78 80 65 90 50 90 C35 90 22 80 22 65 C22 48 50 15 50 15 Z"
+        fill="url(#waterGrad)"
+      />
+      <ellipse cx="44" cy="55" rx="4" ry="10" fill="#FFFFFF" opacity="0.35" transform="rotate(-20 44 55)" />
+      <ellipse cx="40" cy="45" rx="2" ry="5" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 40 45)" />
+    </svg>
+  );
+}
+
+function SodaCup() {
+  return (
+    <svg viewBox="0 0 120 160" className="w-auto h-full">
+      <path d="M35 50 L85 50 L77 140 L43 140 Z" fill="#EAEAEA" />
+      <path d="M48 50 L54 50 L57 140 L51 140 Z" fill="#EC4E63" />
+      <path d="M66 50 L72 50 L69 140 L63 140 Z" fill="#EC4E63" />
+      <ellipse cx="60" cy="50" rx="27" ry="8" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
+      <rect x="52" y="42" width="16" height="6" rx="2" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
+      <path d="M57 42 L57 20 L75 20" stroke="#EC4E63" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M57 42 L57 20 L75 20" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.3" />
+    </svg>
+  );
+}
+
+function ChipsBag() {
+  return (
+    <svg viewBox="0 0 100 120" className="w-auto h-full">
+      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#F4B400" />
+      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#DBA000" />
+      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#DBA000" />
+      <circle cx="50" cy="62" r="16" fill="#FFFFFF" />
+      <ellipse cx="50" cy="62" rx="10" ry="7" fill="#E37400" />
+    </svg>
+  );
+}
+
+// src/components/Screensaver.jsx
+function WaferBag() {
+  return (
+    <svg viewBox="0 0 100 120" className="w-auto h-full">
+      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#4285F4" />
+      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#2A6CD6" />
+      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#2A6CD6" />
+      <rect x="30" y="50" width="40" height="30" rx="3" fill="#FFD600" />
+    </svg>
+  );
+}
+
+function CupNoodle() {
+  return (
+    <svg viewBox="0 0 100 120" className="w-auto h-full">
+      <path d="M25 35 L75 35 L68 105 L32 105 Z" fill="#EA4335" />
+      <ellipse cx="50" cy="35" rx="25" ry="8" fill="#F1F3F4" />
+      <ellipse cx="50" cy="31" rx="25" ry="8" fill="#FFFFFF" />
+      <rect x="35" y="55" width="30" height="15" rx="2" fill="#F4B400" />
+    </svg>
+  );
+}
+
+function MiloBox() {
+  return (
+    <svg viewBox="0 0 100 120" className="w-auto h-full">
+      <rect x="25" y="15" width="50" height="90" rx="4" fill="#0F9D58" />
+      <rect x="25" y="15" width="50" height="20" rx="4" fill="#0B8043" />
+      <circle cx="50" cy="65" r="14" fill="#F4B400" />
+    </svg>
+  );
+}
+
+function Pen() {
+  return (
+    <svg viewBox="0 0 100 120" className="w-auto h-full">
+      <rect x="44" y="15" width="12" height="75" rx="6" fill="#4285F4" />
+      <rect x="44" y="15" width="12" height="15" rx="3" fill="#1A73E8" />
+      <polygon points="44,90 56,90 50,110" fill="#3C4043" />
+    </svg>
+  );
+}
+
+function Notebook() {
+  return (
+    <svg viewBox="0 0 100 120" className="w-auto h-full">
+      <rect x="25" y="15" width="55" height="90" rx="4" fill="#FBBC05" />
+      <rect x="20" y="20" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="36" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="52" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="68" width="8" height="8" rx="2" fill="#3C4043" />
+      <rect x="20" y="84" width="8" height="8" rx="2" fill="#3C4043" />
+    </svg>
+  );
+}
+
+const ILLUSTRATIONS = {
+  water: WaterDrop,
+  cola: SodaCup,
+  chips: ChipsBag,
+  wafer: WaferBag,
+  noodle: CupNoodle,
+  milo: MiloBox,
+  pen: Pen,
+  notebook: Notebook,
+};
 
 export default function Screensaver({ onWake }) {
+  const [time, setTime] = useState(new Date());
+  const [bestSellers, setBestSellers] = useState([]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/products/bestsellers")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch best sellers");
+        return res.json();
+      })
+      .then((data) => {
+        setBestSellers(data.slice(0, 4));
+      })
+      .catch((err) => {
+        console.error("Error loading best sellers on screensaver:", err);
+      });
+  }, []);
+
+  const getThaiDateString = (date) => {
+    const months = [
+      "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+      "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const yearBE = date.getFullYear() + 543;
+    return `${day} ${month} ${yearBE}`;
+  };
+
+  const timeString = time.toLocaleTimeString("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const dateString = getThaiDateString(time);
+
+  const renderCard = (index) => {
+    const product = bestSellers[index];
+    const leftPositions = [
+      "left-[6.37cqw]",
+      "left-[29.75cqw]",
+      "left-[53.13cqw]",
+      "left-[76.51cqw]"
+    ];
+
+    if (!product) {
+      // Render a blank cover to hide the static cards in wait_screen.png
+      return (
+        <div
+          key={`blank-${index}`}
+          className={`absolute ${leftPositions[index]} top-[67.58cqh] w-[21.78cqw] h-[17.94cqh] bg-[#F2ECE4] rounded-[1.8cqw] border border-transparent`}
+        />
+      );
+    }
+
+    const { name, price, image } = product;
+    const Illustration = ILLUSTRATIONS[image] || WaterDrop;
+    const isCustomImage = image && (image.startsWith("http") || image.startsWith("/") || image.includes("."));
+
+    return (
+      <div
+        key={product.id || index}
+        className={`absolute ${leftPositions[index]} top-[67.58cqh] w-[21.78cqw] h-[17.94cqh] bg-[#FAF3EB] rounded-[1.8cqw] border border-[#E1D2C1] p-[1.2cqw] flex flex-col items-center justify-between shadow-[0_2px_6px_rgba(61,46,36,0.05)] hover:scale-105 transition-transform duration-300`}
+      >
+        <div className="w-full flex-1 flex items-center justify-center p-[0.2cqw] overflow-hidden">
+          {isCustomImage ? (
+            <img
+              src={image}
+              alt={name}
+              className="w-auto h-full max-h-[8.5cqh] object-contain"
+            />
+          ) : (
+            <div className="w-auto h-full max-h-[8.5cqh] flex items-center justify-center">
+              <Illustration />
+            </div>
+          )}
+        </div>
+        <div className="text-center w-full mt-[0.5cqw]">
+          <h4 className="text-[1.8cqw] font-bold text-[#3D2E24] line-clamp-1 px-[0.2cqw]">
+            {name}
+          </h4>
+          <p className="text-[1.9cqw] font-black text-[#A24B2C] mt-[0.1cqw]">
+            ฿ {parseFloat(price).toFixed(0)}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       onClick={onWake}
-      className="fixed inset-0 z-50 bg-[#0B0B0C] flex flex-col items-center justify-center p-6 select-none cursor-pointer overflow-hidden font-['Prompt']"
+      className="fixed inset-0 z-50 bg-[#121214] flex items-center justify-center select-none cursor-pointer overflow-hidden font-['Prompt']"
     >
-      {/* Inject custom CSS keyframes for premium animations */}
+      {/* Inject custom CSS keyframes for animations */}
       <style>{`
-        @keyframes float-slow-1 {
-          0%, 100% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(40px, -60px) scale(1.1); }
+        @keyframes wiggle-scale {
+          0%, 100% {
+            transform: rotate(-2.5deg) scale(0.97);
+          }
+          50% {
+            transform: rotate(2.5deg) scale(1.03);
+          }
         }
-        @keyframes float-slow-2 {
-          0%, 100% { transform: translate(0px, 0px) scale(1.1); }
-          50% { transform: translate(-50px, 50px) scale(0.9); }
-        }
-        @keyframes pulse-glow {
-          0%, 100% { opacity: 0.25; transform: scale(1); }
-          50% { opacity: 0.45; transform: scale(1.05); }
-        }
-        @keyframes pulse-text {
-          0%, 100% { opacity: 0.6; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.03); }
-        }
-        @keyframes border-glow {
-          0%, 100% { border-color: rgba(248, 192, 50, 0.4); box-shadow: 0 0 15px rgba(248, 192, 50, 0.2); }
-          50% { border-color: rgba(248, 192, 50, 0.8); box-shadow: 0 0 30px rgba(248, 192, 50, 0.5); }
-        }
-        .animate-float-1 {
-          animation: float-slow-1 15s infinite ease-in-out;
-        }
-        .animate-float-2 {
-          animation: float-slow-2 18s infinite ease-in-out;
-        }
-        .animate-pulse-glow {
-          animation: pulse-glow 8s infinite ease-in-out;
-        }
-        .animate-pulse-text {
-          animation: pulse-text 2s infinite ease-in-out;
-        }
-        .animate-border-glow {
-          animation: border-glow 3s infinite ease-in-out;
+        .animate-wiggle-scale {
+          animation: wiggle-scale 2.5s infinite ease-in-out;
         }
       `}</style>
 
-      {/* Decorative Floating Glowing Background Blobs */}
-      <div className="absolute top-1/4 left-1/4 w-[350px] h-[350px] bg-gradient-to-tr from-[#F8C032] to-[#FF9800] rounded-full filter blur-[90px] opacity-25 animate-float-1 animate-pulse-glow"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-[#FF9800] to-[#E53935] rounded-full filter blur-[100px] opacity-25 animate-float-2 animate-pulse-glow"></div>
+      {/* Main Kiosk Container maintaining exact portrait ratio */}
+      <div
+        className="relative aspect-[941/1672] h-full max-h-screen w-auto bg-[#F4EEE8] shadow-2xl overflow-hidden"
+        style={{ containerType: "size" }}
+      >
+        {/* Full wait screen image background */}
+        <img
+          src="/wait_screen.png"
+          alt="Lanna Souvenir Kiosk background"
+          className="w-full h-full object-cover"
+        />
 
-      {/* Glassmorphic Main Card Container */}
-      <div className="relative z-10 w-full max-w-xl bg-white/[0.03] backdrop-blur-2xl border border-white/[0.08] rounded-[40px] p-12 text-center flex flex-col items-center gap-8 shadow-[0_30px_100px_rgba(0,0,0,0.5)]">
-        
-        {/* Glow Logo Area */}
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-[#F8C032] to-[#FF9800] p-0.5 flex items-center justify-center shadow-[0_10px_35px_rgba(248,192,50,0.3)] animate-pulse-text">
-          <div className="w-full h-full bg-[#121214] rounded-[22px] flex items-center justify-center">
-            <SparklesIcon className="w-12 h-12 text-[#F8C032]" />
+        {/* Live Clock Overlay - exactly covering static clock */}
+        <div
+          className="absolute left-[78.4cqw] top-[1.2cqh] w-[19.8cqw] h-[7.17cqh] bg-[#E7DCCE] rounded-[1.6cqw] flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(61,46,36,0.08)]"
+          onClick={(e) => {
+            // Wake up on click
+            onWake();
+            e.stopPropagation();
+          }}
+        >
+          <div className="flex items-center gap-[0.5cqw] text-[#3D2E24]">
+            <ClockIcon className="w-[2.2cqw] h-[2.2cqw] stroke-[2.5]" />
+            <span className="text-[2.6cqw] font-bold leading-none">{timeString}</span>
+          </div>
+          <div className="text-[1.25cqw] font-medium text-[#3D2E24]/80 mt-[0.3cqw] leading-none text-center">
+            {dateString}
           </div>
         </div>
 
-        {/* Title & Tagline */}
-        <div className="flex flex-col gap-3">
-          <h1 className="text-4xl font-black text-white tracking-wide uppercase">
-            DIIC SHOP
-          </h1>
-          <p className="text-lg text-gray-400 font-medium">
-            ศูนย์นวัตกรรมและเทคโนโลยีสารสนเทศ
-          </p>
-          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-[#F8C032] to-transparent mx-auto mt-2"></div>
+        {/* Action Button Overlay - wiggling and scaling over static button */}
+        <div
+          className="absolute left-[12.2cqw] top-[51.7cqh] w-[75.4cqw] h-[10.7cqh] flex items-center justify-center animate-wiggle-scale"
+        >
+          <img
+            src="/lanna_button.png"
+            className="w-full h-full object-contain"
+            alt="แตะหน้าจอเพื่อเริ่มเลือกซื้อสินค้า"
+          />
         </div>
 
-        {/* Dynamic Breathing Touch-to-Start Button */}
-        <div className="w-full max-w-md mt-6">
-          <button
-            onClick={onWake}
-            className="w-full h-20 rounded-3xl border-2 bg-gradient-to-b from-white/[0.06] to-transparent text-white font-bold text-xl tracking-wider select-none animate-border-glow hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3"
-          >
-            <span className="relative flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F8C032] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-[#F8C032]"></span>
-            </span>
-            <span className="animate-pulse-text">แตะหน้าจอเพื่อเริ่มต้นใช้งาน</span>
-          </button>
-        </div>
-
-        <p className="text-xs text-gray-500 font-medium mt-4 tracking-widest uppercase">
-          DIIC Smart Kiosk Experience
-        </p>
+        {/* Dynamic Product Cards Overlays - exactly covering static cards */}
+        { [0, 1, 2, 3].map(index => renderCard(index)) }
       </div>
     </div>
   );

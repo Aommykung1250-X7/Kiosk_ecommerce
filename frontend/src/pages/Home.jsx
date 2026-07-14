@@ -244,7 +244,7 @@ export default function Home() {
 
   return (
     <div className="w-screen h-screen bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt']">
-      <Header />
+      <Header cart={cart} onCartClick={handleCartClick} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -252,28 +252,44 @@ export default function Home() {
           onSelectCategory={setSelectedCategory}
         />
 
-        <main className="flex-1 overflow-y-auto min-w-0">
+        <main className="flex-1 overflow-y-auto min-w-0 bg-[#F8F8F8]">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#2B2B2B]/60">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#F8C032] mb-4"></div>
-              <p className="text-lg font-medium animate-pulse">Loading products...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#5EBAA8] mb-4"></div>
+              <p className="text-lg font-medium animate-pulse">กำลังโหลดข้อมูลสินค้า...</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#E53935]">
-              <p className="text-xl font-semibold">Error: {error}</p>
+              <p className="text-xl font-semibold">เกิดข้อผิดพลาด: {error}</p>
               <button
                 onClick={() => setSelectedCategory(selectedCategory)}
-                className="mt-4 px-6 py-2 bg-[#F8C032] text-[#2B2B2B] rounded-xl font-semibold active:scale-95 transition-transform shadow-sm"
+                className="mt-4 px-6 py-2 bg-[#F9C338] text-black border-2 border-black rounded-xl font-semibold active:scale-95 transition-all shadow-sm"
               >
-                Retry
+                ลองใหม่
               </button>
             </div>
           ) : (
             <>
+              {/* Category Heading matching the screenshot */}
+              <div className="px-8 pt-8 flex items-end justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Now Showing</span>
+                  <h1 className="text-3xl font-black text-black mt-1.5 leading-none">
+                    {selectedCategory === "all" ? "ทั้งหมด" : 
+                     selectedCategory === "drinks" ? "เครื่องดื่ม" :
+                     selectedCategory === "snacks" ? "ขนมขบเคี้ยว" :
+                     selectedCategory === "instant" ? "อาหารพร้อมทาน" :
+                     selectedCategory === "stationery" ? "เครื่องเขียน" :
+                     selectedCategory === "promotion" ? "โปรโมชั่น" : "สินค้า"}
+                  </h1>
+                </div>
+                <span className="text-sm font-black text-gray-400">
+                  {products.length} รายการ
+                </span>
+              </div>
+
               <div
-                className="grid grid-cols-2
-                           gap-[clamp(12px,2vw,32px)] 
-                           p-[clamp(12px,2vw,32px)]"
+                className="grid grid-cols-2 gap-6 p-8"
               >
                 {(() => {
                   const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
@@ -291,7 +307,7 @@ export default function Home() {
 
               {products.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-[60vh] text-[#2B2B2B]/40">
-                  <p className="text-xl font-medium">No products in this category yet</p>
+                  <p className="text-xl font-medium">ไม่มีสินค้าในหมวดหมู่นี้ในขณะนี้</p>
                 </div>
               )}
             </>

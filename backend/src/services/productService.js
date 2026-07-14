@@ -54,6 +54,15 @@ class ProductService {
   async incrementProductViews(productId) {
     return await productRepository.incrementViews(productId);
   }
+
+  /**
+   * Get best selling products ordered by quantity sold
+   * @returns {Promise<Array>}
+   */
+  async getBestSellers() {
+    return await productRepository.getBestSellers();
+  }
 }
 
 export default new ProductService();
+

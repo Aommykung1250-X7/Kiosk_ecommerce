@@ -163,6 +163,42 @@ class ProductRepository {
       throw error;
     }
   }
+
+  /**
+   * Fetch products ordered by best selling (total quantity in paid orders)
+   * @returns {Promise<Array>}
+   */
+  async getBestSellers() {
+    try {
+      const query = `
+        SELECT 
+          p.*,
+          COALESCE(
+            (
+              SELECT SUM((item->>'quantity')::int)
+              FROM orders o,
+                   jsonb_array_elements(o.items) AS item
+              WHERE o.payment_status = 'paid' 
+                AND (item->'product'->>'id')::int = p.id
+            ), 0
+          ) AS sold_count
+        FROM products p
+        ORDER BY sold_count DESC, p.views DESC, p.id ASC
+      `;
+      const res = await pool.query(query);
+      return res.rows.map(row => ({
+        ...row,
+        price: parseFloat(row.price),
+        quantity: row.stock,
+        pickupLocation: row.pickup_location,
+        soldCount: parseInt(row.sold_count, 10)
+      }));
+    } catch (error) {
+      console.error("Error in ProductRepository.getBestSellers:", error);
+      throw error;
+    }
+  }
 }
 
 export default new ProductRepository();
+
