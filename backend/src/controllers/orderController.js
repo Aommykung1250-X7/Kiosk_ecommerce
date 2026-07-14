@@ -170,8 +170,9 @@ class OrderController {
     try {
       const { orderId } = req.params;
       const handlerId = req.user.id;
+      const { courier, trackingNumber, autoBook } = req.body;
 
-      const order = await orderService.fulfillOrderPreOrder(orderId, handlerId);
+      const order = await orderService.fulfillOrderPreOrder(orderId, handlerId, courier, trackingNumber, autoBook);
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
       }

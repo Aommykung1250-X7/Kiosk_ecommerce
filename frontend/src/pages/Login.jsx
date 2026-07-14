@@ -28,8 +28,6 @@ export default function Login() {
         throw new Error(data.error || "เกิดข้อผิดพลาดในการล็อกอิน");
       }
 
-      // บันทึก Token และ ข้อมูล User ลงใน localStorage ตามพิมพ์เขียว
-      localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
       // นำทางไปยัง Dashboard ตามสิทธิ์

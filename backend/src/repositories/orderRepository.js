@@ -171,7 +171,9 @@ class OrderRepository {
       fulfillmentStatus: row.fulfillment_status,
       fulfillmentStatusInstock: row.fulfillment_status_instock,
       fulfillmentStatusPreorder: row.fulfillment_status_preorder,
-      fulfilledAt: row.fulfilled_at
+      fulfilledAt: row.fulfilled_at,
+      courier: row.courier,
+      trackingNumber: row.tracking_number
     };
   }
 
@@ -276,7 +278,7 @@ class OrderRepository {
     }
   }
 
-  async fulfillPreOrder(orderUuid, handlerId) {
+  async fulfillPreOrder(orderUuid, handlerId, courier = null, trackingNumber = null) {
     const query = `
       UPDATE orders 
       SET 
@@ -292,12 +294,14 @@ class OrderRepository {
         handler_id = CASE 
           WHEN fulfillment_status_instock IN ('fulfilled', 'none') THEN $1
           ELSE handler_id 
-        END
+        END,
+        courier = COALESCE($3, courier),
+        tracking_number = COALESCE($4, tracking_number)
       WHERE order_uuid = $2
       RETURNING *
     `;
     try {
-      const res = await pool.query(query, [handlerId, orderUuid]);
+      const res = await pool.query(query, [handlerId, orderUuid, courier, trackingNumber]);
       if (res.rows.length === 0) return null;
       return this.mapOrderRow(res.rows[0]);
     } catch (error) {

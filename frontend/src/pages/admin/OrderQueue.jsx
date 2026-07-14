@@ -17,7 +17,39 @@ export default function OrderQueue() {
   const prevOrderIdsRef = useRef(new Set());
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("token");
+  // Shipping Modal states
+  const [selectedFulfillOrder, setSelectedFulfillOrder] = useState(null);
+  const [courier, setCourier] = useState("thailandpost");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [autoBook, setAutoBook] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const closeSlipPreview = () => {
+    if (selectedSlipUrl && selectedSlipUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(selectedSlipUrl);
+    }
+    setSelectedSlipUrl(null);
+  };
+
+  const handleOpenSlipPreview = async (slipUrl) => {
+    if (!slipUrl) return;
+
+    try {
+      const response = await fetch(slipUrl, {
+        credentials: "include"
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to load slip image");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setSelectedSlipUrl(objectUrl);
+    } catch (err) {
+      setError("ไม่สามารถเปิดภาพสลิปได้ในขณะนี้");
+    }
+  };
 
   // Helper checks
   const hasInStockItem = (order) => order.items.some(item => item.product && item.product.status === 'In Stock');
@@ -51,10 +83,10 @@ export default function OrderQueue() {
 
   const fetchData = async () => {
     try {
-      const headers = { "Authorization": `Bearer ${token}` };
+      const headers = { credentials: "include" };
       const [queueRes, historyRes] = await Promise.all([
-        fetch("/api/orders/queue", { headers }),
-        fetch("/api/orders/history", { headers })
+        fetch("/api/orders/queue", headers),
+        fetch("/api/orders/history", headers)
       ]);
 
       if (!queueRes.ok || !historyRes.ok) {
@@ -173,9 +205,7 @@ export default function OrderQueue() {
     try {
       const res = await fetch(`/api/orders/${orderId}/fulfill/instock`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        credentials: "include"
       });
 
       const data = await res.json();
@@ -191,17 +221,225 @@ export default function OrderQueue() {
     }
   };
 
-  const handleFulfillPreOrder = async (orderId) => {
-    if (!window.confirm(`ยืนยันการจัดส่งสินค้า Pre-Order สำหรับออเดอร์ ${orderId} หรือไม่?`)) {
+  const handlePrintLabel = () => {
+    if (!selectedFulfillOrder) return;
+    const order = selectedFulfillOrder;
+    const printWindow = window.open("", "_blank", "width=800,height=600");
+    if (!printWindow) {
+      alert("กรุณาอนุญาตให้เบราว์เซอร์เปิดป๊อปอัปเพื่อแสดงใบแปะหน้ากล่อง");
       return;
     }
 
+    const courierMap = {
+      thailandpost: "ไปรษณีย์ไทย (EMS)",
+      flash: "Flash Express",
+      kerry: "Kerry Express",
+      jt: "J&T Express"
+    };
+
+    const courierName = courierMap[courier] || "บริการจัดส่งทั่วไป";
+    let trackingText = autoBook ? "จองพัสดุผ่านระบบ (MOCK API)" : (trackingNumber || "รอดำเนินการ");
+
+    const recipientName = order.customerName || "ไม่ระบุชื่อ";
+    const recipientPhone = order.customerPhone || "N/A";
+    const recipientAddress = order.customerAddress || "ไม่ระบุที่อยู่";
+
+    const packItemsHtml = order.items
+      .map(item => `
+        <tr style="border-bottom: 1px solid #ddd;">
+          <td style="padding: 6px 0; font-size: 13px;">${item.product?.name || "สินค้า"}</td>
+          <td style="text-align: center; font-weight: bold; font-size: 13px;">x${item.quantity}</td>
+        </tr>
+      `)
+      .join("");
+
+    const isChiangMai = recipientAddress.includes("เชียงใหม่");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Shipping Label - Order #${order.id}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800&display=swap');
+            body {
+              font-family: 'Prompt', sans-serif;
+              margin: 0;
+              padding: 20px;
+              color: #000;
+              background-color: #fff;
+              -webkit-print-color-adjust: exact;
+            }
+            .label-container {
+              width: 100%;
+              max-width: 400px;
+              margin: 0 auto;
+              border: 3px double #000;
+              padding: 15px;
+              box-sizing: border-box;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 2px solid #000;
+              padding-bottom: 8px;
+              margin-bottom: 10px;
+            }
+            .courier-badge {
+              font-size: 16px;
+              font-weight: 800;
+              border: 2px solid #000;
+              padding: 4px 8px;
+              text-transform: uppercase;
+              background-color: #000;
+              color: #fff;
+            }
+            .order-ref {
+              font-size: 11px;
+              font-weight: bold;
+              font-family: monospace;
+            }
+            .address-box {
+              font-size: 12px;
+              line-height: 1.4;
+              margin-bottom: 15px;
+            }
+            .sender {
+              border-bottom: 1px dashed #000;
+              padding-bottom: 8px;
+              margin-bottom: 8px;
+            }
+            .recipient {
+              font-size: 14px;
+            }
+            .recipient strong {
+              font-size: 16px;
+            }
+            .highlight-province {
+              background-color: #e0e0e0;
+              font-weight: 850;
+              padding: 4px 8px;
+              border: 2px solid #000;
+              display: inline-block;
+              margin-top: 6px;
+              font-size: 14px;
+            }
+            .barcode-section {
+              text-align: center;
+              margin: 15px 0;
+              border-top: 2px solid #000;
+              border-bottom: 2px solid #000;
+              padding: 10px 0;
+            }
+            .barcode-lines {
+              font-family: monospace;
+              font-size: 26px;
+              letter-spacing: 3px;
+              line-height: 1;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            .tracking-number {
+              font-size: 14px;
+              font-weight: 700;
+              font-family: monospace;
+            }
+            .packing-list {
+              font-size: 11px;
+              border-top: 1px solid #000;
+              padding-top: 8px;
+            }
+            .packing-list table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            .packing-list th {
+              text-align: left;
+              border-bottom: 1px solid #000;
+              padding-bottom: 4px;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .label-container {
+                border: 2px solid #000;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="label-container">
+            <div class="header">
+              <div class="courier-badge">${courierName}</div>
+              <div class="order-ref">ORDER: ${order.id}</div>
+            </div>
+            
+            <div class="address-box sender">
+              <strong>ผู้ส่ง (Sender):</strong><br>
+              ศูนย์นวัตกรรมและเทคโนโลยีสารสนเทศ (DIIC) CAMT CMU<br>
+              วิทยาลัยศิลปะ สื่อ และเทคโนโลยี มหาวิทยาลัยเชียงใหม่<br>
+              239 ถ.ห้วยแก้ว ต.สุเทพ อ.เมือง จ.เชียงใหม่ 50200<br>
+              โทร: 053-941777
+            </div>
+
+            <div class="address-box recipient">
+              <strong>ผู้รับ (Recipient):</strong><br>
+              <strong>คุณ ${recipientName}</strong><br>
+              โทร: ${recipientPhone}<br>
+              ที่อยู่: ${recipientAddress}
+              ${isChiangMai ? '<br><span class="highlight-province">ปลายทาง: เชียงใหม่ (ด่วนพิเศษ)</span>' : ''}
+            </div>
+
+            <div class="barcode-section">
+              <div class="barcode-lines">||||| | ||||| |||| | ||| | |||</div>
+              <div class="tracking-number">TRACKING: ${trackingText}</div>
+            </div>
+
+            <div class="packing-list">
+              <div style="font-weight: bold; margin-bottom: 4px;">รายการสินค้าในกล่อง (Packing Checklist)</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align: left;">ชื่อสินค้า</th>
+                    <th style="text-align: center; width: 50px;">จำนวน</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${packItemsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleFulfillPreOrderSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedFulfillOrder) return;
+
+    setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/fulfill/preorder`, {
+      const res = await fetch(`/api/orders/${selectedFulfillOrder.id}/fulfill/preorder`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`
-        }
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          courier,
+          trackingNumber: autoBook ? "" : trackingNumber,
+          autoBook
+        })
       });
 
       const data = await res.json();
@@ -211,9 +449,12 @@ export default function OrderQueue() {
       }
 
       fetchData();
-      alert("ยืนยันการจัดส่งสินค้า Pre-Order สำเร็จ!");
+      setSelectedFulfillOrder(null);
+      alert("ยืนยันการจัดส่งสินค้า Pre-Order และส่งเมลแจ้งเลขพัสดุสำเร็จ!");
     } catch (err) {
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -555,7 +796,7 @@ export default function OrderQueue() {
                         )}
                         {order.slipUrl && (
                           <button
-                            onClick={() => setSelectedSlipUrl(order.slipUrl)}
+                            onClick={() => handleOpenSlipPreview(order.slipUrl)}
                             className="text-[#F8C032] hover:underline font-semibold mt-1 text-left inline-block"
                           >
                             [ดูภาพสลิปชำระเงิน]
@@ -611,7 +852,12 @@ export default function OrderQueue() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => handleFulfillPreOrder(order.id)}
+                          onClick={() => {
+                            setSelectedFulfillOrder(order);
+                            setCourier("thailandpost");
+                            setTrackingNumber(order.trackingNumber || "");
+                            setAutoBook(false);
+                          }}
                           className="w-full h-12 rounded-xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
                         >
                           <CheckIcon className="w-5 h-5" />
@@ -640,11 +886,105 @@ export default function OrderQueue() {
         )}
       </main>
 
+      {/* Pre-order Fulfillment & Shipping Modal */}
+      {selectedFulfillOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative max-w-lg w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+              <div>
+                <h3 className="font-extrabold text-[#2B2B2B] text-base">ยืนยันจัดส่งพัสดุสินค้า Pre-Order</h3>
+                <p className="text-xs text-gray-400 font-mono mt-0.5 select-all">ออเดอร์ ID: {selectedFulfillOrder.id}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedFulfillOrder(null)}
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleFulfillPreOrderSubmit} className="flex flex-col gap-4">
+              {/* Delivery Address Summary */}
+              <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100/60 text-xs text-gray-600 flex flex-col gap-1.5">
+                <p><span className="font-bold text-gray-700">ชื่อผู้รับ:</span> {selectedFulfillOrder.customerName}</p>
+                <p><span className="font-bold text-gray-700">เบอร์โทร:</span> {selectedFulfillOrder.customerPhone}</p>
+                <p><span className="font-bold text-gray-700">ที่อยู่จัดส่ง:</span> {selectedFulfillOrder.customerAddress}</p>
+              </div>
+
+              {/* Courier Selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">บริการขนส่ง (Courier)</label>
+                <select
+                  value={courier}
+                  onChange={(e) => setCourier(e.target.value)}
+                  className="w-full h-11 bg-gray-50 border border-gray-150 rounded-xl px-4 text-sm outline-none focus:border-[#F8C032] cursor-pointer"
+                >
+                  <option value="thailandpost">ไปรษณีย์ไทย (EMS)</option>
+                  <option value="flash">Flash Express</option>
+                  <option value="kerry">Kerry Express</option>
+                  <option value="jt">J&T Express</option>
+                </select>
+              </div>
+
+              {/* API Mock Auto Booking Toggle */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 mt-1">
+                <div>
+                  <span className="text-xs font-bold text-gray-700 block">ใช้ระบบ API จำลองจองพัสดุอัตโนมัติ</span>
+                  <span className="text-[10px] text-gray-400">จองคิวและรับเลขพัสดุอัตโนมัติ (ขยายเพื่อเชื่อมต่อระบบจริงในอนาคต)</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoBook}
+                  onChange={(e) => setAutoBook(e.target.checked)}
+                  className="w-5 h-5 accent-[#F8C032] cursor-pointer"
+                />
+              </div>
+
+              {/* Tracking Number Input */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">เลขพัสดุ (Tracking Number)</label>
+                <input
+                  type="text"
+                  value={autoBook ? "ระบบจะขอเลขพัสดุผ่าน API อัตโนมัติ" : trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  disabled={autoBook}
+                  required={!autoBook}
+                  placeholder="กรอกเลขพัสดุจัดส่ง..."
+                  className="w-full h-11 bg-gray-50 border border-gray-150 rounded-xl px-4 text-sm outline-none focus:border-[#F8C032] disabled:opacity-60 disabled:bg-gray-100 disabled:text-gray-500"
+                />
+              </div>
+
+              {/* Actions Grid */}
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 mt-2">
+                <button
+                  type="button"
+                  onClick={handlePrintLabel}
+                  className="h-11 border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm cursor-pointer"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  <span>พิมพ์ใบแปะหน้ากล่อง</span>
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="h-11 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95 transition-all shadow-sm cursor-pointer"
+                >
+                  {isSubmitting ? "กำลังดำเนินการ..." : "บันทึกจัดส่งสินค้า"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Slip Image Viewer Modal Popup */}
       {selectedSlipUrl && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setSelectedSlipUrl(null)}
+          onClick={closeSlipPreview}
         >
           <div 
             className="relative max-w-sm w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col p-5 animate-in zoom-in-95 duration-200"
@@ -653,7 +993,7 @@ export default function OrderQueue() {
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
               <span className="font-bold text-[#2B2B2B] text-sm">สลิปหลักฐานการชำระเงิน</span>
               <button 
-                onClick={() => setSelectedSlipUrl(null)}
+                onClick={closeSlipPreview}
                 className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <XMarkIcon className="w-5 h-5" />

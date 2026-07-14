@@ -1,6 +1,7 @@
 // backend/src/services/orderService.js
 import orderRepository from "../repositories/orderRepository.js";
 import productRepository from "../repositories/productRepository.js";
+import shippingService from "./shippingService.js";
 
 class OrderService {
   constructor() {
@@ -155,9 +156,41 @@ class OrderService {
    * Fulfill the Pre-Order items of an order
    * @param {string} orderId 
    * @param {number} handlerId 
+   * @param {string} [courier]
+   * @param {string} [trackingNumber]
+   * @param {boolean} [autoBook]
    */
-  async fulfillOrderPreOrder(orderId, handlerId) {
-    return await orderRepository.fulfillPreOrder(orderId, handlerId);
+  async fulfillOrderPreOrder(orderId, handlerId, courier = null, trackingNumber = null, autoBook = false) {
+    let finalCourier = courier;
+    let finalTracking = trackingNumber;
+
+    if (autoBook && courier) {
+      const order = await orderRepository.get(orderId);
+      if (order) {
+        try {
+          const bookingResult = await shippingService.bookShipment(order, courier);
+          if (bookingResult.success) {
+            finalTracking = bookingResult.trackingNumber;
+          }
+        } catch (err) {
+          console.error(`[OrderService] Failed to auto-book shipment for order ${orderId}:`, err);
+        }
+      }
+    }
+
+    const updatedOrder = await orderRepository.fulfillPreOrder(orderId, handlerId, finalCourier, finalTracking);
+    
+    // Send email notification to customer if tracking is available
+    if (updatedOrder && updatedOrder.customerEmail && finalTracking) {
+      // Import emailService dynamically to avoid circular dependencies
+      import("./emailService.js").then(({ default: emailService }) => {
+        emailService.sendShipmentNotification(updatedOrder).catch(err => {
+          console.error("[OrderService] Failed to send shipment notification email:", err);
+        });
+      });
+    }
+
+    return updatedOrder;
   }
 }
 
