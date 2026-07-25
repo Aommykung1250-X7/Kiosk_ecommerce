@@ -2,10 +2,12 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import MobileCheckout from "./pages/MobileCheckout";
+import MobileDelivery from "./pages/MobileDelivery";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
 import OrderQueue from "./pages/admin/OrderQueue";
 import ProductManagement from "./pages/admin/ProductManagement";
+import ScreensaverManagement from "./pages/admin/ScreensaverManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // ฟังก์ชันดึงออเดอร์เพื่อสลับไปหน้าจ่ายเงินบนมือถือ หรือกลับหน้าหลักของคีออส
@@ -97,15 +99,16 @@ export default function App() {
         {/* หน้ายืนยันตัวตน */}
         <Route path="/ditc-portal-to-manager" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/mobile/delivery" element={<MobileDelivery />} />
 
         {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (Staff & Admin) */}
         <Route element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}>
           <Route path="/dashboard/orders" element={<OrderQueue />} />
         </Route>
 
-        {/* ส่วนงานจัดการระบบเฉพาะแอดมินเท่านั้น (Admin Only) */}
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/dashboard/products" element={<ProductManagement />} />
+          <Route path="/dashboard/screensavers" element={<ScreensaverManagement />} />
         </Route>
 
         {/* เส้นทางกรณีไม่พบหน้าจอใดๆ ดีดกลับหน้าแรก */}

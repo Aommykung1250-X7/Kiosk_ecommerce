@@ -162,6 +162,13 @@ export default function Home() {
       trackProductView(product.id);
     }
 
+    const existingItem = cart.items.find(item => item.product?.id === product.id);
+    const limit = product.purchaseLimit || product.purchase_limit;
+    if (existingItem && limit && existingItem.quantity >= limit) {
+      alert(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+      return;
+    }
+
     fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -205,24 +212,48 @@ export default function Home() {
     setIsCartOpen(true);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = (deliveryOption, shippingOption) => {
     if (cart.items.length === 0) return;
 
-    const hasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-    const shippingFee = hasPreOrder ? 40 : 0;
-    const grandTotal = cart.totalPrice + shippingFee;
+    fetch("/api/settings/shipping")
+      .then((res) => res.json())
+      .then((shippingSettings) => {
+        const hasInStock = cart.items.some(item => item.product && item.product.status === "In Stock");
+        const hasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
+        const isMixed = hasInStock && hasPreOrder;
 
-    fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: cart.items, totalPrice: grandTotal })
-    })
+        let shippingFee = 0;
+        if (deliveryOption === "delivery") {
+          if (isMixed && shippingOption === "split") {
+            shippingFee = shippingSettings.baseShippingFee + shippingSettings.additionalSplitShippingFee;
+          } else {
+            shippingFee = shippingSettings.baseShippingFee;
+          }
+        }
+
+        const grandTotal = cart.totalPrice + shippingFee;
+
+        return fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cart.items,
+            totalPrice: grandTotal,
+            deliveryOption,
+            shippingOption
+          })
+        });
+      })
       .then((res) => {
         if (!res.ok) throw new Error("ไม่สามารถสร้างออเดอร์ได้");
         return res.json();
       })
       .then((data) => {
-        setActiveOrder({ orderId: data.orderId, totalPrice: data.totalPrice });
+        setActiveOrder({
+          orderId: data.orderId,
+          totalPrice: data.totalPrice,
+          qrPayload: data.qrPayload
+        });
       })
       .catch((err) => alert(err.message));
   };
@@ -239,8 +270,7 @@ export default function Home() {
 
 
   const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-  const bottomShippingFee = bottomHasPreOrder ? 40 : 0;
-  const bottomDisplayTotal = cart.totalPrice + bottomShippingFee;
+  const bottomDisplayTotal = cart.totalPrice;
 
   return (
     <div className="w-screen h-screen bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt']">
@@ -359,12 +389,12 @@ export default function Home() {
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-white/60">ยอดรวมสุทธิ:</span>
                 <span className="text-xl font-extrabold text-[#F8C032]">
-                  ฿{bottomDisplayTotal.toFixed(0)}
+                  ฿{bottomDisplayTotal.toLocaleString('th-TH')}
                 </span>
               </div>
-              {bottomShippingFee > 0 && (
+              {bottomHasPreOrder && (
                 <span className="text-[10px] text-red-400 font-bold mt-1">
-                  (รวมค่าส่ง Pre-Order ฿40)
+                  (มีค่าจัดส่งเพิ่มเติมสำหรับสินค้า Pre-order)
                 </span>
               )}
             </div>
@@ -380,6 +410,7 @@ export default function Home() {
         <KioskPayment
           orderId={activeOrder.orderId}
           totalPrice={activeOrder.totalPrice}
+          qrPayload={activeOrder.qrPayload}
           onPaymentSuccess={handlePaymentSuccess}
           onCancel={() => setActiveOrder(null)}
         />

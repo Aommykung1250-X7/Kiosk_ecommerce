@@ -1,7 +1,7 @@
 // frontend/src/pages/admin/OrderQueue.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowPathIcon, CheckIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon, XMarkIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, CheckIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon, XMarkIcon, Squares2X2Icon, PhotoIcon } from "@heroicons/react/24/outline";
 
 const getLocalDateString = (dateStr) => {
   if (!dateStr) return "";
@@ -45,6 +45,7 @@ export default function OrderQueue() {
 
   // Shipping Modal states
   const [selectedFulfillOrder, setSelectedFulfillOrder] = useState(null);
+  const [fulfillmentType, setFulfillmentType] = useState("preorder"); // "instock", "preorder", "combined"
   const [courier, setCourier] = useState("thailandpost");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [autoBook, setAutoBook] = useState(false);
@@ -431,7 +432,9 @@ export default function OrderQueue() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/orders/${selectedFulfillOrder.id}/fulfill/preorder`, {
+      const endpoint = fulfillmentType === "instock" ? "instock" : "preorder";
+      
+      const res = await fetch(`/api/orders/${selectedFulfillOrder.id}/fulfill/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -447,12 +450,30 @@ export default function OrderQueue() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "เกิดข้อผิดพลาดในการยืนยันจัดส่งพรีออเดอร์");
+        throw new Error(data.error || "เกิดข้อผิดพลาดในการยืนยันจัดส่งพัสดุ");
+      }
+
+      // If combined delivery, auto-fulfill In Stock portion as well (using same tracking details!)
+      if (fulfillmentType === "combined") {
+        if (selectedFulfillOrder.fulfillmentStatusInstock === "pending") {
+          await fetch(`/api/orders/${selectedFulfillOrder.id}/fulfill/instock`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              courier,
+              trackingNumber: data.order?.trackingNumber2 || trackingNumber,
+              autoBook: false
+            })
+          });
+        }
       }
 
       fetchData();
       setSelectedFulfillOrder(null);
-      alert("ยืนยันการจัดส่งสินค้า Pre-Order และส่งเมลแจ้งเลขพัสดุสำเร็จ!");
+      alert("ยืนยันการจัดส่งพัสดุและส่งเมลแจ้งเลขพัสดุสำเร็จ!");
     } catch (err) {
       alert(err.message);
     } finally {
@@ -481,12 +502,12 @@ export default function OrderQueue() {
 
   // Compute lists for each section
   const allOrdersList = queueOrders.filter(matchesSearch).filter(matchesDate);
-  const instockOrdersList = queueOrders
-    .filter(order => order.fulfillmentStatusInstock === 'pending' && hasInStockItem(order))
+  const pickupOrdersList = queueOrders
+    .filter(order => order.deliveryOption === "pickup" && order.fulfillmentStatusInstock === "pending")
     .filter(matchesSearch)
     .filter(matchesDate);
-  const preorderOrdersList = queueOrders
-    .filter(order => order.fulfillmentStatusPreorder === 'pending' && hasPreOrderItem(order))
+  const deliveryOrdersList = queueOrders
+    .filter(order => order.deliveryOption === "delivery" && (order.fulfillmentStatusInstock === "pending" || order.fulfillmentStatusPreorder === "pending"))
     .filter(matchesSearch)
     .filter(matchesDate);
   const historyOrdersList = historyOrders.filter(matchesSearch).filter(matchesDate);
@@ -496,10 +517,10 @@ export default function OrderQueue() {
     switch (activeTab) {
       case "all":
         return allOrdersList;
-      case "instock":
-        return instockOrdersList;
-      case "preorder":
-        return preorderOrdersList;
+      case "pickup":
+        return pickupOrdersList;
+      case "delivery":
+        return deliveryOrdersList;
       case "history":
         return historyOrdersList;
       default:
@@ -529,13 +550,23 @@ export default function OrderQueue() {
             <p className="text-xs text-gray-400 font-medium capitalize">สิทธิ์: {currentUser?.role}</p>
           </div>
           {currentUser?.role === "admin" && (
-            <button
-              onClick={() => navigate("/dashboard/products")}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
-            >
-              <Squares2X2Icon className="w-4.5 h-4.5" />
-              <span>ไปหน้าจัดการสินค้า</span>
-            </button>
+            <>
+              <button
+                onClick={() => navigate("/dashboard/products")}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
+              >
+                <Squares2X2Icon className="w-4.5 h-4.5" />
+                <span>ไปหน้าจัดการสินค้า</span>
+              </button>
+
+              <button
+                onClick={() => navigate("/dashboard/screensavers")}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
+              >
+                <PhotoIcon className="w-4.5 h-4.5" />
+                <span>จัดการโฆษณา</span>
+              </button>
+            </>
           )}
 
           <button
@@ -641,40 +672,40 @@ export default function OrderQueue() {
         <div className="flex border-b border-gray-200 gap-6 overflow-x-auto whitespace-nowrap scrollbar-none">
           <button
             onClick={() => setActiveTab("all")}
-            className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "all" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-600"
+            className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "all" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
-            <span>คำสั่งซื้อทั้งหมด ({allOrdersList.length})</span>
+            <span>คิวทั้งหมด ({allOrdersList.length})</span>
             {activeTab === "all" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#F8C032] rounded-full"></span>
             )}
           </button>
 
           <button
-            onClick={() => setActiveTab("instock")}
-            className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "instock" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
+            onClick={() => setActiveTab("pickup")}
+            className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "pickup" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
-            <span>สินค้า In Stock({instockOrdersList.length})</span>
-            {activeTab === "instock" && (
+            <span>🏪 รับหน้าร้าน ({pickupOrdersList.length})</span>
+            {activeTab === "pickup" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#F8C032] rounded-full"></span>
             )}
           </button>
 
           <button
-            onClick={() => setActiveTab("preorder")}
-            className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "preorder" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
+            onClick={() => setActiveTab("delivery")}
+            className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "delivery" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
-            <span>สินค้า Pre-Order ({preorderOrdersList.length})</span>
-            {activeTab === "preorder" && (
+            <span>🚚 จัดส่งพัสดุ ({deliveryOrdersList.length})</span>
+            {activeTab === "delivery" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#F8C032] rounded-full"></span>
             )}
           </button>
 
           <button
             onClick={() => setActiveTab("history")}
-            className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "history" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
+            className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "history" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
             <span>ประวัติการจ่ายสินค้า ({historyOrdersList.length})</span>
@@ -718,12 +749,7 @@ export default function OrderQueue() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentDisplayOrders.map((order) => {
-              // Filter items based on activeTab
-              const displayItems = order.items.filter((item) => {
-                if (activeTab === "instock") return item.product && item.product.status === "In Stock";
-                if (activeTab === "preorder") return item.product && item.product.status === "Pre-Order";
-                return true; // "all" and "history" show everything
-              });
+              const displayItems = order.items || [];
 
               return (
                 <div
@@ -741,20 +767,15 @@ export default function OrderQueue() {
                           จ่ายของครบแล้ว
                         </span>
                       ) : (
-                        <div className="flex items-center gap-1.5">
-                          {hasInStockItem(order) && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full shadow-sm">
-                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                              In Stock
-                            </span>
-                          )}
-                          {hasPreOrderItem(order) && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 bg-orange-50 text-orange-600 border border-orange-200 rounded-full shadow-sm">
-                              <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
-                              Pre-Order
-                            </span>
-                          )}
-                        </div>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md ${
+                          order.deliveryOption === "delivery"
+                            ? (order.shippingOption === "split" ? "bg-orange-50 text-orange-655 border border-orange-200" : "bg-blue-50 text-blue-655 border border-blue-200")
+                            : "bg-green-50 text-green-700 border border-green-200"
+                        }`}>
+                          {order.deliveryOption === "delivery"
+                            ? (order.shippingOption === "split" ? "🚚 จัดส่งพัสดุ (แยกส่ง)" : "🚚 จัดส่งพัสดุ (รวมส่ง)")
+                            : "🏪 รับที่ตู้ Kiosk"}
+                        </span>
                       )}
                     </div>
                     <span className="text-sm font-bold text-gray-700 font-mono mt-1 select-all">{order.id}</span>
@@ -767,15 +788,15 @@ export default function OrderQueue() {
                   <div className="p-5 flex-1 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        {activeTab === "instock" ? "รายการหยิบของ (In Stock)" : activeTab === "preorder" ? "รายการจัดส่ง (Pre-Order)" : "รายการสินค้าทั้งหมด"}
+                        รายการสินค้าทั้งหมด
                       </span>
                       <ul className="flex flex-col gap-2">
                         {displayItems.map((item, index) => (
                           <li key={index} className="flex justify-between items-center text-sm bg-gray-50/60 p-2.5 rounded-xl border border-gray-100">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-gray-700">{item.product.name}</span>
-                              <span className={`text-[10px] font-bold ${item.product.status === 'In Stock' ? 'text-green-600' : 'text-orange-500'}`}>
-                                ({item.product.status === 'In Stock' ? 'In Stock' : 'Pre-Order'})
+                              <span className="font-semibold text-gray-700">{item.product?.name || "สินค้า"}</span>
+                              <span className={`text-[10px] font-bold ${item.product?.status === 'In Stock' ? 'text-green-600' : 'text-orange-500'}`}>
+                                ({item.product?.status === 'In Stock' ? 'In Stock' : 'Pre-Order'})
                               </span>
                             </div>
                             <span className="font-bold text-[#E53935] px-2.5 py-0.5 bg-red-50 border border-red-150 rounded-lg text-xs shrink-0">
@@ -791,9 +812,9 @@ export default function OrderQueue() {
                       <div className="border-t border-gray-100 pt-3 flex flex-col gap-1 text-xs text-gray-500">
                         <p><span className="font-semibold">ผู้สั่งซื้อ:</span> {order.customerName}</p>
                         <p><span className="font-semibold">เบอร์โทร:</span> {order.customerPhone}</p>
-                        {order.customerAddress && (
+                        {order.deliveryOption === "delivery" && (
                           <p className="mt-1 bg-amber-50/40 p-2 rounded-lg border border-amber-100/60 text-gray-600">
-                            <span className="font-semibold text-[#2B2B2B]">ที่อยู่จัดส่ง:</span> {order.customerAddress}
+                            <span className="font-semibold text-[#2B2B2B]">ที่อยู่จัดส่ง:</span> {order.customerAddress || "รอลูกค้ากรอกที่อยู่ผ่านมือถือ..."}
                           </p>
                         )}
                         {order.slipUrl && (
@@ -808,64 +829,123 @@ export default function OrderQueue() {
                     )}
                   </div>
 
-                  {/* Card Footer Actions based on activeTab */}
+                  {/* Card Footer Actions based on activeTab & deliveryOptions */}
                   <div className="p-5 bg-gray-50/30 border-t border-gray-100">
-                    {activeTab === "all" && (
-                      <div className="flex flex-col gap-2 text-xs text-gray-400">
-                        {order.fulfillmentStatusInstock !== "none" && (
-                          <p className="flex justify-between">
-                            <span>สถานะ In Stock:</span>
-                            <span className={order.fulfillmentStatusInstock === "fulfilled" ? "text-green-600 font-bold" : "text-amber-600 font-bold"}>
-                              {order.fulfillmentStatusInstock === "fulfilled" ? "จ่ายสินค้าแล้ว" : "รอดำเนินการ"}
-                            </span>
-                          </p>
+                    {/* ALL / PICKUP TAB - KIOSK PICKUP FLOW */}
+                    {order.deliveryOption === "pickup" && (
+                      <div className="flex flex-col gap-2">
+                        {order.fulfillmentStatusInstock === "fulfilled" ? (
+                          <div className="text-center text-xs font-bold text-green-600 bg-green-50 py-2.5 rounded-lg border border-green-150">
+                            ✓ จ่ายสินค้าที่ตู้ Kiosk เรียบร้อย
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleFulfillInStock(order.id)}
+                            className="w-full h-12 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm cursor-pointer"
+                          >
+                            <CheckIcon className="w-5 h-5" />
+                            ยืนยันจ่ายของที่ตู้ Kiosk
+                          </button>
                         )}
-                        {order.fulfillmentStatusPreorder !== "none" && (
-                          <p className="flex justify-between">
-                            <span>สถานะ Pre-Order:</span>
-                            <span className={order.fulfillmentStatusPreorder === "fulfilled" ? "text-green-600 font-bold" : "text-amber-600 font-bold"}>
-                              {order.fulfillmentStatusPreorder === "fulfilled" ? "จัดส่งแล้ว" : "รอดำเนินการ"}
-                            </span>
-                          </p>
+                        {hasPreOrderItem(order) && (
+                          <div className="text-[10px] text-orange-600 text-center font-bold bg-orange-50/70 p-2 rounded-lg border border-orange-100">
+                            📦 ออเดอร์มี Pre-Order (รอนัดรับหน้าร้านภายหลัง)
+                          </div>
                         )}
                       </div>
                     )}
 
-                    {activeTab === "instock" && (
-                      order.fulfillmentStatusInstock === "fulfilled" ? (
-                        <div className="text-center text-xs font-bold text-green-600 bg-green-50 py-2.5 rounded-lg border border-green-150">
-                          ✓ จ่ายสินค้าหน้าร้านเรียบร้อย
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleFulfillInStock(order.id)}
-                          className="w-full h-12 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
-                        >
-                          <CheckIcon className="w-5 h-5" />
-                          ยืนยันจ่ายสินค้าหน้าร้าน
-                        </button>
-                      )
-                    )}
+                    {/* ALL / DELIVERY TAB - PARCEL DELIVERY FLOW */}
+                    {order.deliveryOption === "delivery" && (
+                      <div className="flex flex-col gap-3">
+                        {/* 1. Split Delivery Option */}
+                        {order.shippingOption === "split" ? (
+                          <div className="flex flex-col gap-2.5">
+                            {/* In-Stock Portion */}
+                            <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                              <span className="text-xs text-gray-500 font-medium">ส่วน In Stock:</span>
+                              {order.fulfillmentStatusInstock === "fulfilled" ? (
+                                <span className="text-xs font-bold text-green-600">✓ ส่งพัสดุแล้ว</span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setSelectedFulfillOrder(order);
+                                    setFulfillmentType("instock");
+                                    setCourier("thailandpost");
+                                    setTrackingNumber(order.trackingNumber1 || "");
+                                    setAutoBook(false);
+                                  }}
+                                  disabled={!order.customerAddress}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs border cursor-pointer
+                                    ${order.customerAddress 
+                                      ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" 
+                                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"}`}
+                                >
+                                  ส่งพัสดุ In Stock
+                                </button>
+                              )}
+                            </div>
 
-                    {activeTab === "preorder" && (
-                      order.fulfillmentStatusPreorder === "fulfilled" ? (
-                        <div className="text-center text-xs font-bold text-green-600 bg-green-50 py-2.5 rounded-lg border border-green-150">
-                          ✓ จัดส่งสินค้าพรีออเดอร์เรียบร้อย
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedFulfillOrder(order);
-                            setCourier("thailandpost");
-                            setTrackingNumber(order.trackingNumber || "");
-                            setAutoBook(false);
-                          }}
-                          className="w-full h-12 rounded-xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
-                        >
-                          <CheckIcon className="w-5 h-5" />
-                          ยืนยันจัดส่งสินค้า Pre-Order
-                        </button>
-                      )
+                            {/* Pre-Order Portion */}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-gray-500 font-medium">ส่วน Pre-Order:</span>
+                              {order.fulfillmentStatusPreorder === "fulfilled" ? (
+                                <span className="text-xs font-bold text-green-600">✓ ส่งพัสดุแล้ว</span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setSelectedFulfillOrder(order);
+                                    setFulfillmentType("preorder");
+                                    setCourier("thailandpost");
+                                    setTrackingNumber(order.trackingNumber2 || "");
+                                    setAutoBook(false);
+                                  }}
+                                  disabled={!order.customerAddress}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs border cursor-pointer
+                                    ${order.customerAddress 
+                                      ? "bg-[#F8C032] text-[#2B2B2B] border-[#F8C032]/40 hover:bg-[#F0B420]" 
+                                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"}`}
+                                >
+                                  ส่งพัสดุ Pre-Order
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          /* 2. Combined Delivery Option */
+                          <div className="flex flex-col gap-2">
+                            {order.fulfillmentStatusPreorder === "fulfilled" && order.fulfillmentStatusInstock === "fulfilled" ? (
+                              <div className="text-center text-xs font-bold text-green-600 bg-green-50 py-2.5 rounded-lg border border-green-150">
+                                ✓ จัดส่งพัสดุรวมกันครบถ้วนแล้ว
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setSelectedFulfillOrder(order);
+                                  setFulfillmentType("combined");
+                                  setCourier("thailandpost");
+                                  setTrackingNumber(order.trackingNumber1 || "");
+                                  setAutoBook(false);
+                                }}
+                                disabled={!order.customerAddress}
+                                className={`w-full h-11 rounded-xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm border cursor-pointer
+                                  ${order.customerAddress 
+                                    ? "bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] border-[#F8C032]/40" 
+                                    : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"}`}
+                              >
+                                <CheckIcon className="w-5 h-5" />
+                                จัดส่งพัสดุรวมกล่องเดียว
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        
+                        {!order.customerAddress && (
+                          <p className="text-[10px] text-amber-600 text-center font-bold animate-pulse">
+                            ⚠️ รอลูกค้าระบุที่อยู่จัดส่งผ่านหน้า LINE LIFF
+                          </p>
+                        )}
+                      </div>
                     )}
 
                     {activeTab === "history" && (
@@ -894,7 +974,13 @@ export default function OrderQueue() {
           <div className="relative max-w-lg w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col p-6 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
               <div>
-                <h3 className="font-extrabold text-[#2B2B2B] text-base">ยืนยันจัดส่งพัสดุสินค้า Pre-Order</h3>
+                <h3 className="font-extrabold text-[#2B2B2B] text-base">
+                  {fulfillmentType === "instock" 
+                    ? "ยืนยันจัดส่งพัสดุสินค้า In Stock (พร้อมส่ง)" 
+                    : fulfillmentType === "combined" 
+                      ? "ยืนยันจัดส่งพัสดุสินค้า (Combined)" 
+                      : "ยืนยันจัดส่งพัสดุสินค้า Pre-Order"}
+                </h3>
                 <p className="text-xs text-gray-400 font-mono mt-0.5 select-all">ออเดอร์ ID: {selectedFulfillOrder.id}</p>
               </div>
               <button 

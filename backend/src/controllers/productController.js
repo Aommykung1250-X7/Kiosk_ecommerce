@@ -103,6 +103,25 @@ class ProductController {
       return res.status(500).json({ error: "Internal server error occurred." });
     }
   }
+
+  /**
+   * Handle product image upload (POST /api/products/upload)
+   */
+  async uploadProductImage(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Please upload an image file." });
+      }
+      return res.status(201).json({
+        success: true,
+        image: req.file.filename,
+        url: `/uploads/products/${req.file.filename}`
+      });
+    } catch (error) {
+      console.error("Error in ProductController.uploadProductImage:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
 }
 
 export default new ProductController();

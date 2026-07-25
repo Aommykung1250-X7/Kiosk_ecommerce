@@ -1,128 +1,83 @@
 // src/components/CartDrawer.jsx
+import { useState, useEffect } from "react";
 import { XMarkIcon, MinusIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon, ShoppingBagIcon } from "@heroicons/react/24/solid";
 
-function WaterDrop() {
+function CategoryPlaceholder({ category }) {
+  const getIcon = () => {
+    switch (category) {
+      case "drinks":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9V5.25c0-.414.168-.75.375-.75h3.75c.207 0 .375.336.375.75V9m-4.5 0h4.5m-4.5 0a3 3 0 0 1-3-3V3.75c0-.414.168-.75.375-.75h6.75c.207 0 .375.336.375.75V6a3 3 0 0 1-3 3M3.75 21h16.5M12 9v12m-5.25-6h10.5" />
+          </svg>
+        );
+      case "snacks":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+          </svg>
+        );
+      case "instant":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+          </svg>
+        );
+      case "stationery":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+          </svg>
+        );
+    }
+  };
+
   return (
-    <svg viewBox="0 0 100 100" className="w-16 h-16">
-      <defs>
-        <linearGradient id="waterGradCart" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#80D0FF" />
-          <stop offset="50%" stopColor="#41A5EE" />
-          <stop offset="100%" stopColor="#2568D9" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M50 15 C50 15 78 48 78 65 C78 80 65 90 50 90 C35 90 22 80 22 65 C22 48 50 15 50 15 Z"
-        fill="url(#waterGradCart)"
-      />
-      <ellipse cx="44" cy="55" rx="3" ry="8" fill="#FFFFFF" opacity="0.35" transform="rotate(-20 44 55)" />
-      <ellipse cx="40" cy="45" rx="1.5" ry="4" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 40 45)" />
-    </svg>
+    <div className="flex flex-col items-center justify-center gap-0.5 opacity-60">
+      {getIcon()}
+      <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{category || "Product"}</span>
+    </div>
   );
 }
-
-function SodaCup() {
-  return (
-    <svg viewBox="0 0 120 160" className="w-16 h-20">
-      {/* Cup body with pink/red stripes */}
-      <path d="M35 50 L85 50 L77 140 L43 140 Z" fill="#EAEAEA" />
-      <path d="M48 50 L54 50 L57 140 L51 140 Z" fill="#EC4E63" />
-      <path d="M66 50 L72 50 L69 140 L63 140 Z" fill="#EC4E63" />
-      {/* Lid */}
-      <ellipse cx="60" cy="50" rx="27" ry="8" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      <rect x="52" y="42" width="16" height="6" rx="2" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      {/* Straw */}
-      <path d="M57 42 L57 20 L75 20" stroke="#EC4E63" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M57 42 L57 20 L75 20" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.3" />
-    </svg>
-  );
-}
-
-function ChipsBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#F4B400" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#DBA000" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#DBA000" />
-      <circle cx="50" cy="62" r="14" fill="#FFFFFF" />
-      <ellipse cx="50" cy="62" rx="9" ry="6" fill="#E37400" />
-    </svg>
-  );
-}
-
-function WaferBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#4285F4" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#2A6CD6" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#2A6CD6" />
-      <rect x="30" y="50" width="40" height="30" rx="3" fill="#FFD600" />
-    </svg>
-  );
-}
-
-function CupNoodle() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <path d="M25 35 L75 35 L68 105 L32 105 Z" fill="#EA4335" />
-      <ellipse cx="50" cy="35" rx="25" ry="8" fill="#F1F3F4" />
-      <ellipse cx="50" cy="31" rx="25" ry="8" fill="#FFFFFF" />
-      <rect x="35" y="55" width="30" height="15" rx="2" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function MiloBox() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-12 h-16">
-      <rect x="25" y="15" width="50" height="90" rx="4" fill="#0F9D58" />
-      <rect x="25" y="15" width="50" height="20" rx="4" fill="#0B8043" />
-      <circle cx="50" cy="65" r="12" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function Pen() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-10 h-18">
-      <rect x="44" y="15" width="12" height="75" rx="6" fill="#4285F4" />
-      <rect x="44" y="15" width="12" height="15" rx="3" fill="#1A73E8" />
-      <polygon points="44,90 56,90 50,110" fill="#3C4043" />
-    </svg>
-  );
-}
-
-function Notebook() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <rect x="25" y="15" width="55" height="90" rx="4" fill="#FBBC05" />
-      <rect x="20" y="20" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="36" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="52" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="68" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="84" width="8" height="8" rx="2" fill="#3C4043" />
-    </svg>
-  );
-}
-
-const ILLUSTRATIONS = {
-  water: WaterDrop,
-  cola: SodaCup,
-  chips: ChipsBag,
-  wafer: WaferBag,
-  noodle: CupNoodle,
-  milo: MiloBox,
-  pen: Pen,
-  notebook: Notebook,
-};
 
 export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout }) {
+  const [deliveryOption, setDeliveryOption] = useState("pickup");
+  const [shippingOption, setShippingOption] = useState("combined");
+  const [shippingSettings, setShippingSettings] = useState({ baseShippingFee: 40, additionalSplitShippingFee: 30 });
+
+  useEffect(() => {
+    fetch("/api/settings/shipping")
+      .then(res => res.json())
+      .then(data => {
+        if (data.baseShippingFee !== undefined) {
+          setShippingSettings(data);
+        }
+      })
+      .catch(err => console.error("Error loading shipping settings:", err));
+  }, []);
+
   if (!isOpen) return null;
 
   const { items = [], totalPrice = 0, totalItems = 0 } = cart || {};
+  const hasInStock = items.some(item => item.product && item.product.status === "In Stock");
   const hasPreOrder = items.some(item => item.product && item.product.status === "Pre-Order");
-  const shippingFee = hasPreOrder ? 40 : 0;
+  const isMixed = hasInStock && hasPreOrder;
+
+  let shippingFee = 0;
+  if (deliveryOption === "delivery") {
+    if (isMixed && shippingOption === "split") {
+      shippingFee = shippingSettings.baseShippingFee * 2;
+    } else {
+      shippingFee = shippingSettings.baseShippingFee;
+    }
+  }
 
   return (
     <div
@@ -140,31 +95,28 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400">ตรวจสอบความถูกต้องและจำนวนรายการสินค้าก่อนดำเนินการชำระเงิน</p>
+          <p className="text-xs text-gray-400">รายการพัสดุและค่าจัดส่งคำนวณตามมาตรฐานตู้สินค้า Kiosk</p>
         </div>
 
+        <button
+          onClick={onClose}
+          className="p-3 rounded-full hover:bg-gray-100 border border-gray-100 transition-colors cursor-pointer"
+        >
+          <XMarkIcon className="w-6 h-6 text-gray-500" />
+        </button>
       </div>
 
       {/* Cart Content Body */}
-      <div className="flex-1 overflow-hidden p-8 flex flex-col lg:flex-row gap-8 max-w-7xl w-full mx-auto">
-        {items.length === 0 ? (
-          // Beautiful Empty State View
-          <div className="flex-1 bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center p-12 text-center gap-6">
-            <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100 shadow-inner">
-              <ShoppingBagIcon className="w-12 h-12 text-gray-300 animate-pulse" />
+      <div className="flex-1 flex p-8 gap-8 overflow-hidden">
+        {totalItems === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+              <ShoppingBagIcon className="w-10 h-10" />
             </div>
-            <div className="flex flex-col gap-2 max-w-sm">
-              <p className="text-xl font-bold text-[#2B2B2B]">ตะกร้าของคุณว่างเปล่า</p>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                ดูเหมือนคุณยังไม่ได้เลือกสินค้าใส่ตะกร้าเลย สนุกกับการเลือกซื้อสินค้าโปรดของคุณได้ทันที!
-              </p>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-gray-700">ไม่มีสินค้าในตะกร้า</h3>
+              <p className="text-sm text-gray-400 mt-1">กรุณาเลือกหยิบสินค้าจากหน้าร้านเพื่อดำเนินการต่อ</p>
             </div>
-            <button
-              onClick={onClose}
-              className="px-8 py-3.5 bg-[#F8C032] hover:bg-[#F0B420] active:scale-95 text-[#2B2B2B] font-bold rounded-2xl transition-all shadow-md select-none cursor-pointer"
-            >
-              เลือกซื้อสินค้าเลย
-            </button>
           </div>
         ) : (
           <>
@@ -183,7 +135,6 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
               <div className="flex flex-col gap-4">
                 {items.map((item) => {
                   const { product, quantity } = item;
-                  const Illustration = ILLUSTRATIONS[product.image] || WaterBottle;
 
                   return (
                     <div
@@ -192,7 +143,15 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                     >
                       {/* Product Illustration / Image */}
                       <div className="w-28 h-28 bg-gray-50 flex items-center justify-center p-3 rounded-2xl border border-gray-100 shrink-0">
-                        <Illustration />
+                        {product.image && product.image.includes(".") ? (
+                          <img
+                            src={`/uploads/products/${product.image}`}
+                            alt={product.name}
+                            className="max-w-full max-h-full w-auto h-auto object-contain rounded-xl"
+                          />
+                        ) : (
+                          <CategoryPlaceholder category={product.category} />
+                        )}
                       </div>
 
                       {/* Product Detail Text */}
@@ -211,6 +170,11 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                                 พร้อมส่งหน้าร้าน
                               </span>
                             )}
+                            {(product.purchaseLimit || product.purchase_limit) && (
+                              <span className="text-[10px] text-red-500 bg-red-50 px-2.5 py-0.5 rounded-full font-bold">
+                                จำกัดไม่เกิน {product.purchaseLimit || product.purchase_limit} ชิ้น
+                              </span>
+                            )}
                             {product.pickup_location && (
                               <span className="text-[10px] text-gray-400 font-medium font-mono">
                                 {product.pickup_location}
@@ -222,10 +186,10 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                         {/* Calculated Unit Price */}
                         <div className="flex items-baseline gap-2">
                           <span className="text-xl font-black text-[#E53935]">
-                            ฿{(product.price * quantity).toFixed(0)}
+                            ฿{(product.price * quantity).toLocaleString('th-TH')}
                           </span>
                           <span className="text-xs text-gray-400">
-                            (฿{product.price}/ชิ้น)
+                            (฿{product.price.toLocaleString('th-TH')}/ชิ้น)
                           </span>
                         </div>
                       </div>
@@ -253,8 +217,15 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                             {quantity}
                           </span>
                           <button
-                            onClick={() => onUpdateQuantity(product.id, quantity + 1)}
-                            className="p-1.5 hover:bg-gray-200 rounded-xl text-gray-500 transition-colors cursor-pointer active:scale-90"
+                            onClick={() => {
+                              const limit = product.purchaseLimit || product.purchase_limit;
+                              if (limit && quantity >= limit) {
+                                alert(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+                                return;
+                              }
+                              onUpdateQuantity(product.id, quantity + 1);
+                            }}
+                            className={`p-1.5 rounded-xl text-gray-500 transition-colors cursor-pointer active:scale-90 ${(product.purchaseLimit || product.purchase_limit) && quantity >= (product.purchaseLimit || product.purchase_limit) ? "opacity-30 cursor-not-allowed" : "hover:bg-gray-200"}`}
                           >
                             <PlusIcon className="w-4 h-4" />
                           </button>
@@ -271,6 +242,69 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
               <div className="flex flex-col gap-4">
                 <h3 className="text-lg font-black text-[#2B2B2B] border-b border-gray-50 pb-3">สรุปยอดชำระเงิน</h3>
 
+                {/* รูปแบบการรับสินค้า (Delivery Method Selection) */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">รูปแบบการรับสินค้า</span>
+                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                    <button
+                      onClick={() => setDeliveryOption("pickup")}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        deliveryOption === "pickup"
+                          ? "bg-white text-[#2B2B2B] shadow-sm border border-gray-200/40"
+                          : "text-gray-400 hover:text-gray-600"
+                      }`}
+                    >
+                      🏪 รับที่ตู้ Kiosk
+                    </button>
+                    <button
+                      onClick={() => setDeliveryOption("delivery")}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        deliveryOption === "delivery"
+                          ? "bg-white text-[#2B2B2B] shadow-sm border border-gray-200/40"
+                          : "text-gray-400 hover:text-gray-600"
+                      }`}
+                    >
+                      🚚 จัดส่งพัสดุ
+                    </button>
+                  </div>
+                </div>
+
+                {/* แยกจัดส่งสำหรับออเดอร์ผสม (Split Shipping Selector) */}
+                {deliveryOption === "delivery" && isMixed && (
+                  <div className="flex flex-col gap-2 bg-[#F8C032]/5 p-4 rounded-2xl border border-[#F8C032]/10 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <span className="text-xs font-bold text-[#A24B2C] uppercase tracking-wide">ตัวเลือกจัดส่งสินค้าผสม</span>
+                    <div className="flex flex-col gap-2 mt-1">
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="radio"
+                          name="shipping_option"
+                          checked={shippingOption === "combined"}
+                          onChange={() => setShippingOption("combined")}
+                          className="mt-1 accent-[#A24B2C]"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-[#2B2B2B]">จัดส่งพร้อมกันทั้งหมด</span>
+                          <span className="text-[10px] text-gray-400">รอส่งรอบเดียวเมื่อสินค้า Pre-Order ครบ (ค่าส่งปกติ ฿{shippingSettings.baseShippingFee.toLocaleString('th-TH')})</span>
+                        </div>
+                      </label>
+                      
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none border-t border-gray-100 pt-2 mt-1">
+                        <input
+                          type="radio"
+                          name="shipping_option"
+                          checked={shippingOption === "split"}
+                          onChange={() => setShippingOption("split")}
+                          className="mt-1 accent-[#A24B2C]"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-[#2B2B2B]">แยกจัดส่งสินค้า (บวกค่าส่งเพิ่ม)</span>
+                          <span className="text-[10px] text-gray-400">ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{(shippingSettings.baseShippingFee * 2).toLocaleString('th-TH')})</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 {/* Cost Breakdown Rows */}
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-center text-sm text-gray-400">
@@ -278,16 +312,20 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                     <span className="font-bold text-[#2B2B2B]">{totalItems} ชิ้น</span>
                   </div>
                   <div className="flex justify-between items-center text-sm text-gray-400">
-                    <span>ค่าจัดส่งสินค้า (Pre-Order)</span>
-                    {shippingFee > 0 ? (
-                      <span className="font-bold text-[#E53935]">฿{shippingFee}</span>
-                    ) : (
-                      <span className="font-bold text-[#2E7D32]">ฟรี</span>
-                    )}
+                    <span>วิธีกระจายสินค้า</span>
+                    <span className="font-bold text-[#2B2B2B]">
+                      {deliveryOption === "pickup" ? "🏪 รับที่ตู้ Kiosk" : "🚚 จัดส่งพัสดุ"}
+                    </span>
                   </div>
+                  {deliveryOption === "delivery" && (
+                    <div className="flex justify-between items-center text-sm text-gray-400">
+                      <span>ค่าบริการจัดส่ง</span>
+                      <span className="font-bold text-[#E53935]">฿{shippingFee}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center text-sm text-gray-400">
                     <span>การชำระเงิน</span>
-                    <span className="font-medium text-[#2B2B2B]">สแกนโอนเงิน QR</span>
+                    <span className="font-medium text-[#2B2B2B]">PromptPay Dynamic QR</span>
                   </div>
                 </div>
 
@@ -297,7 +335,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 <div className="flex justify-between items-end">
                   <span className="text-sm font-bold text-gray-400 uppercase tracking-wide">ยอดรวมสุทธิ</span>
                   <span className="text-3xl font-black text-[#E53935] leading-none">
-                    ฿{(totalPrice + shippingFee).toFixed(0)}
+                    ฿{(totalPrice + shippingFee).toLocaleString('th-TH')}
                   </span>
                 </div>
               </div>
@@ -306,7 +344,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
-                    onCheckout();
+                    onCheckout(deliveryOption, shippingOption);
                     onClose();
                   }}
                   className="h-14 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95

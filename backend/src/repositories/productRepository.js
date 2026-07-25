@@ -14,7 +14,9 @@ class ProductRepository {
         price: parseFloat(row.price),
         // แมปชื่อฟิลด์จาก Database (snake_case) เป็นฟิลด์ที่หน้าบ้านใช้ (camelCase)
         quantity: row.stock,
-        pickupLocation: row.pickup_location
+        pickupLocation: row.pickup_location,
+        preorderReleaseDate: row.preorder_release_date,
+        purchaseLimit: row.purchase_limit
       }));
     } catch (error) {
       console.error("Error in ProductRepository.getAll:", error);
@@ -37,7 +39,9 @@ class ProductRepository {
         ...row,
         price: parseFloat(row.price),
         quantity: row.stock,
-        pickupLocation: row.pickup_location
+        pickupLocation: row.pickup_location,
+        preorderReleaseDate: row.preorder_release_date,
+        purchaseLimit: row.purchase_limit
       }));
     } catch (error) {
       console.error("Error in ProductRepository.getByCategory:", error);
@@ -58,7 +62,9 @@ class ProductRepository {
         ...row,
         price: parseFloat(row.price),
         quantity: row.stock,
-        pickupLocation: row.pickup_location
+        pickupLocation: row.pickup_location,
+        preorderReleaseDate: row.preorder_release_date,
+        purchaseLimit: row.purchase_limit
       }));
     } catch (error) {
       console.error("Error in ProductRepository.getPromotions:", error);
@@ -72,11 +78,11 @@ class ProductRepository {
    */
   async create(p) {
     const query = `
-      INSERT INTO products (name, description, price, stock, category, image, promotion, pickup_location, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO products (name, description, price, stock, category, image, promotion, pickup_location, status, preorder_release_date, purchase_limit)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock || 0, p.category, p.image, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock'];
+    const values = [p.name, p.description, p.price, p.stock || 0, p.category, p.image, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null];
     try {
       const res = await pool.query(query, values);
       return res.rows[0];
@@ -94,11 +100,11 @@ class ProductRepository {
   async update(id, p) {
     const query = `
       UPDATE products 
-      SET name = $1, description = $2, price = $3, stock = $4, category = $5, image = $6, promotion = $7, pickup_location = $8, status = $9
-      WHERE id = $10
+      SET name = $1, description = $2, price = $3, stock = $4, category = $5, image = $6, promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11
+      WHERE id = $12
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock, p.category, p.image, p.promotion, p.pickupLocation, p.status, id];
+    const values = [p.name, p.description, p.price, p.stock, p.category, p.image, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, id];
     try {
       const res = await pool.query(query, values);
       if (res.rows.length === 0) return null;
@@ -191,10 +197,36 @@ class ProductRepository {
         price: parseFloat(row.price),
         quantity: row.stock,
         pickupLocation: row.pickup_location,
+        preorderReleaseDate: row.preorder_release_date,
+        purchaseLimit: row.purchase_limit,
         soldCount: parseInt(row.sold_count, 10)
       }));
     } catch (error) {
       console.error("Error in ProductRepository.getBestSellers:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch a single product by ID
+   * @param {number|string} id 
+   * @returns {Promise<object|null>}
+   */
+  async getById(id) {
+    try {
+      const res = await pool.query("SELECT * FROM products WHERE id = $1", [parseInt(id, 10)]);
+      if (res.rows.length === 0) return null;
+      const row = res.rows[0];
+      return {
+        ...row,
+        price: parseFloat(row.price),
+        quantity: row.stock,
+        pickupLocation: row.pickup_location,
+        preorderReleaseDate: row.preorder_release_date,
+        purchaseLimit: row.purchase_limit
+      };
+    } catch (error) {
+      console.error("Error in ProductRepository.getById:", error);
       throw error;
     }
   }
