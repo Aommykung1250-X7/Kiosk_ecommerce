@@ -1,127 +1,55 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 
-function WaterDrop() {
+function CategoryPlaceholder({ category }) {
+  const getIcon = () => {
+    switch (category) {
+      case "drinks":
+        return (
+          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9V5.25c0-.414.168-.75.375-.75h3.75c.207 0 .375.336.375.75V9m-4.5 0h4.5m-4.5 0a3 3 0 0 1-3-3V3.75c0-.414.168-.75.375-.75h6.75c.207 0 .375.336.375.75V6a3 3 0 0 1-3 3M3.75 21h16.5M12 9v12m-5.25-6h10.5" />
+          </svg>
+        );
+      case "snacks":
+        return (
+          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+          </svg>
+        );
+      case "instant":
+        return (
+          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+          </svg>
+        );
+      case "stationery":
+        return (
+          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+          </svg>
+        );
+    }
+  };
+
   return (
-    <svg viewBox="0 0 100 100" className="w-28 h-28">
-      <defs>
-        <linearGradient id="waterGradDetail" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#80D0FF" />
-          <stop offset="50%" stopColor="#41A5EE" />
-          <stop offset="100%" stopColor="#2568D9" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M50 15 C50 15 78 48 78 65 C78 80 65 90 50 90 C35 90 22 80 22 65 C22 48 50 15 50 15 Z"
-        fill="url(#waterGradDetail)"
-      />
-      <ellipse cx="44" cy="55" rx="4" ry="10" fill="#FFFFFF" opacity="0.35" transform="rotate(-20 44 55)" />
-      <ellipse cx="40" cy="45" rx="2" ry="5" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 40 45)" />
-    </svg>
+    <div className="flex flex-col items-center justify-center gap-1 opacity-60">
+      {getIcon()}
+      <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{category || "Product"}</span>
+    </div>
   );
 }
-
-function SodaCup() {
-  return (
-    <svg viewBox="0 0 120 160" className="w-28 h-36">
-      {/* Cup body with pink/red stripes */}
-      <path d="M35 50 L85 50 L77 140 L43 140 Z" fill="#EAEAEA" />
-      <path d="M48 50 L54 50 L57 140 L51 140 Z" fill="#EC4E63" />
-      <path d="M66 50 L72 50 L69 140 L63 140 Z" fill="#EC4E63" />
-      {/* Lid */}
-      <ellipse cx="60" cy="50" rx="27" ry="8" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      <rect x="52" y="42" width="16" height="6" rx="2" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      {/* Straw */}
-      <path d="M57 42 L57 20 L75 20" stroke="#EC4E63" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M57 42 L57 20 L75 20" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.3" />
-    </svg>
-  );
-}
-
-function ChipsBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-24 h-28">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#F4B400" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#DBA000" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#DBA000" />
-      <circle cx="50" cy="62" r="16" fill="#FFFFFF" />
-      <ellipse cx="50" cy="62" rx="10" ry="7" fill="#E37400" />
-    </svg>
-  );
-}
-
-function WaferBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-24 h-28">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#4285F4" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#2A6CD6" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#2A6CD6" />
-      <rect x="30" y="50" width="40" height="30" rx="3" fill="#FFD600" />
-    </svg>
-  );
-}
-
-function CupNoodle() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-24 h-28">
-      <path d="M25 35 L75 35 L68 105 L32 105 Z" fill="#EA4335" />
-      <ellipse cx="50" cy="35" rx="25" ry="8" fill="#F1F3F4" />
-      <ellipse cx="50" cy="31" rx="25" ry="8" fill="#FFFFFF" />
-      <rect x="35" y="55" width="30" height="15" rx="2" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function MiloBox() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-20 h-28">
-      <rect x="25" y="15" width="50" height="90" rx="4" fill="#0F9D58" />
-      <rect x="25" y="15" width="50" height="20" rx="4" fill="#0B8043" />
-      <circle cx="50" cy="65" r="14" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function Pen() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-16 h-32">
-      <rect x="44" y="15" width="12" height="75" rx="6" fill="#4285F4" />
-      <rect x="44" y="15" width="12" height="15" rx="3" fill="#1A73E8" />
-      <polygon points="44,90 56,90 50,110" fill="#3C4043" />
-    </svg>
-  );
-}
-
-function Notebook() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-24 h-28">
-      <rect x="25" y="15" width="55" height="90" rx="4" fill="#FBBC05" />
-      <rect x="20" y="20" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="36" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="52" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="68" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="84" width="8" height="8" rx="2" fill="#3C4043" />
-    </svg>
-  );
-}
-
-const ILLUSTRATIONS = {
-  water: WaterDrop,
-  cola: SodaCup,
-  chips: ChipsBag,
-  wafer: WaferBag,
-  noodle: CupNoodle,
-  milo: MiloBox,
-  pen: Pen,
-  notebook: Notebook,
-};
 
 export default function ProductDetailModal({ product, onClose, onAddToCart }) {
   if (!product) return null;
 
   const { name, price, image, promotion, description, status, quantity } = product;
   const isOutOfStock = status === "In Stock" && quantity <= 0;
-  const Illustration = ILLUSTRATIONS[image] || WaterDrop;
 
   const bgColors = {
     water: "bg-[#E9F4FA]",
@@ -152,16 +80,25 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
         </button>
 
         {/* Product Image Area */}
-        <div className="w-full aspect-[4/3] bg-white flex items-center justify-center p-8 border-b-2 border-black">
-          <div className="w-full h-full max-w-[180px] flex items-center justify-center">
-            <Illustration />
+        {/* Product Image Area */}
+        <div className="w-full aspect-[4/3] bg-white flex items-center justify-center p-6 border-b-2 border-black relative overflow-hidden">
+          <div className="w-full h-full max-w-[200px] flex items-center justify-center">
+            {image && image.includes(".") ? (
+              <img
+                src={`/uploads/products/${image}`}
+                alt={name}
+                className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg"
+              />
+            ) : (
+              <CategoryPlaceholder category={product.category} />
+            )}
           </div>
         </div>
 
         {/* Content Area matching item detail.png */}
         <div className="p-6 flex flex-col gap-4 text-left">
-          {/* Status Badge */}
-          <div>
+          {/* Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
               isOutOfStock
                 ? "bg-red-50 text-[#FF5252]"
@@ -169,6 +106,11 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
             }`}>
               {isOutOfStock ? "Out of stock" : "Ready"}
             </span>
+            {(product.purchaseLimit || product.purchase_limit) && (
+              <span className="bg-red-50 text-red-600 text-[10px] font-black px-3 py-1 rounded-full border border-red-200 tracking-wider">
+                จำกัดไม่เกิน {product.purchaseLimit || product.purchase_limit} ชิ้น
+              </span>
+            )}
           </div>
 
           {/* Title and Price */}
@@ -191,6 +133,17 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
             <p className="text-gray-600 text-sm leading-relaxed font-semibold">
               {description || "Product detail description."}
             </p>
+            {product.status === "Pre-Order" && (product.preorderReleaseDate || product.preorder_release_date) && (
+              <div className="mt-2 text-xs font-bold text-[#E65100] bg-[#FFF3E0] px-3.5 py-2 rounded-xl border border-[#FFE0B2]/50 w-fit">
+                📦 วันที่ปล่อยสินค้าส่งมอบ: {(() => {
+                  const d = new Date(product.preorderReleaseDate || product.preorder_release_date);
+                  const day = String(d.getDate()).padStart(2, '0');
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const year = d.getFullYear();
+                  return `${day}/${month}/${year}`;
+                })()}
+              </div>
+            )}
           </div>
 
           {/* Add to Cart Button matching item detail.png */}

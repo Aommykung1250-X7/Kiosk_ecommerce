@@ -1,29 +1,29 @@
 // backend/src/middlewares/authMiddleware.js
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../config/security.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "camt-secret-key-for-toy-kiosk";
+const JWT_SECRET = getJwtSecret();
 
 /**
  * Middleware สำหรับดักตรวจสอบ JWT Token ใน HTTP Headers
  */
 export const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
+  const tokenFromCookie = req.cookies?.authToken;
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : tokenFromCookie;
 
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.split(" ")[1];
-
-    jwt.verify(token, JWT_SECRET, (err, decodedUser) => {
-      if (err) {
-        return res.status(403).json({ error: "Token is invalid or expired" });
-      }
-      
-      // บันทึกข้อมูล user จาก token ลงใน request object
-      req.user = decodedUser; // { id, username, role, name }
-      next();
-    });
-  } else {
-    res.status(401).json({ error: "Authorization header (Bearer token) is missing" });
+  if (!token) {
+    return res.status(401).json({ error: "Authorization header (Bearer token) is missing" });
   }
+
+  jwt.verify(token, JWT_SECRET, (err, decodedUser) => {
+    if (err) {
+      return res.status(403).json({ error: "Token is invalid or expired" });
+    }
+
+    req.user = decodedUser;
+    next();
+  });
 };
 
 /**

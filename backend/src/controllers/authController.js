@@ -2,8 +2,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import pool from "../data/db.js";
+import { getJwtSecret } from "../config/security.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "camt-secret-key-for-toy-kiosk";
+const JWT_SECRET = getJwtSecret();
 
 class AuthController {
   /**
@@ -46,9 +47,14 @@ class AuthController {
         { expiresIn: "24h" }
       );
 
-      // คืนค่า token และข้อมูลผู้ใช้กลับไป (ไม่ส่ง password_hash ไปเด็ดขาด)
+      res.cookie("authToken", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000
+      });
+
       return res.json({
-        token,
         user: {
           id: user.id,
           username: user.username,

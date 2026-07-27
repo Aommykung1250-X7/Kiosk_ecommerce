@@ -1,5 +1,24 @@
 // backend/src/services/productService.js
+import fs from "fs";
+import path from "path";
 import productRepository from "../repositories/productRepository.js";
+
+const defaultIllustrations = ["water", "cola", "chips", "wafer", "noodle", "milo", "pen", "notebook"];
+
+const deleteProductImageFile = (imageFilename) => {
+  if (!imageFilename) return;
+  if (defaultIllustrations.includes(imageFilename)) return;
+
+  const filepath = path.join(process.cwd(), "uploads", "products", imageFilename);
+  try {
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+      console.log(`[ProductService] Deleted custom image file: ${filepath}`);
+    }
+  } catch (error) {
+    console.error(`[ProductService] Error deleting file: ${filepath}`, error);
+  }
+};
 
 class ProductService {
   /**
@@ -36,6 +55,14 @@ class ProductService {
    * @param {object} productData 
    */
   async updateProduct(id, productData) {
+    try {
+      const oldProduct = await productRepository.getById(id);
+      if (oldProduct && oldProduct.image !== productData.image) {
+        deleteProductImageFile(oldProduct.image);
+      }
+    } catch (err) {
+      console.error("[ProductService] Failed to check and delete old product image file:", err);
+    }
     return await productRepository.update(id, productData);
   }
 
@@ -44,6 +71,14 @@ class ProductService {
    * @param {number} id
    */
   async deleteProduct(id) {
+    try {
+      const product = await productRepository.getById(id);
+      if (product) {
+        deleteProductImageFile(product.image);
+      }
+    } catch (err) {
+      console.error("[ProductService] Failed to clean up product image on delete:", err);
+    }
     return await productRepository.delete(id);
   }
 

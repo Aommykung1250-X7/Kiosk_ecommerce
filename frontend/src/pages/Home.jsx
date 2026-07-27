@@ -162,6 +162,13 @@ export default function Home() {
       trackProductView(product.id);
     }
 
+    const existingItem = cart.items.find(item => item.product?.id === product.id);
+    const limit = product.purchaseLimit || product.purchase_limit;
+    if (existingItem && limit && existingItem.quantity >= limit) {
+      alert(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+      return;
+    }
+
     fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -205,22 +212,42 @@ export default function Home() {
     setIsCartOpen(true);
   };
 
-  const handleCheckout = (shippingFee = 0, deliveryMethod = "pickup") => {
+  const handleCheckout = (param1, param2) => {
     if (cart.items.length === 0) return;
+
+    let shippingFee = 0;
+    let deliveryMethod = "pickup";
+
+    if (typeof param1 === "number") {
+      shippingFee = param1;
+      deliveryMethod = param2 || "pickup";
+    } else if (param1 === "delivery" || param1 === "home") {
+      shippingFee = 20;
+      deliveryMethod = "home";
+    }
 
     const grandTotal = cart.totalPrice + shippingFee;
 
     fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: cart.items, totalPrice: grandTotal, deliveryMethod, shippingFee })
+      body: JSON.stringify({
+        items: cart.items,
+        totalPrice: grandTotal,
+        deliveryMethod,
+        shippingFee
+      })
     })
       .then((res) => {
         if (!res.ok) throw new Error("ไม่สามารถสร้างออเดอร์ได้");
         return res.json();
       })
       .then((data) => {
-        setActiveOrder({ orderId: data.orderId, totalPrice: data.totalPrice });
+        setActiveOrder({
+          orderId: data.orderId,
+          totalPrice: data.totalPrice,
+          qrPayload: data.qrPayload
+        });
       })
       .catch((err) => alert(err.message));
   };
@@ -348,12 +375,19 @@ export default function Home() {
             <span className="font-extrabold text-sm text-white">View your shopping cart</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-gray-400">TOTAL:</span>
-              <span className="text-xl font-black text-[#F9C338]">
-                ฿{bottomDisplayTotal.toFixed(0)}
-              </span>
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end justify-center leading-none">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-white/60">ยอดรวมสุทธิ:</span>
+                <span className="text-xl font-extrabold text-[#F8C032]">
+                  ฿{bottomDisplayTotal.toLocaleString('th-TH')}
+                </span>
+              </div>
+              {bottomHasPreOrder && (
+                <span className="text-[10px] text-red-400 font-bold mt-1">
+                  (มีค่าจัดส่งเพิ่มเติมสำหรับสินค้า Pre-order)
+                </span>
+              )}
             </div>
             <span className="text-xs font-black text-[#F9C338] bg-[#F9C338]/20 px-2.5 py-1 rounded-lg uppercase tracking-wider">
               OPEN {'>'}
@@ -366,6 +400,7 @@ export default function Home() {
         <KioskPayment
           orderId={activeOrder.orderId}
           totalPrice={activeOrder.totalPrice}
+          qrPayload={activeOrder.qrPayload}
           onPaymentSuccess={handlePaymentSuccess}
           onCancel={() => setActiveOrder(null)}
         />

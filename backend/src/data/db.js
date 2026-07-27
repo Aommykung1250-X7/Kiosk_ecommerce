@@ -1,5 +1,10 @@
 import pkg from 'pg';
-const { Pool } = pkg;
+const { Pool, types } = pkg;
+
+// Force node-postgres to parse TIMESTAMP (without timezone) as UTC
+types.setTypeParser(1114, (val) => {
+    return new Date(val.replace(' ', 'T') + 'Z');
+});
 
 const pool = new Pool({
     user: 'aommykung',
@@ -17,7 +22,7 @@ export const initDb = async () => {
             FROM information_schema.columns 
             WHERE table_name = 'products' AND column_name = 'id'
         `);
-        
+
         if (checkIdType.rows.length > 0 && checkIdType.rows[0].data_type === 'character varying') {
             console.log("Dropping old tables to change product ID column type to SERIAL...");
             await pool.query("DROP TABLE IF EXISTS orders CASCADE;");
@@ -46,6 +51,12 @@ export const initDb = async () => {
         password_hash VARCHAR(255) NOT NULL,
         role VARCHAR(50) NOT NULL CHECK(role IN('admin', 'staff')),
         name VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS categories(
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -79,6 +90,8 @@ export const initDb = async () => {
         customer_address TEXT,
         slip_url TEXT,
         items JSONB,
+        courier VARCHAR(100),
+        tracking_number VARCHAR(100),
         paid_at TIMESTAMP,
         fulfilled_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -92,6 +105,8 @@ export const initDb = async () => {
         await pool.query(`
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_status_instock VARCHAR(50) DEFAULT 'pending';
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS fulfillment_status_preorder VARCHAR(50) DEFAULT 'pending';
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier VARCHAR(100);
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_number VARCHAR(100);
         `);
 
         // Migrate existing fulfilled orders
@@ -135,6 +150,74 @@ export const initDb = async () => {
             INSERT INTO kiosk_stats (key, value) 
             VALUES ('session_wakeups', 0) 
             ON CONFLICT (key) DO NOTHING;
+        `);
+
+        // Create system_settings table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS system_settings(
+                key VARCHAR(100) PRIMARY KEY,
+                value TEXT
+            );
+        `);
+
+        // Seed system_settings
+        await pool.query(`
+            INSERT INTO system_settings (key, value) VALUES
+            ('shipping_base_fee', '40.00'),
+            ('shipping_split_fee', '30.00')
+            ON CONFLICT (key) DO NOTHING;
+        `);
+
+        // Seed default categories
+        await pool.query(`
+            INSERT INTO categories (id, name) VALUES
+            ('toy', 'ของเล่น'),
+            ('sweet', 'ขนมหวาน'),
+            ('stationery', 'เครื่องเขียน')
+            ON CONFLICT (id) DO NOTHING;
+        `);
+
+        // Create line_members table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS line_members (
+                line_user_id VARCHAR(100) PRIMARY KEY,
+                customer_name VARCHAR(255),
+                customer_phone VARCHAR(50),
+                customer_email VARCHAR(100),
+                customer_address TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Create screensavers table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS screensavers(
+                id SERIAL PRIMARY KEY,
+                type VARCHAR(50) DEFAULT 'image',
+                file_url TEXT NOT NULL,
+                is_enabled BOOLEAN DEFAULT TRUE,
+                display_order INTEGER DEFAULT 0,
+                duration INTEGER DEFAULT 10,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Alter products table
+        await pool.query(`
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS preorder_release_date DATE DEFAULT NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS purchase_limit INTEGER DEFAULT NULL;
+            ALTER TABLE screensavers ADD COLUMN IF NOT EXISTS title VARCHAR(255) DEFAULT 'Untitled Ad';
+        `);
+
+        // Alter orders table
+        await pool.query(`
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_option VARCHAR(50) DEFAULT 'pickup';
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_option VARCHAR(50) DEFAULT 'combined';
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_number_1 VARCHAR(100) DEFAULT NULL;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_1 VARCHAR(100) DEFAULT NULL;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_number_2 VARCHAR(100) DEFAULT NULL;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_2 VARCHAR(100) DEFAULT NULL;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway_ref VARCHAR(255) DEFAULT NULL;
         `);
 
         console.log('Database tables initialized successfully');

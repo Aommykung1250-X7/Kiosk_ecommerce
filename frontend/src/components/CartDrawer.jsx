@@ -1,121 +1,51 @@
-import { useState } from "react";
+// src/components/CartDrawer.jsx
+import { useState, useEffect } from "react";
 import { XMarkIcon, MinusIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon, ShoppingBagIcon } from "@heroicons/react/24/solid";
 
-function WaterDrop() {
+function CategoryPlaceholder({ category }) {
+  const getIcon = () => {
+    switch (category) {
+      case "drinks":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9V5.25c0-.414.168-.75.375-.75h3.75c.207 0 .375.336.375.75V9m-4.5 0h4.5m-4.5 0a3 3 0 0 1-3-3V3.75c0-.414.168-.75.375-.75h6.75c.207 0 .375.336.375.75V6a3 3 0 0 1-3 3M3.75 21h16.5M12 9v12m-5.25-6h10.5" />
+          </svg>
+        );
+      case "snacks":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+          </svg>
+        );
+      case "instant":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+          </svg>
+        );
+      case "stationery":
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+          </svg>
+        );
+    }
+  };
+
   return (
-    <svg viewBox="0 0 100 100" className="w-16 h-16">
-      <defs>
-        <linearGradient id="waterGradCart" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#80D0FF" />
-          <stop offset="50%" stopColor="#41A5EE" />
-          <stop offset="100%" stopColor="#2568D9" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M50 15 C50 15 78 48 78 65 C78 80 65 90 50 90 C35 90 22 80 22 65 C22 48 50 15 50 15 Z"
-        fill="url(#waterGradCart)"
-      />
-      <ellipse cx="44" cy="55" rx="3" ry="8" fill="#FFFFFF" opacity="0.35" transform="rotate(-20 44 55)" />
-      <ellipse cx="40" cy="45" rx="1.5" ry="4" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 40 45)" />
-    </svg>
+    <div className="flex flex-col items-center justify-center gap-0.5 opacity-60">
+      {getIcon()}
+      <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{category || "Product"}</span>
+    </div>
   );
 }
-
-function SodaCup() {
-  return (
-    <svg viewBox="0 0 120 160" className="w-16 h-20">
-      {/* Cup body with pink/red stripes */}
-      <path d="M35 50 L85 50 L77 140 L43 140 Z" fill="#EAEAEA" />
-      <path d="M48 50 L54 50 L57 140 L51 140 Z" fill="#EC4E63" />
-      <path d="M66 50 L72 50 L69 140 L63 140 Z" fill="#EC4E63" />
-      {/* Lid */}
-      <ellipse cx="60" cy="50" rx="27" ry="8" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      <rect x="52" y="42" width="16" height="6" rx="2" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      {/* Straw */}
-      <path d="M57 42 L57 20 L75 20" stroke="#EC4E63" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M57 42 L57 20 L75 20" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.3" />
-    </svg>
-  );
-}
-
-function ChipsBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#F4B400" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#DBA000" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#DBA000" />
-      <circle cx="50" cy="62" r="14" fill="#FFFFFF" />
-      <ellipse cx="50" cy="62" rx="9" ry="6" fill="#E37400" />
-    </svg>
-  );
-}
-
-function WaferBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#4285F4" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#2A6CD6" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#2A6CD6" />
-      <rect x="30" y="50" width="40" height="30" rx="3" fill="#FFD600" />
-    </svg>
-  );
-}
-
-function CupNoodle() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <path d="M25 35 L75 35 L68 105 L32 105 Z" fill="#EA4335" />
-      <ellipse cx="50" cy="35" rx="25" ry="8" fill="#F1F3F4" />
-      <ellipse cx="50" cy="31" rx="25" ry="8" fill="#FFFFFF" />
-      <rect x="35" y="55" width="30" height="15" rx="2" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function MiloBox() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-12 h-16">
-      <rect x="25" y="15" width="50" height="90" rx="4" fill="#0F9D58" />
-      <rect x="25" y="15" width="50" height="20" rx="4" fill="#0B8043" />
-      <circle cx="50" cy="65" r="12" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function Pen() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-10 h-18">
-      <rect x="44" y="15" width="12" height="75" rx="6" fill="#4285F4" />
-      <rect x="44" y="15" width="12" height="15" rx="3" fill="#1A73E8" />
-      <polygon points="44,90 56,90 50,110" fill="#3C4043" />
-    </svg>
-  );
-}
-
-function Notebook() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-14 h-16">
-      <rect x="25" y="15" width="55" height="90" rx="4" fill="#FBBC05" />
-      <rect x="20" y="20" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="36" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="52" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="68" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="84" width="8" height="8" rx="2" fill="#3C4043" />
-    </svg>
-  );
-}
-
-const ILLUSTRATIONS = {
-  water: WaterDrop,
-  cola: SodaCup,
-  chips: ChipsBag,
-  wafer: WaferBag,
-  noodle: CupNoodle,
-  milo: MiloBox,
-  pen: Pen,
-  notebook: Notebook,
-};
 
 export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout }) {
   const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "pickup" (รับที่นี่ - ฿0) or "home" (ส่งไปบ้าน - ฿20)
@@ -131,18 +61,27 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
       onClick={(e) => e.stopPropagation()}
     >
       {/* Fullscreen Header matching cart.png */}
-      <div className="bg-white border-b border-gray-100 px-8 py-6 flex flex-col gap-1 shadow-xs shrink-0">
-        <div className="flex items-center gap-3">
-          <h2 className="text-3xl font-black text-black">Shopping basket</h2>
-          {totalItems > 0 && (
-            <span className="bg-[#F9C338] text-black text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
-              {totalItems} ITEM
-            </span>
-          )}
+      <div className="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between shadow-xs shrink-0">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl sm:text-3xl font-black text-black">Shopping basket</h2>
+            {totalItems > 0 && (
+              <span className="bg-[#F9C338] text-black text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                {totalItems} ITEM
+              </span>
+            )}
+          </div>
+          <p className="text-xs font-semibold text-gray-400">
+            Verify the accuracy and quantity of the items before proceeding with payment.
+          </p>
         </div>
-        <p className="text-xs font-semibold text-gray-400">
-          Verify the accuracy and quantity of the items before proceeding with payment.
-        </p>
+
+        <button
+          onClick={onClose}
+          className="p-2.5 rounded-full hover:bg-gray-100 border border-gray-200 transition-colors cursor-pointer"
+        >
+          <XMarkIcon className="w-6 h-6 text-black" />
+        </button>
       </div>
 
       {/* Cart Content Body */}
@@ -180,10 +119,9 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 </button>
               </div>
 
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3.5">
                 {items.map((item) => {
                   const { product, quantity } = item;
-                  const Illustration = ILLUSTRATIONS[product.image] || WaterDrop;
 
                   return (
                     <div
@@ -192,8 +130,16 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                     >
                       <div className="flex items-center gap-4 min-w-0">
                         {/* Product Image */}
-                        <div className="w-20 h-20 bg-[#F6F6F6] flex items-center justify-center p-2 rounded-2xl shrink-0">
-                          <Illustration />
+                        <div className="w-20 h-20 bg-[#F6F6F6] flex items-center justify-center p-2 rounded-2xl shrink-0 overflow-hidden">
+                          {product.image && product.image.includes(".") ? (
+                            <img
+                              src={`/uploads/products/${product.image}`}
+                              alt={product.name}
+                              className="max-w-full max-h-full w-auto h-auto object-contain rounded-xl"
+                            />
+                          ) : (
+                            <CategoryPlaceholder category={product.category} />
+                          )}
                         </div>
 
                         {/* Product Details */}
@@ -203,7 +149,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                           </h4>
                           <div>
                             <span className="bg-[#E0F2F1] text-[#00796B] text-[10px] font-black px-2.5 py-0.5 rounded-full inline-block">
-                              Ready
+                              {product.status || "Ready"}
                             </span>
                           </div>
                           <div className="flex items-baseline gap-1.5 mt-0.5">
@@ -240,7 +186,14 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                             {quantity}
                           </span>
                           <button
-                            onClick={() => onUpdateQuantity(product.id, quantity + 1)}
+                            onClick={() => {
+                              const limit = product.purchaseLimit || product.purchase_limit;
+                              if (limit && quantity >= limit) {
+                                alert(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+                                return;
+                              }
+                              onUpdateQuantity(product.id, quantity + 1);
+                            }}
                             className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-black font-bold text-base cursor-pointer active:scale-90"
                           >
                             +

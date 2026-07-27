@@ -1,39 +1,38 @@
-import {
-  Squares2X2Icon,
-  BeakerIcon,
-  ShoppingBagIcon,
-  FireIcon,
-  PencilSquareIcon,
-  TagIcon,
-} from "@heroicons/react/24/outline";
-import {
-  Squares2X2Icon as Squares2X2Solid,
-  BeakerIcon as BeakerSolid,
-  ShoppingBagIcon as ShoppingBagSolid,
-  FireIcon as FireSolid,
-  PencilSquareIcon as PencilSquareSolid,
-  TagIcon as TagSolid,
-} from "@heroicons/react/24/solid";
-
-const CATEGORIES = [
-  { id: "all", label: "ทั้งหมด" },
-  { id: "drinks", label: "เครื่องดื่ม" },
-  { id: "snacks", label: "ขนมขบเคี้ยว" },
-  { id: "instant", label: "อาหารพร้อมทาน" },
-  { id: "stationery", label: "เครื่องเขียน" },
-  { id: "promotion", label: "โปรโมชั่น" },
-];
-
-const ICONS = {
-  all: [Squares2X2Icon, Squares2X2Solid],
-  drinks: [BeakerIcon, BeakerSolid],
-  snacks: [ShoppingBagIcon, ShoppingBagSolid],
-  instant: [FireIcon, FireSolid],
-  stationery: [PencilSquareIcon, PencilSquareSolid],
-  promotion: [TagIcon, TagSolid],
-};
+import React, { useState, useEffect } from "react";
 
 export default function Sidebar({ selectedCategory, onSelectCategory }) {
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        return res.json();
+      })
+      .then((data) => {
+        const mapped = (data || []).map((c) => ({
+          id: c.id,
+          label: c.name,
+        }));
+        setCategories([
+          { id: "all", label: "ทั้งหมด" },
+          ...mapped,
+          { id: "promotion", label: "โปรโมชั่น" }
+        ]);
+      })
+      .catch((err) => {
+        console.error("Error loading categories in Sidebar:", err);
+        setCategories([
+          { id: "all", label: "ทั้งหมด" },
+          { id: "drinks", label: "เครื่องดื่ม" },
+          { id: "snacks", label: "ขนมขบเคี้ยว" },
+          { id: "instant", label: "อาหารพร้อมทาน" },
+          { id: "stationery", label: "เครื่องเขียน" },
+          { id: "promotion", label: "โปรโมชั่น" }
+        ]);
+      });
+  }, []);
+
   return (
     <aside
       className="w-36 sm:w-44 h-full bg-white border-r border-gray-200 shrink-0 flex flex-col 
@@ -45,7 +44,7 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
         </p>
       </div>
 
-      {CATEGORIES.map((cat) => {
+      {categories.map((cat) => {
         const isActive = selectedCategory === cat.id;
 
         return (
@@ -69,4 +68,3 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
     </aside>
   );
 }
-

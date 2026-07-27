@@ -7,11 +7,10 @@ import { Navigate, Outlet } from "react-router-dom";
  * @param {Array<string>} allowedRoles - บทบาทที่อนุญาตให้เข้าถึงได้ เช่น ['admin', 'staff']
  */
 const ProtectedRoute = ({ allowedRoles }) => {
-  const token = localStorage.getItem("token");
   const userString = localStorage.getItem("user");
 
-  // หากไม่มี Token หรือข้อมูลผู้ใช้ ให้รีไดเรกต์ไปหน้า Login
-  if (!token || !userString) {
+  // หากไม่มีข้อมูลผู้ใช้ ให้รีไดเรกต์ไปหน้า Login
+  if (!userString) {
     return <Navigate to="/ditc-portal-to-manager" replace />;
   }
 
