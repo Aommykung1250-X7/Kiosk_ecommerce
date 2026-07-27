@@ -65,9 +65,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
               sse.close();
             }
           })
-          .catch(() => {
-            // Fail silently on polling network issues
-          });
+          .catch(() => {});
       }, 3000);
 
       // Clean up SSE & polling on unmount
@@ -86,9 +84,6 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
       body: JSON.stringify({ orderId })
     })
       .then((res) => res.json())
-      .then(() => {
-        // SSE will capture this or polling will capture this
-      })
       .catch((err) => console.error("Error simulating payment:", err))
       .finally(() => setSimulatingPayment(false));
   };
@@ -120,53 +115,53 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F8F8F8] flex flex-col items-center justify-center p-6 font-['Prompt']">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-[0_15px_40px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col p-8 gap-8 animate-in fade-in-50 duration-200">
+    <div className="absolute inset-0 z-50 bg-[#F8F8F8] flex flex-col items-center justify-center p-6 font-['Prompt'] overflow-y-auto">
+      <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-[0_15px_40px_rgba(0,0,0,0.06)] flex flex-col p-8 gap-6 animate-in fade-in-50 duration-200 my-auto">
         
         {paymentStatus === "pending" ? (
           <>
             {/* Payment Pending UI */}
-            <div className="text-center flex flex-col gap-2">
-              <h2 className="text-2xl font-bold text-[#2B2B2B]">สแกนเพื่อชำระเงิน</h2>
-              <p className="text-sm text-gray-500">กรุณาแสกน QR Code เพื่อโอนเงินผ่านแอปพลิเคชันธนาคาร</p>
+            <div className="text-center flex flex-col gap-1">
+              <h2 className="text-2xl font-black text-[#2B2B2B]">สแกนเพื่อชำระเงิน</h2>
+              <p className="text-xs text-gray-500 font-semibold">กรุณาสแกน QR Code เพื่อโอนเงินผ่านแอปพลิเคชันธนาคาร</p>
             </div>
 
             {/* QR Code Container */}
-            <div className="flex flex-col items-center justify-center gap-4 py-4 bg-gray-50 rounded-2xl border border-gray-100 relative">
+            <div className="flex flex-col items-center justify-center gap-3 py-3 bg-gray-50 rounded-2xl border border-gray-100 relative">
               {qrPayload ? (
                 <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-                  <QRCodeSVG value={qrPayload} size={200} />
+                  <QRCodeSVG value={qrPayload} size={180} />
                 </div>
               ) : (
-                <div className="h-[232px] flex flex-col items-center justify-center text-gray-400">
+                <div className="h-[200px] flex flex-col items-center justify-center text-gray-400">
                   <ArrowPathIcon className="w-10 h-10 animate-spin mb-2" />
-                  <span className="text-xs">กำลังสร้าง QR Code จาก Omise...</span>
+                  <span className="text-xs font-semibold">กำลังสร้าง QR Code...</span>
                 </div>
               )}
-              <span className="text-xs font-mono text-gray-400 select-all">
+              <span className="text-[11px] font-mono text-gray-400 select-all">
                 ID: {orderId}
               </span>
             </div>
 
-            {/* Price & Ref details */}
-            <div className="flex flex-col gap-3 text-center bg-[#F8C032]/10 p-4 rounded-2xl border border-[#F8C032]/20">
-              <span className="text-sm text-gray-500 font-medium">ยอดเงินชำระทั้งหมด</span>
-              <span className="text-3xl font-extrabold text-[#E53935]">
-                ฿{totalPrice.toLocaleString('th-TH')}
+            {/* Price details */}
+            <div className="flex flex-col gap-1 text-center bg-[#F9C338]/15 p-3.5 rounded-2xl border border-[#F9C338]/30">
+              <span className="text-xs text-gray-500 font-bold">ยอดเงินชำระทั้งหมด</span>
+              <span className="text-3xl font-black text-[#E53935]">
+                ฿{(totalPrice || 0).toFixed(0)}
               </span>
             </div>
 
             {/* Real-time Loader */}
-            <div className="flex items-center justify-center gap-2.5 text-[#2E7D32] bg-[#E8F5E9] py-3.5 px-4 rounded-xl border border-[#C8E6C9] font-medium text-sm">
-              <ArrowPathIcon className="w-4.5 h-4.5 animate-spin shrink-0" />
-              <span>ระบบตรวจสอบการชำระเงินเรียลไทม์...</span>
+            <div className="flex items-center justify-center gap-2 text-[#2E7D32] bg-[#E8F5E9] py-3 px-4 rounded-xl border border-[#C8E6C9] font-bold text-xs">
+              <ArrowPathIcon className="w-4 h-4 animate-spin shrink-0" />
+              <span>ระบบกำลังตรวจสอบการชำระเงินแบบเรียลไทม์...</span>
             </div>
 
             {/* Simulate Payment for Dev */}
             <button
               onClick={handleSimulatePayment}
               disabled={simulatingPayment}
-              className="py-2.5 px-4 rounded-xl bg-[#F8C032]/20 text-[#A24B2C] hover:bg-[#F8C032]/30 active:scale-95 transition-all text-xs font-bold border border-[#F8C032]/30 cursor-pointer"
+              className="py-2 px-4 rounded-xl bg-[#F9C338]/20 text-[#A24B2C] hover:bg-[#F9C338]/30 active:scale-95 transition-all text-xs font-extrabold border border-[#F9C338]/30 cursor-pointer select-none"
             >
               {simulatingPayment ? "กำลังจำลอง..." : "⚡ จำลองการโอนสำเร็จ (Simulate Webhook)"}
             </button>
@@ -174,7 +169,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
             {/* Cancel Order Button */}
             <button
               onClick={onCancel}
-              className="py-3 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-semibold border border-red-200 active:scale-95 transition-all text-center cursor-pointer"
+              className="py-3 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-extrabold border border-red-200 active:scale-95 transition-all text-center cursor-pointer text-xs"
             >
               ยกเลิกคำสั่งซื้อ
             </button>
@@ -183,17 +178,17 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
           <>
             {/* Payment Successful, Ask for Contact Info */}
             <div className="text-center flex flex-col gap-2">
-              <div className="flex justify-center mb-2">
-                <CheckCircleIcon className="w-16 h-16 text-[#2E7D32] animate-bounce" />
+              <div className="flex justify-center mb-1">
+                <CheckCircleIcon className="w-14 h-14 text-[#2E7D32] animate-bounce" />
               </div>
-              <h2 className="text-2xl font-bold text-[#2B2B2B]">ชำระเงินสำเร็จ!</h2>
-              <p className="text-sm text-gray-500">กรุณากรอกข้อมูลติดต่อเพื่อส่งใบเสร็จรับเงินทางอีเมล</p>
+              <h2 className="text-2xl font-black text-[#2B2B2B]">ชำระเงินสำเร็จ!</h2>
+              <p className="text-xs font-semibold text-gray-500">กรุณากรอกข้อมูลติดต่อเพื่อส่งใบเสร็จรับเงินทางอีเมล</p>
             </div>
 
-            <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <PhoneIcon className="w-4 h-4" /> เบอร์โทรศัพท์ติดต่อ
+            <form onSubmit={handleContactSubmit} className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-1 text-left">
+                <label className="text-xs font-extrabold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                  <PhoneIcon className="w-4 h-4 text-gray-400" /> เบอร์โทรศัพท์ติดต่อ
                 </label>
                 <input
                   type="tel"
@@ -203,13 +198,13 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                   placeholder="เช่น 0812345678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  className="h-12 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm font-medium"
+                  className="h-11 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F9C338] text-sm font-semibold"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <EnvelopeIcon className="w-4 h-4" /> อีเมลสำหรับรับใบเสร็จ
+              <div className="flex flex-col gap-1 text-left">
+                <label className="text-xs font-extrabold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                  <EnvelopeIcon className="w-4 h-4 text-gray-400" /> อีเมลสำหรับรับใบเสร็จ
                 </label>
                 <input
                   type="email"
@@ -217,19 +212,19 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                   placeholder="example@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm font-medium"
+                  className="h-11 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F9C338] text-sm font-semibold"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submittingContact}
-                className={`h-12 rounded-2xl w-full font-bold text-base text-[#2B2B2B] shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer select-none
-                  ${submittingContact ? "bg-gray-100 text-gray-400" : "bg-[#F8C032] hover:bg-[#F0B420] active:scale-95"}`}
+                className={`h-12 rounded-2xl w-full font-black text-sm text-[#2B2B2B] shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer select-none border-2 border-black
+                  ${submittingContact ? "bg-gray-100 text-gray-400 border-gray-300" : "bg-[#F9C338] hover:bg-[#F2BD2B] active:scale-95"}`}
               >
                 {submittingContact ? (
                   <>
-                    <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                    <ArrowPathIcon className="w-4 h-4 animate-spin" />
                     <span>กำลังบันทึกข้อมูล...</span>
                   </>
                 ) : (
@@ -241,17 +236,17 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
         ) : (
           <>
             {/* Payment & Contact Success Final Screen */}
-            <div className="text-center flex flex-col items-center justify-center py-6 gap-6">
-              <CheckCircleIcon className="w-24 h-24 text-[#2E7D32] animate-bounce" />
+            <div className="text-center flex flex-col items-center justify-center py-4 gap-4">
+              <CheckCircleIcon className="w-20 h-20 text-[#2E7D32] animate-bounce" />
               
-              <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-extrabold text-[#2B2B2B]">เสร็จสิ้นรายการ!</h2>
-                <p className="text-sm text-gray-500 px-4">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-2xl font-black text-[#2B2B2B]">เสร็จสิ้นรายการ!</h2>
+                <p className="text-xs font-semibold text-gray-500 px-4">
                   ระบบได้ส่งใบเสร็จการชำระเงินไปยังอีเมลของท่านเรียบร้อยแล้ว
                 </p>
               </div>
 
-              <div className="w-full flex flex-col gap-3 bg-[#E8F5E9]/50 p-5 rounded-2xl border border-[#C8E6C9]/40 mt-2">
+              <div className="w-full flex flex-col gap-1.5 bg-[#E8F5E9]/50 p-4 rounded-2xl border border-[#C8E6C9]/40">
                 <span className="text-xs text-gray-400 font-semibold font-mono uppercase tracking-wider">
                   Order Reference
                 </span>

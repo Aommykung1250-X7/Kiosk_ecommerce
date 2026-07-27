@@ -21,50 +21,42 @@ function DiamondLogo() {
 export default function Header({ cart = { totalPrice: 0, totalItems: 0 }, onCartClick }) {
   return (
     <header
-      className="w-full h-[100px] bg-white border-b border-gray-150 flex items-center justify-between 
-                 px-[clamp(16px,2.5vw,40px)] shrink-0 font-['Prompt']"
+      className="w-full h-[100px] bg-[#F9C338] border-b border-black/10 flex items-center justify-between 
+                 px-[clamp(16px,2.5vw,40px)] shrink-0 font-['Prompt'] shadow-sm"
     >
-      {/* Left: Logo + Store name */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="w-12 h-12 rounded-2xl bg-[#1B1B1C] flex items-center 
-                     justify-center shrink-0 shadow-sm"
-        >
-          <DiamondLogo />
-        </div>
-        <div className="flex flex-col leading-tight min-w-0">
-          <span className="text-[clamp(18px,2vw,24px)] font-black text-[#1B1B1C] tracking-tight uppercase">
-            DITC SHOP
-          </span>
-          <span className="text-[10px] font-extrabold text-gray-400 tracking-wider uppercase">
-            Smart Retail Kiosk
-          </span>
-        </div>
+      {/* Left: Store name + Subtitle matching home.jpg */}
+      <div className="flex flex-col leading-tight min-w-0">
+        <span className="text-[clamp(22px,2.5vw,28px)] font-black text-black tracking-tight uppercase">
+          DITC SHOP
+        </span>
+        <span className="text-[11px] font-bold text-black/70 tracking-widest uppercase mt-0.5">
+          KIOSK
+        </span>
       </div>
 
       {/* Right: Total Price & Cart Button */}
-      <div className="flex items-center gap-6 shrink-0">
+      <div className="flex items-center gap-5 shrink-0">
         <div className="flex flex-col items-end leading-tight">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+          <span className="text-[10px] font-black text-black/70 uppercase tracking-widest">
             TOTAL
           </span>
-          <span className="text-[clamp(18px,2.2vw,26px)] font-black text-black mt-0.5">
-            ฿{(cart.totalPrice || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <span className="text-[clamp(20px,2.4vw,28px)] font-black text-black mt-0.5">
+            ฿{(cart.totalPrice || 0).toFixed(2)}
           </span>
         </div>
 
         <button
           onClick={onCartClick}
-          className="flex items-center gap-2 bg-[#1B1B1C] text-white px-5 py-3 rounded-2xl font-bold cursor-pointer hover:bg-black active:scale-[0.98] transition-all"
+          className="flex items-center gap-2.5 bg-[#1B1B1C] hover:bg-black text-white px-5 py-3 rounded-2xl font-black cursor-pointer active:scale-[0.97] transition-all shadow-sm"
         >
-          <div className="relative mr-1">
+          <div className="relative">
             <ShoppingCartIcon className="w-5 h-5 text-white" />
             <span className="absolute -top-2.5 -right-2.5 bg-[#5EBAA8] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#1B1B1C]">
               {cart.totalItems || 0}
             </span>
           </div>
           <span className="uppercase text-xs tracking-widest font-black">
-            Cart
+            CART
           </span>
         </button>
       </div>

@@ -82,43 +82,42 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           onSelectProduct(product);
         }
       }}
-      className={`w-full bg-white rounded-[24px] border-2 border-[#1B1B1C] 
-                 shadow-[6px_6px_0px_0px_#1B1B1C] flex flex-col overflow-hidden relative 
-                 transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-[8px_8px_0px_0px_#1B1B1C] font-['Prompt']
-                 ${isOutOfStock ? "opacity-75 cursor-not-allowed" : ""}`}
+      className={`w-full bg-white rounded-[24px] border-2 border-black/90 
+                 shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex flex-col overflow-hidden relative 
+                 transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] font-['Prompt']
+                 ${isOutOfStock ? "opacity-90" : ""}`}
     >
       {/* Hot badge */}
-      {isMostViewed && !isOutOfStock && (
-        <div className="absolute top-4 left-4 z-10 bg-[#EC4E63] text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
-          🔥 HOT
+      {isMostViewed && (
+        <div className="absolute top-2.5 left-2.5 z-10 bg-[#FF5252] text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider shadow-xs">
+          🔥 Hot
         </div>
       )}
 
       {/* Promo badge */}
-      {promotion && !isMostViewed && !isOutOfStock && (
-        <div className="absolute top-4 left-4 z-10 bg-[#F9C338] text-black text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider border border-[#1B1B1C]">
-          🏷️ PROMO
+      {promotion && !isMostViewed && (
+        <div className="absolute top-2.5 left-2.5 z-10 bg-[#F9C338] text-black text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider border border-black/20 shadow-xs">
+          🏷️ Promo
         </div>
       )}
 
-      {/* Status Badge */}
-      {status && (
-        <div
-          className={`absolute top-4 right-4 z-10 text-[10px] font-black px-3 py-1 rounded-full border ${
-            isOutOfStock
-              ? "bg-red-50 text-red-600 border-red-200"
-              : status === "In Stock"
-                ? "bg-[#E0F2F1]/60 text-[#00796B] border-[#80CBC4]/40"
-                : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
-          }`}
-        >
-          {isOutOfStock ? "สินค้าหมด" : status === "In Stock" ? "พร้อมส่ง" : status}
-        </div>
-      )}
+      {/* Status Badge matching home.jpg */}
+      <div
+        className={`absolute top-2.5 right-2.5 z-10 text-[9px] font-black px-2 py-0.5 rounded-full ${
+          isOutOfStock
+            ? "bg-red-50 text-[#FF5252]"
+            : status === "In Stock" || status === "Ready"
+              ? "bg-[#E0F2F1] text-[#00796B]"
+              : "bg-[#FFF3E0] text-[#E65100]"
+        }`}
+      >
+        {isOutOfStock ? "Out of stock" : "Ready"}
+      </div>
 
       {/* Image Area */}
-      <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden`}>
-        <div className={`absolute inset-0 flex items-center justify-center p-6 ${isOutOfStock ? "opacity-35 grayscale" : ""}`}>
+      {/* Image Area */}
+      <div className="w-full aspect-[8/5] bg-white flex items-center justify-center p-3 border-b-2 border-black/90 relative overflow-hidden">
+        <div className={`w-full h-full flex items-center justify-center ${isOutOfStock ? "opacity-40 grayscale" : ""}`}>
           {image && image.includes(".") ? (
             <img
               src={`/uploads/products/${image}`}
@@ -129,70 +128,43 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
             <CategoryPlaceholder category={product.category} />
           )}
         </div>
-        {isOutOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="bg-red-600 text-white text-[12px] font-black px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transform -rotate-12 border-2 border-white">
-              สินค้าหมด
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col px-5 py-5 gap-3 text-left">
-        <div>
-          <h3 className="text-base font-bold text-black leading-snug line-clamp-1">
+      <div className="flex-1 flex flex-col px-3.5 py-3 gap-2.5 text-left min-w-0">
+        <div className="min-w-0">
+          <h3 className="text-sm font-black text-black leading-tight truncate">
             {name}
           </h3>
-          <p className="text-xs font-semibold text-gray-400 mt-0.5">
-            {subText}
+          <p className="text-[11px] font-semibold text-gray-400 mt-0.5 truncate">
+            {subText || "Small detail"}
           </p>
         </div>
 
-        {/* Price & Stock container */}
-        <div className="bg-[#F6F6F6] rounded-2xl p-4 flex flex-col gap-1 w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">PRICE</span>
-              <span className="text-2xl font-black text-[#D99A1C] mt-1.5 leading-none">
-                ฿{price.toLocaleString('th-TH')}
-              </span>
-            </div>
-            {status !== "Pre-Order" && !isOutOfStock && (
-              <div className="flex flex-col items-end justify-center">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">STOCK</span>
-                <span className="text-sm font-black text-[#5EBAA8] mt-1.5 leading-none">
-                  คงเหลือ {quantity} ชิ้น
-                </span>
-              </div>
-            )}
-            {status === "Pre-Order" && (
-              <div className="flex flex-col items-end">
-                <span className="text-[9px] font-black text-[#E65100] uppercase tracking-widest leading-none">PRE-ORDER</span>
-                <span className="text-[10px] font-bold text-[#E65100]/80 mt-2">
-                  รอสินค้า 15 วัน
-                </span>
-              </div>
-            )}
-          </div>
+        {/* Price Box matching home.jpg */}
+        <div className="bg-[#F4F4F6] rounded-xl px-3 py-2 flex items-center justify-between w-full min-w-0">
+          <span className="text-xs font-black text-[#8E8E93] uppercase tracking-wider">PRICE</span>
+          <span className="text-lg font-black text-[#F9C338]">
+            ฿{Number(price || 0).toFixed(0)}
+          </span>
         </div>
 
-        {/* Add to Cart Button */}
+        {/* Add to Cart Button matching home.jpg */}
         <button
           disabled={isOutOfStock}
           onClick={(e) => {
             e.stopPropagation();
             onAddToCart(product);
           }}
-          className={`h-12 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-[#1B1B1C]
-                     transition-all duration-150 shrink-0 cursor-pointer font-black text-xs uppercase ${
+          className={`h-10 w-full rounded-xl flex items-center justify-center gap-1.5 border-2 border-black/90
+                     transition-all duration-150 shrink-0 font-extrabold text-[11px] uppercase cursor-pointer select-none whitespace-nowrap px-1 ${
                        isOutOfStock
-                         ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
-                         : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
+                         ? "bg-[#E5E5E7] text-[#8E8E93] border-[#D1D1D6] cursor-not-allowed"
+                         : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98] shadow-xs"
                      }`}
         >
-          <ShoppingCartIcon className="w-4 h-4" />
-          <span>{isOutOfStock ? "สินค้าหมด" : "Add to Cart"}</span>
+          <ShoppingCartIcon className="w-3.5 h-3.5 shrink-0" />
+          <span>{isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}</span>
         </button>
       </div>
     </div>

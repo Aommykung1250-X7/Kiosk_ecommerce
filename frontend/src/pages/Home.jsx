@@ -212,38 +212,32 @@ export default function Home() {
     setIsCartOpen(true);
   };
 
-  const handleCheckout = (deliveryOption, shippingOption) => {
+  const handleCheckout = (param1, param2) => {
     if (cart.items.length === 0) return;
 
-    fetch("/api/settings/shipping")
-      .then((res) => res.json())
-      .then((shippingSettings) => {
-        const hasInStock = cart.items.some(item => item.product && item.product.status === "In Stock");
-        const hasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-        const isMixed = hasInStock && hasPreOrder;
+    let shippingFee = 0;
+    let deliveryMethod = "pickup";
 
-        let shippingFee = 0;
-        if (deliveryOption === "delivery") {
-          if (isMixed && shippingOption === "split") {
-            shippingFee = shippingSettings.baseShippingFee + shippingSettings.additionalSplitShippingFee;
-          } else {
-            shippingFee = shippingSettings.baseShippingFee;
-          }
-        }
+    if (typeof param1 === "number") {
+      shippingFee = param1;
+      deliveryMethod = param2 || "pickup";
+    } else if (param1 === "delivery" || param1 === "home") {
+      shippingFee = 20;
+      deliveryMethod = "home";
+    }
 
-        const grandTotal = cart.totalPrice + shippingFee;
+    const grandTotal = cart.totalPrice + shippingFee;
 
-        return fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items: cart.items,
-            totalPrice: grandTotal,
-            deliveryOption,
-            shippingOption
-          })
-        });
+    fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: cart.items,
+        totalPrice: grandTotal,
+        deliveryMethod,
+        shippingFee
       })
+    })
       .then((res) => {
         if (!res.ok) throw new Error("ไม่สามารถสร้างออเดอร์ได้");
         return res.json();
@@ -267,13 +261,11 @@ export default function Home() {
       });
   };
 
-
-
-  const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-  const bottomDisplayTotal = cart.totalPrice;
+  const bottomHasPreOrder = cart.items?.some(item => item.product && item.product.status === "Pre-Order");
+  const bottomDisplayTotal = cart.totalPrice || 0;
 
   return (
-    <div className="w-screen h-screen bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt']">
+    <div className="w-full h-full bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt'] relative">
       <Header cart={cart} onCartClick={handleCartClick} />
 
       <div className="flex flex-1 overflow-hidden">
@@ -301,25 +293,25 @@ export default function Home() {
           ) : (
             <>
               {/* Category Heading matching the screenshot */}
-              <div className="px-8 pt-8 flex items-end justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Now Showing</span>
-                  <h1 className="text-3xl font-black text-black mt-1.5 leading-none">
-                    {selectedCategory === "all" ? "ทั้งหมด" :
-                      selectedCategory === "drinks" ? "เครื่องดื่ม" :
-                        selectedCategory === "snacks" ? "ขนมขบเคี้ยว" :
-                          selectedCategory === "instant" ? "อาหารพร้อมทาน" :
-                            selectedCategory === "stationery" ? "เครื่องเขียน" :
-                              selectedCategory === "promotion" ? "โปรโมชั่น" : "สินค้า"}
+              <div className="px-4 pt-5 flex items-end justify-between min-w-0">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">NOW SHOWING</span>
+                  <h1 className="text-2xl sm:text-3xl font-black text-black mt-1 leading-none uppercase truncate">
+                    {selectedCategory === "all" ? "ALL" : 
+                     selectedCategory === "drinks" ? "DRINKS" :
+                     selectedCategory === "snacks" ? "SNACKS" :
+                     selectedCategory === "instant" ? "INSTANT" :
+                     selectedCategory === "stationery" ? "STATIONERY" :
+                     selectedCategory === "promotion" ? "PROMOTION" : "PRODUCTS"}
                   </h1>
                 </div>
-                <span className="text-sm font-black text-gray-400">
-                  {products.length} รายการ
+                <span className="text-xs font-black text-gray-400 uppercase tracking-widest shrink-0 ml-2">
+                  {products.length} ITEM
                 </span>
               </div>
 
               <div
-                className="grid grid-cols-2 gap-6 p-8"
+                className="grid grid-cols-2 gap-3.5 p-4"
               >
                 {(() => {
                   const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
@@ -363,25 +355,25 @@ export default function Home() {
         onCheckout={handleCheckout}
       />
 
-      {/* Floating Cart Pop-up Bar at Bottom */}
+      {/* Floating Cart Pop-up Bar at Bottom matching home.jpg */}
       {cart.totalItems > 0 && (
         <div
           onClick={handleCartClick}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 
                      w-[90%] max-w-lg h-16 bg-[#2B2B2B] text-white rounded-2xl 
                      shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-white/10
                      flex items-center justify-between px-6 cursor-pointer 
                      hover:bg-[#3A3A3A] active:scale-[0.98] transition-all duration-200
-                     animate-in slide-in-from-bottom-10"
+                     animate-in slide-in-from-bottom-10 select-none"
         >
           <div className="flex items-center gap-3">
-            <div className="relative p-2 bg-[#F8C032] rounded-xl text-[#2B2B2B]">
+            <div className="relative p-2 bg-[#F9C338] rounded-xl text-[#2B2B2B]">
               <ShoppingCartIcon className="w-6 h-6" />
-              <span className="absolute -top-1.5 -right-1.5 bg-[#E53935] text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
+              <span className="absolute -top-1.5 -right-1.5 bg-[#FF5252] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
                 {cart.totalItems}
               </span>
             </div>
-            <span className="font-bold text-[clamp(14px,1.5vw,16px)]">ดูตะกร้าสินค้าของคุณ</span>
+            <span className="font-extrabold text-sm text-white">View your shopping cart</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -398,13 +390,12 @@ export default function Home() {
                 </span>
               )}
             </div>
-            <span className="text-xs font-semibold text-[#F8C032] bg-[#F8C032]/10 px-2 py-0.5 rounded-lg">
-              เปิด {'>'}
+            <span className="text-xs font-black text-[#F9C338] bg-[#F9C338]/20 px-2.5 py-1 rounded-lg uppercase tracking-wider">
+              OPEN {'>'}
             </span>
           </div>
         </div>
       )}
-
 
       {activeOrder && (
         <KioskPayment
@@ -423,7 +414,7 @@ export default function Home() {
 
       {/* Waking / loading transition */}
       {isWaking && (
-        <div className="fixed inset-0 z-[60] bg-[#0B0B0C]/90 backdrop-blur-md flex flex-col items-center justify-center font-['Prompt'] text-white animate-in fade-in-50 duration-200">
+        <div className="absolute inset-0 z-[60] bg-[#0B0B0C]/90 backdrop-blur-md flex flex-col items-center justify-center font-['Prompt'] text-white animate-in fade-in-50 duration-200">
           <div className="w-16 h-16 rounded-full border-4 border-t-[#F8C032] border-[#F8C032]/20 animate-spin mb-4"></div>
           <p className="text-lg font-semibold tracking-wider text-gray-200 animate-pulse">กำลังอัปเดตข้อมูลสินค้าล่าสุด...</p>
         </div>

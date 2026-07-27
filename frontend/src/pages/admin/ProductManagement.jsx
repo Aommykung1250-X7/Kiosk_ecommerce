@@ -1,4 +1,4 @@
-// frontend/src/pages/admin/ProductManagement.jsx
+﻿// frontend/src/pages/admin/ProductManagement.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlusIcon, PencilIcon, TrashIcon, ArrowRightOnRectangleIcon, ClipboardDocumentListIcon, Squares2X2Icon, TagIcon, ExclamationTriangleIcon, ChevronDownIcon, PhotoIcon } from "@heroicons/react/24/outline";
@@ -67,9 +67,9 @@ export default function ProductManagement() {
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
-  // State สำหรับควบคุม Modal ฟอร์ม
+  // State เธชเธณเธซเธฃเธฑเธเธเธงเธเธเธธเธก Modal เธเธญเธฃเนเธก
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null); // NULL = สร้างใหม่, มีค่า = แก้ไขตาม ID นั้น
+  const [editingId, setEditingId] = useState(null); // NULL = เธชเธฃเนเธฒเธเนเธซเธกเน, เธกเธตเธเนเธฒ = เนเธเนเนเธเธ•เธฒเธก ID เธเธฑเนเธ
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -98,7 +98,7 @@ export default function ProductManagement() {
       setPreviewUrl(URL.createObjectURL(resized));
     } catch (err) {
       console.error(err);
-      alert("ไม่สามารถปรับขนาดรูปภาพได้: " + err.message);
+      alert("เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธเธฃเธฑเธเธเธเธฒเธ”เธฃเธนเธเธ เธฒเธเนเธ”เน: " + err.message);
     }
   };
 
@@ -108,7 +108,7 @@ export default function ProductManagement() {
 
   const navigate = useNavigate();
 
-  // แท็บทำงาน: products = จัดการสินค้า, users = จัดการพนักงาน
+  // เนเธ—เนเธเธ—เธณเธเธฒเธ: products = เธเธฑเธ”เธเธฒเธฃเธชเธดเธเธเนเธฒ, users = เธเธฑเธ”เธเธฒเธฃเธเธเธฑเธเธเธฒเธ
   const [activeTab, setActiveTab] = useState("products");
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -167,7 +167,7 @@ export default function ProductManagement() {
   const handleSaveShippingSettings = async () => {
     const feeVal = parseFloat(baseShippingFeeInput);
     if (isNaN(feeVal) || feeVal < 0) {
-      return alert("กรุณาระบุค่าจัดส่งที่ถูกต้อง");
+      return alert("เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธเนเธฒเธเธฑเธ”เธชเนเธเธ—เธตเนเธ–เธนเธเธ•เนเธญเธ");
     }
 
     try {
@@ -181,9 +181,9 @@ export default function ProductManagement() {
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการบันทึกค่าจัดส่ง");
+      if (!res.ok) throw new Error(data.error || "เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธเธฑเธเธ—เธถเธเธเนเธฒเธเธฑเธ”เธชเนเธ");
 
-      alert("บันทึกค่าจัดส่งระบบสำเร็จ!");
+      alert("เธเธฑเธเธ—เธถเธเธเนเธฒเธเธฑเธ”เธชเนเธเธฃเธฐเธเธเธชเธณเน€เธฃเนเธ!");
       fetchShippingSettings();
     } catch (err) {
       alert(err.message);
@@ -201,7 +201,7 @@ export default function ProductManagement() {
     fetchShippingSettings();
   }, []);
 
-  // ดึงข้อมูลเมื่อแท็บสมาชิกเปิดทำงาน
+  // เธ”เธถเธเธเนเธญเธกเธนเธฅเน€เธกเธทเนเธญเนเธ—เนเธเธชเธกเธฒเธเธดเธเน€เธเธดเธ”เธ—เธณเธเธฒเธ
   useEffect(() => {
     if (activeTab === "users") {
       fetchUsers();
@@ -212,7 +212,7 @@ export default function ProductManagement() {
     try {
       const res = await fetch("/api/products");
       const data = await res.json();
-      if (!res.ok) throw new Error("ไม่สามารถเรียกรายการสินค้าได้");
+      if (!res.ok) throw new Error("เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เน€เธฃเธตเธขเธเธฃเธฒเธขเธเธฒเธฃเธชเธดเธเธเนเธฒเนเธ”เน");
       setProducts(data);
       fetchStats();
     } catch (err) {
@@ -229,7 +229,7 @@ export default function ProductManagement() {
         credentials: "include"
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "ไม่สามารถดึงข้อมูลรายชื่อพนักงานได้");
+      if (!res.ok) throw new Error(data.error || "เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธ”เธถเธเธเนเธญเธกเธนเธฅเธฃเธฒเธขเธเธทเนเธญเธเธเธฑเธเธเธฒเธเนเธ”เน");
       setUsers(data);
     } catch (err) {
       alert(err.message);
@@ -250,9 +250,9 @@ export default function ProductManagement() {
         body: JSON.stringify(userForm)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการบันทึกรายชื่อพนักงาน");
+      if (!res.ok) throw new Error(data.error || "เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธเธฑเธเธ—เธถเธเธฃเธฒเธขเธเธทเนเธญเธเธเธฑเธเธเธฒเธ");
 
-      alert("เพิ่มพนักงานสำเร็จ!");
+      alert("เน€เธเธดเนเธกเธเธเธฑเธเธเธฒเธเธชเธณเน€เธฃเนเธ!");
       setIsUserModalOpen(false);
       setUserForm({ username: "", password: "", role: "staff", name: "" });
       fetchUsers();
@@ -262,7 +262,7 @@ export default function ProductManagement() {
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm("คุณต้องการลบบัญชีผู้ใช้งานนี้จริงหรือไม่?")) {
+    if (!window.confirm("เธเธธเธ“เธ•เนเธญเธเธเธฒเธฃเธฅเธเธเธฑเธเธเธตเธเธนเนเนเธเนเธเธฒเธเธเธตเนเธเธฃเธดเธเธซเธฃเธทเธญเนเธกเน?")) {
       return;
     }
     try {
@@ -271,9 +271,9 @@ export default function ProductManagement() {
         credentials: "include"
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการลบพนักงาน");
+      if (!res.ok) throw new Error(data.error || "เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธฅเธเธเธเธฑเธเธเธฒเธ");
 
-      alert("ลบพนักงานสำเร็จ!");
+      alert("เธฅเธเธเธเธฑเธเธเธฒเธเธชเธณเน€เธฃเนเธ!");
       fetchUsers();
     } catch (err) {
       alert(err.message);
@@ -282,12 +282,12 @@ export default function ProductManagement() {
 
   const handleSaveNewCategoryInline = async () => {
     if (!newCatName.trim() || !newCatId.trim()) {
-      return alert("กรุณากรอกข้อมูลให้ครบถ้วนทั้งชื่อไทยและคีย์ภาษาอังกฤษ");
+      return alert("เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธเนเธญเธกเธนเธฅเนเธซเนเธเธฃเธเธ–เนเธงเธเธ—เธฑเนเธเธเธทเนเธญเนเธ—เธขเนเธฅเธฐเธเธตเธขเนเธ เธฒเธฉเธฒเธญเธฑเธเธเธคเธฉ");
     }
     
     const formattedId = newCatId.trim().toLowerCase();
     if (categories.some(c => c.id === formattedId)) {
-      return alert("มีคีย์หมวดหมู่นี้อยู่แล้วในระบบ");
+      return alert("เธกเธตเธเธตเธขเนเธซเธกเธงเธ”เธซเธกเธนเนเธเธตเนเธญเธขเธนเนเนเธฅเนเธงเนเธเธฃเธฐเธเธ");
     }
 
     try {
@@ -298,14 +298,14 @@ export default function ProductManagement() {
         body: JSON.stringify({ id: formattedId, name: newCatName.trim() })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการบันทึกหมวดหมู่");
+      if (!res.ok) throw new Error(data.error || "เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธเธฑเธเธ—เธถเธเธซเธกเธงเธ”เธซเธกเธนเน");
 
       await fetchCategories();
       setForm(prev => ({ ...prev, category: formattedId }));
       setIsAddingCategory(false);
       setNewCatName("");
       setNewCatId("");
-      alert(`เพิ่มหมวดหมู่ "${data.name}" สำเร็จ!`);
+      alert(`เน€เธเธดเนเธกเธซเธกเธงเธ”เธซเธกเธนเน "${data.name}" เธชเธณเน€เธฃเนเธ!`);
     } catch (err) {
       alert(err.message);
     }
@@ -316,11 +316,11 @@ export default function ProductManagement() {
 
     const isUsed = products.some(p => p.category === catId);
     if (isUsed) {
-      alert(`ไม่สามารถลบหมวดหมู่ "${categoryName}" ได้ เนื่องจากมีสินค้าที่ใช้หมวดหมู่นี้อยู่`);
+      alert(`เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธฅเธเธซเธกเธงเธ”เธซเธกเธนเน "${categoryName}" เนเธ”เน เน€เธเธทเนเธญเธเธเธฒเธเธกเธตเธชเธดเธเธเนเธฒเธ—เธตเนเนเธเนเธซเธกเธงเธ”เธซเธกเธนเนเธเธตเนเธญเธขเธนเน`);
       return;
     }
 
-    if (!window.confirm(`คุณต้องการลบหมวดหมู่ "${categoryName}" ใช่หรือไม่?`)) {
+    if (!window.confirm(`เธเธธเธ“เธ•เนเธญเธเธเธฒเธฃเธฅเธเธซเธกเธงเธ”เธซเธกเธนเน "${categoryName}" เนเธเนเธซเธฃเธทเธญเนเธกเน?`)) {
       return;
     }
 
@@ -330,13 +330,13 @@ export default function ProductManagement() {
         credentials: "include"
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "ไม่สามารถลบหมวดหมู่ได้");
+      if (!res.ok) throw new Error(data.error || "เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธฅเธเธซเธกเธงเธ”เธซเธกเธนเนเนเธ”เน");
 
       await fetchCategories();
       if (form.category === catId) {
         setForm(prev => ({ ...prev, category: "" }));
       }
-      alert(`ลบหมวดหมู่ "${categoryName}" เรียบร้อยแล้ว`);
+      alert(`เธฅเธเธซเธกเธงเธ”เธซเธกเธนเน "${categoryName}" เน€เธฃเธตเธขเธเธฃเนเธญเธขเนเธฅเนเธง`);
     } catch (err) {
       alert(err.message);
     }
@@ -345,7 +345,7 @@ export default function ProductManagement() {
   const handleSaveCategoryNameInline = async (catId) => {
     const trimmed = editingCatName.trim();
     if (!trimmed) {
-      alert("ชื่อหมวดหมู่ไม่สามารถเป็นค่าว่างได้");
+      alert("เธเธทเนเธญเธซเธกเธงเธ”เธซเธกเธนเนเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เน€เธเนเธเธเนเธฒเธงเนเธฒเธเนเธ”เน");
       return;
     }
 
@@ -357,7 +357,7 @@ export default function ProductManagement() {
         body: JSON.stringify({ name: trimmed })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "ไม่สามารถแก้ไขหมวดหมู่ได้");
+      if (!res.ok) throw new Error(data.error || "เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเนเนเธเธซเธกเธงเธ”เธซเธกเธนเนเนเธ”เน");
 
       await fetchCategories();
       setEditingCatId(null);
@@ -400,7 +400,7 @@ export default function ProductManagement() {
       name: p.name,
       description: p.description || "",
       price: p.price,
-      stock: p.stock || p.quantity || 0, // รองรับกรณีฟิลด์ทับซ้อน
+      stock: p.stock || p.quantity || 0, // เธฃเธญเธเธฃเธฑเธเธเธฃเธ“เธตเธเธดเธฅเธ”เนเธ—เธฑเธเธเนเธญเธ
       category: p.category || "drinks",
       image: p.image || "",
       promotion: p.promotion || false,
@@ -442,7 +442,7 @@ export default function ProductManagement() {
           credentials: "include"
         });
         const uploadData = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadData.error || "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ");
+        if (!uploadRes.ok) throw new Error(uploadData.error || "เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธญเธฑเธเนเธซเธฅเธ”เธฃเธนเธเธ เธฒเธ");
         finalImage = uploadData.image;
       } catch (err) {
         alert(err.message);
@@ -450,7 +450,7 @@ export default function ProductManagement() {
       }
     }
 
-    // ปรับชนิดตัวเลข
+    // เธเธฃเธฑเธเธเธเธดเธ”เธ•เธฑเธงเน€เธฅเธ
     const payload = {
       ...form,
       image: finalImage,
@@ -469,9 +469,9 @@ export default function ProductManagement() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการบันทึกสินค้า");
+      if (!res.ok) throw new Error(data.error || "เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธเธฑเธเธ—เธถเธเธชเธดเธเธเนเธฒ");
 
-      alert(editingId ? "แก้ไขสินค้าสำเร็จ!" : "เพิ่มสินค้าใหม่สำเร็จ!");
+      alert(editingId ? "เนเธเนเนเธเธชเธดเธเธเนเธฒเธชเธณเน€เธฃเนเธ!" : "เน€เธเธดเนเธกเธชเธดเธเธเนเธฒเนเธซเธกเนเธชเธณเน€เธฃเนเธ!");
       setIsModalOpen(false);
       fetchProducts();
     } catch (err) {
@@ -480,7 +480,7 @@ export default function ProductManagement() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("คุณต้องการลบสินค้าชิ้นนี้จริงหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) {
+    if (!window.confirm("เธเธธเธ“เธ•เนเธญเธเธเธฒเธฃเธฅเธเธชเธดเธเธเนเธฒเธเธดเนเธเธเธตเนเธเธฃเธดเธเธซเธฃเธทเธญเนเธกเน? เธเธฒเธฃเธเธฃเธฐเธ—เธณเธเธตเนเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธขเนเธญเธเธเธฅเธฑเธเนเธ”เน")) {
       return;
     }
 
@@ -491,9 +491,9 @@ export default function ProductManagement() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการลบสินค้า");
+      if (!res.ok) throw new Error(data.error || "เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”เนเธเธเธฒเธฃเธฅเธเธชเธดเธเธเนเธฒ");
 
-      alert("ลบสินค้าสำเร็จ!");
+      alert("เธฅเธเธชเธดเธเธเนเธฒเธชเธณเน€เธฃเนเธ!");
       fetchProducts();
     } catch (err) {
       alert(err.message);
@@ -505,7 +505,7 @@ export default function ProductManagement() {
     navigate("/ditc-portal-to-manager");
   };
 
-  // คำนวณสถิติ
+  // เธเธณเธเธงเธ“เธชเธ–เธดเธ•เธด
   const totalProducts = products.length;
   const outOfStock = products.filter(p => (p.stock || p.quantity) <= 0).length;
   const lowStock = products.filter(p => {
@@ -522,8 +522,8 @@ export default function ProductManagement() {
             <Squares2X2Icon className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-[#2B2B2B]">ระบบจัดการสินค้าหน้าร้าน</h1>
-            <p className="text-xs text-gray-400">ผู้จัดเตรียมสต็อกและคลังสินค้า (Admin/Manager)</p>
+            <h1 className="text-lg font-bold text-[#2B2B2B]">เธฃเธฐเธเธเธเธฑเธ”เธเธฒเธฃเธชเธดเธเธเนเธฒเธซเธเนเธฒเธฃเนเธฒเธ</h1>
+            <p className="text-xs text-gray-400">เธเธนเนเธเธฑเธ”เน€เธ•เธฃเธตเธขเธกเธชเธ•เนเธญเธเนเธฅเธฐเธเธฅเธฑเธเธชเธดเธเธเนเธฒ (Admin/Manager)</p>
           </div>
         </div>
 
@@ -533,7 +533,7 @@ export default function ProductManagement() {
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
           >
             <PhotoIcon className="w-4.5 h-4.5" />
-            <span>จัดการโฆษณา</span>
+            <span>เธเธฑเธ”เธเธฒเธฃเนเธเธฉเธ“เธฒ</span>
           </button>
 
           <button
@@ -541,7 +541,7 @@ export default function ProductManagement() {
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
           >
             <ClipboardDocumentListIcon className="w-4.5 h-4.5" />
-            <span>ไปหน้าจัดการคิว</span>
+            <span>เนเธเธซเธเนเธฒเธเธฑเธ”เธเธฒเธฃเธเธดเธง</span>
           </button>
 
           <button
@@ -549,7 +549,7 @@ export default function ProductManagement() {
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all"
           >
             <ArrowRightOnRectangleIcon className="w-4.5 h-4.5" />
-            <span>ออกจากระบบ</span>
+            <span>เธญเธญเธเธเธฒเธเธฃเธฐเธเธ</span>
           </button>
         </div>
       </nav>
@@ -559,24 +559,24 @@ export default function ProductManagement() {
         {/* Dashboard Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-400 uppercase">สินค้าทั้งหมด</span>
-            <span className="text-3xl font-black text-gray-700">{totalProducts} รายการ</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase">เธชเธดเธเธเนเธฒเธ—เธฑเนเธเธซเธกเธ”</span>
+            <span className="text-3xl font-black text-gray-700">{totalProducts} เธฃเธฒเธขเธเธฒเธฃ</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-400 uppercase">จำนวนผู้เข้าใช้งาน (ตู้ Kiosk)</span>
-            <span className="text-3xl font-black text-indigo-650">{kioskStats.wakeups} ครั้ง</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase">เธเธณเธเธงเธเธเธนเนเน€เธเนเธฒเนเธเนเธเธฒเธ (เธ•เธนเน Kiosk)</span>
+            <span className="text-3xl font-black text-indigo-650">{kioskStats.wakeups} เธเธฃเธฑเนเธ</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-400 uppercase">ยอดการเข้าชมสินค้าสะสม</span>
-            <span className="text-3xl font-black text-emerald-600">{kioskStats.totalViews} ครั้ง</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase">เธขเธญเธ”เธเธฒเธฃเน€เธเนเธฒเธเธกเธชเธดเธเธเนเธฒเธชเธฐเธชเธก</span>
+            <span className="text-3xl font-black text-emerald-600">{kioskStats.totalViews} เธเธฃเธฑเนเธ</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-400 uppercase">สินค้าหมดสต็อก</span>
-            <span className="text-3xl font-black text-red-600">{outOfStock} รายการ</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase">เธชเธดเธเธเนเธฒเธซเธกเธ”เธชเธ•เนเธญเธ</span>
+            <span className="text-3xl font-black text-red-600">{outOfStock} เธฃเธฒเธขเธเธฒเธฃ</span>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-400 uppercase">สินค้าใกล้หมด</span>
-            <span className="text-3xl font-black text-orange-500">{lowStock} รายการ</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase">เธชเธดเธเธเนเธฒเนเธเธฅเนเธซเธกเธ”</span>
+            <span className="text-3xl font-black text-orange-500">{lowStock} เธฃเธฒเธขเธเธฒเธฃ</span>
           </div>
         </div>
 
@@ -589,7 +589,7 @@ export default function ProductManagement() {
               : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
           >
-            จัดการคลังสินค้า
+            เธเธฑเธ”เธเธฒเธฃเธเธฅเธฑเธเธชเธดเธเธเนเธฒ
           </button>
           <button
             onClick={() => setActiveTab("users")}
@@ -598,7 +598,7 @@ export default function ProductManagement() {
               : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
           >
-            จัดการพนักงาน & สมาชิก
+            เธเธฑเธ”เธเธฒเธฃเธเธเธฑเธเธเธฒเธ & เธชเธกเธฒเธเธดเธ
           </button>
           <button
             onClick={() => setActiveTab("settings")}
@@ -607,7 +607,7 @@ export default function ProductManagement() {
               : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
           >
-            ตั้งค่าระบบ
+            เธ•เธฑเนเธเธเนเธฒเธฃเธฐเธเธ
           </button>
         </div>
 
@@ -615,13 +615,13 @@ export default function ProductManagement() {
           <>
             {/* Action Header for Products */}
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-800">คลังสินค้า Kiosk Shop</h2>
+              <h2 className="text-lg font-bold text-gray-800">เธเธฅเธฑเธเธชเธดเธเธเนเธฒ Kiosk Shop</h2>
               <button
                 onClick={handleOpenAddModal}
                 className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold rounded-xl active:scale-95 transition-all text-sm shadow-sm"
               >
                 <PlusIcon className="w-5 h-5" />
-                เพิ่มสินค้าใหม่
+                เน€เธเธดเนเธกเธชเธดเธเธเนเธฒเนเธซเธกเน
               </button>
             </div>
 
@@ -633,20 +633,20 @@ export default function ProductManagement() {
 
             {/* Table list */}
             {loading ? (
-              <div className="text-center py-20 text-gray-400">กำลังโหลดสินค้า...</div>
+              <div className="text-center py-20 text-gray-400">เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธชเธดเธเธเนเธฒ...</div>
             ) : (
               <div className="bg-white rounded-2xl border border-gray-150 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase">
-                        <th className="py-4 px-6">ชื่อสินค้า</th>
-                        <th className="py-4 px-6">หมวดหมู่</th>
-                        <th className="py-4 px-6">ราคา</th>
-                        <th className="py-4 px-6">จำนวนสต็อก</th>
-                        <th className="py-4 px-6">สถานะ</th>
-                        <th className="py-4 px-6">ยอดการเข้าชม</th>
-                        <th className="py-4 px-6 text-center">จัดการ</th>
+                        <th className="py-4 px-6">เธเธทเนเธญเธชเธดเธเธเนเธฒ</th>
+                        <th className="py-4 px-6">เธซเธกเธงเธ”เธซเธกเธนเน</th>
+                        <th className="py-4 px-6">เธฃเธฒเธเธฒ</th>
+                        <th className="py-4 px-6">เธเธณเธเธงเธเธชเธ•เนเธญเธ</th>
+                        <th className="py-4 px-6">เธชเธ–เธฒเธเธฐ</th>
+                        <th className="py-4 px-6">เธขเธญเธ”เธเธฒเธฃเน€เธเนเธฒเธเธก</th>
+                        <th className="py-4 px-6 text-center">เธเธฑเธ”เธเธฒเธฃ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
@@ -676,12 +676,12 @@ export default function ProductManagement() {
                                   )}
                                   {(p.purchaseLimit || p.purchase_limit) && (
                                     <span className="text-[9px] font-bold text-red-700 bg-red-50 py-0.5 px-1.5 rounded-full border border-red-150">
-                                      จำกัด {p.purchaseLimit || p.purchase_limit} ชิ้น
+                                      เธเธณเธเธฑเธ” {p.purchaseLimit || p.purchase_limit} เธเธดเนเธ
                                     </span>
                                   )}
                                   {p.status === "Pre-Order" && (p.preorderReleaseDate || p.preorder_release_date) && (
                                     <span className="text-[9px] font-bold text-[#E65100] bg-[#FFF3E0] py-0.5 px-1.5 rounded-full border border-[#FFE0B2]">
-                                      ส่งมอบ {new Date(p.preorderReleaseDate || p.preorder_release_date).toLocaleDateString("th-TH")}
+                                      เธชเนเธเธกเธญเธ {new Date(p.preorderReleaseDate || p.preorder_release_date).toLocaleDateString("th-TH")}
                                     </span>
                                   )}
                                 </div>
@@ -690,11 +690,11 @@ export default function ProductManagement() {
                             <td className="py-4 px-6 capitalize">
                               {categories.find(c => c.id === p.category)?.name || p.category}
                             </td>
-                            <td className="py-4 px-6 font-bold text-gray-800">฿{parseFloat(p.price).toFixed(0)}</td>
+                            <td className="py-4 px-6 font-bold text-gray-800">เธฟ{parseFloat(p.price).toFixed(0)}</td>
                             <td className="py-4 px-6">
                               <div className="flex items-center gap-1.5 font-bold">
                                 <span className={stockVal <= 0 ? "text-red-600" : stockVal <= 5 ? "text-orange-500" : "text-gray-800"}>
-                                  {stockVal} ชิ้น
+                                  {stockVal} เธเธดเนเธ
                                 </span>
                                 {stockVal <= 5 && (
                                   <ExclamationTriangleIcon className="w-4 h-4 text-orange-500 shrink-0" />
@@ -710,7 +710,7 @@ export default function ProductManagement() {
                               </span>
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-700 font-mono">
-                              {p.views || 0} ครั้ง
+                              {p.views || 0} เธเธฃเธฑเนเธ
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center justify-center gap-3">
@@ -743,29 +743,29 @@ export default function ProductManagement() {
           <>
             {/* User Management Section */}
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-800">บัญชีพนักงานร้านค้า CAMT</h2>
+              <h2 className="text-lg font-bold text-gray-800">เธเธฑเธเธเธตเธเธเธฑเธเธเธฒเธเธฃเนเธฒเธเธเนเธฒ CAMT</h2>
               <button
                 onClick={() => setIsUserModalOpen(true)}
                 className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold rounded-xl active:scale-95 transition-all text-sm shadow-sm"
               >
                 <PlusIcon className="w-5 h-5" />
-                เพิ่มพนักงานใหม่
+                เน€เธเธดเนเธกเธเธเธฑเธเธเธฒเธเนเธซเธกเน
               </button>
             </div>
 
             {loadingUsers ? (
-              <div className="text-center py-20 text-gray-400">กำลังโหลดบัญชีผู้ใช้งาน...</div>
+              <div className="text-center py-20 text-gray-400">เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธเธฑเธเธเธตเธเธนเนเนเธเนเธเธฒเธ...</div>
             ) : (
               <div className="bg-white rounded-2xl border border-gray-150 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase">
-                        <th className="py-4 px-6">ชื่อ-นามสกุล</th>
-                        <th className="py-4 px-6">ชื่อบัญชีผู้ใช้ (Username)</th>
-                        <th className="py-4 px-6">ตำแหน่งสิทธิ์ (Role)</th>
-                        <th className="py-4 px-6">วันที่สร้างบัญชี</th>
-                        <th className="py-4 px-6 text-center">จัดการ</th>
+                        <th className="py-4 px-6">เธเธทเนเธญ-เธเธฒเธกเธชเธเธธเธฅ</th>
+                        <th className="py-4 px-6">เธเธทเนเธญเธเธฑเธเธเธตเธเธนเนเนเธเน (Username)</th>
+                        <th className="py-4 px-6">เธ•เธณเนเธซเธเนเธเธชเธดเธ—เธเธดเน (Role)</th>
+                        <th className="py-4 px-6">เธงเธฑเธเธ—เธตเนเธชเธฃเนเธฒเธเธเธฑเธเธเธต</th>
+                        <th className="py-4 px-6 text-center">เธเธฑเธ”เธเธฒเธฃ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
@@ -778,7 +778,7 @@ export default function ProductManagement() {
                               ? "bg-purple-50 text-purple-700 border border-purple-150"
                               : "bg-blue-50 text-blue-700 border border-blue-150"
                               }`}>
-                              {u.role === "admin" ? "ผู้ดูแลระบบ (Admin)" : "พนักงาน (Staff)"}
+                              {u.role === "admin" ? "เธเธนเนเธ”เธนเนเธฅเธฃเธฐเธเธ (Admin)" : "เธเธเธฑเธเธเธฒเธ (Staff)"}
                             </span>
                           </td>
                           <td className="py-4 px-6 text-xs text-gray-400">
@@ -794,7 +794,7 @@ export default function ProductManagement() {
                                   <TrashIcon className="w-4.5 h-4.5" />
                                 </button>
                               ) : (
-                                <span className="text-xs text-gray-300 italic">บัญชีคุณในปัจจุบัน</span>
+                                <span className="text-xs text-gray-300 italic">เธเธฑเธเธเธตเธเธธเธ“เนเธเธเธฑเธเธเธธเธเธฑเธ</span>
                               )}
                             </div>
                           </td>
@@ -811,12 +811,12 @@ export default function ProductManagement() {
         {activeTab === "settings" && (
           <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm max-w-lg flex flex-col gap-6 font-['Prompt'] animate-in fade-in duration-200">
             <div>
-              <h3 className="text-lg font-black text-gray-800">ตั้งค่าการบริการจัดส่ง</h3>
-              <p className="text-xs text-gray-400 mt-1">กำหนดอัตราค่าจัดส่งพัสดุสำหรับตู้สินค้า Kiosk</p>
+              <h3 className="text-lg font-black text-gray-800">เธ•เธฑเนเธเธเนเธฒเธเธฒเธฃเธเธฃเธดเธเธฒเธฃเธเธฑเธ”เธชเนเธ</h3>
+              <p className="text-xs text-gray-400 mt-1">เธเธณเธซเธเธ”เธญเธฑเธ•เธฃเธฒเธเนเธฒเธเธฑเธ”เธชเนเธเธเธฑเธชเธ”เธธเธชเธณเธซเธฃเธฑเธเธ•เธนเนเธชเธดเธเธเนเธฒ Kiosk</p>
             </div>
             
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">ค่าจัดส่งพัสดุเริ่มต้น (บาท)</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">เธเนเธฒเธเธฑเธ”เธชเนเธเธเธฑเธชเธ”เธธเน€เธฃเธดเนเธกเธ•เนเธ (เธเธฒเธ—)</label>
               <input
                 type="number"
                 value={baseShippingFeeInput}
@@ -827,16 +827,16 @@ export default function ProductManagement() {
             </div>
 
             <div className="bg-gray-50 rounded-2xl p-4 border border-gray-150 flex flex-col gap-2">
-              <span className="text-xs font-bold text-gray-500">พรีวิวอัตราค่าจัดส่ง:</span>
+              <span className="text-xs font-bold text-gray-500">เธเธฃเธตเธงเธดเธงเธญเธฑเธ•เธฃเธฒเธเนเธฒเธเธฑเธ”เธชเนเธ:</span>
               <div className="flex justify-between items-center text-sm font-medium text-gray-600 border-b border-gray-100/50 pb-2">
-                <span>📦 จัดส่งรอบเดียว (Combined)</span>
-                <span className="font-bold text-[#2B2B2B]">฿{parseFloat(baseShippingFeeInput || 0).toLocaleString('th-TH')}</span>
+                <span>๐“ฆ เธเธฑเธ”เธชเนเธเธฃเธญเธเน€เธ”เธตเธขเธง (Combined)</span>
+                <span className="font-bold text-[#2B2B2B]">เธฟ{parseFloat(baseShippingFeeInput || 0).toLocaleString('th-TH')}</span>
               </div>
               <div className="flex justify-between items-center text-sm font-medium text-gray-600 pt-1">
-                <span>🚚 แยกจัดส่งสินค้าพรีออเดอร์ (Split)</span>
+                <span>๐ เนเธขเธเธเธฑเธ”เธชเนเธเธชเธดเธเธเนเธฒเธเธฃเธตเธญเธญเน€เธ”เธญเธฃเน (Split)</span>
                 <div className="flex flex-col items-end">
-                  <span className="font-bold text-[#E53935]">฿{(parseFloat(baseShippingFeeInput || 0) * 2).toLocaleString('th-TH')}</span>
-                  <span className="text-[10px] text-red-500 font-bold">(ค่าส่งคูณ 2)</span>
+                  <span className="font-bold text-[#E53935]">เธฟ{(parseFloat(baseShippingFeeInput || 0) * 2).toLocaleString('th-TH')}</span>
+                  <span className="text-[10px] text-red-500 font-bold">(เธเนเธฒเธชเนเธเธเธนเธ“ 2)</span>
                 </div>
               </div>
             </div>
@@ -845,7 +845,7 @@ export default function ProductManagement() {
               onClick={handleSaveShippingSettings}
               className="h-12 w-full rounded-xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95 transition-all text-[#2B2B2B] font-bold text-sm cursor-pointer flex items-center justify-center shadow-sm"
             >
-              บันทึกการตั้งค่า
+              เธเธฑเธเธ—เธถเธเธเธฒเธฃเธ•เธฑเนเธเธเนเธฒ
             </button>
           </div>
         )}
@@ -857,38 +857,38 @@ export default function ProductManagement() {
           <div className="max-w-xl w-full max-h-[90vh] bg-white rounded-3xl border border-gray-150 shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-8 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
             <div>
               <h3 className="text-xl font-bold text-gray-800">
-                {editingId ? "แก้ไขรายละเอียดสินค้า" : "เพิ่มสินค้าชิ้นใหม่ในคลัง"}
+                {editingId ? "เนเธเนเนเธเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธชเธดเธเธเนเธฒ" : "เน€เธเธดเนเธกเธชเธดเธเธเนเธฒเธเธดเนเธเนเธซเธกเนเนเธเธเธฅเธฑเธ"}
               </h3>
-              <p className="text-xs text-gray-400">กรอกข้อมูลให้ครบถ้วนเพื่ออัปเดตลงระบบคีออส</p>
+              <p className="text-xs text-gray-400">เธเธฃเธญเธเธเนเธญเธกเธนเธฅเนเธซเนเธเธฃเธเธ–เนเธงเธเน€เธเธทเนเธญเธญเธฑเธเน€เธ”เธ•เธฅเธเธฃเธฐเธเธเธเธตเธญเธญเธช</p>
             </div>
 
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
               {/* Scrollable inputs container */}
               <div className="flex-1 overflow-y-auto pr-1.5 grid grid-cols-2 gap-4 max-h-[calc(90vh-220px)] custom-scrollbar">
                 <div className="col-span-2 flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">ชื่อสินค้า (Name)</label>
+                  <label className="text-xs font-semibold text-gray-500">เธเธทเนเธญเธชเธดเธเธเนเธฒ (Name)</label>
                   <input
                     type="text"
                     required
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="กรอกชื่อภาษาไทย..."
+                    placeholder="เธเธฃเธญเธเธเธทเนเธญเธ เธฒเธฉเธฒเนเธ—เธข..."
                     className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
                   />
                 </div>
 
                 <div className="col-span-2 flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">รายละเอียดสินค้า (Description)</label>
+                  <label className="text-xs font-semibold text-gray-500">เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธชเธดเธเธเนเธฒ (Description)</label>
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="กรอกรายละเอียดสั้นๆ..."
+                    placeholder="เธเธฃเธญเธเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธชเธฑเนเธเน..."
                     className="w-full h-20 py-2 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all resize-none"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">ราคา (Price)</label>
+                  <label className="text-xs font-semibold text-gray-500">เธฃเธฒเธเธฒ (Price)</label>
                   <input
                     type="number"
                     required
@@ -900,7 +900,7 @@ export default function ProductManagement() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">จำนวนสต็อก (Stock Count)</label>
+                  <label className="text-xs font-semibold text-gray-500">เธเธณเธเธงเธเธชเธ•เนเธญเธ (Stock Count)</label>
                   <input
                     type="number"
                     required
@@ -916,7 +916,7 @@ export default function ProductManagement() {
                     <div className="flex items-center justify-between border-b border-[#F8C032]/20 pb-2">
                       <div className="flex items-center gap-1.5">
                         <TagIcon className="w-4 h-4 text-[#F8C032]" />
-                        <span className="text-xs font-bold text-gray-800">สร้างหมวดหมู่ใหม่</span>
+                        <span className="text-xs font-bold text-gray-800">เธชเธฃเนเธฒเธเธซเธกเธงเธ”เธซเธกเธนเนเนเธซเธกเน</span>
                       </div>
                       <button
                         type="button"
@@ -927,27 +927,27 @@ export default function ProductManagement() {
                         }}
                         className="text-xs text-red-500 hover:text-red-700 font-bold hover:underline cursor-pointer select-none"
                       >
-                        ยกเลิก
+                        เธขเธเน€เธฅเธดเธ
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-semibold text-gray-500">ชื่อหมวดหมู่ (ภาษาไทย)</label>
+                        <label className="text-[11px] font-semibold text-gray-500">เธเธทเนเธญเธซเธกเธงเธ”เธซเธกเธนเน (เธ เธฒเธฉเธฒเนเธ—เธข)</label>
                         <input
                           type="text"
                           value={newCatName}
                           onChange={(e) => setNewCatName(e.target.value)}
-                          placeholder="เช่น: ของเล่น"
+                          placeholder="เน€เธเนเธ: เธเธญเธเน€เธฅเนเธ"
                           className="h-10 bg-white border border-gray-200 focus:border-[#F8C032] rounded-xl px-3 text-xs outline-none transition-all"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-semibold text-gray-500">คีย์ภาษาอังกฤษ (อังกฤษพิมพ์เล็ก)</label>
+                        <label className="text-[11px] font-semibold text-gray-500">เธเธตเธขเนเธ เธฒเธฉเธฒเธญเธฑเธเธเธคเธฉ (เธญเธฑเธเธเธคเธฉเธเธดเธกเธเนเน€เธฅเนเธ)</label>
                         <input
                           type="text"
                           value={newCatId}
                           onChange={(e) => setNewCatId(e.target.value)}
-                          placeholder="เช่น: toys"
+                          placeholder="เน€เธเนเธ: toys"
                           className="h-10 bg-white border border-gray-200 focus:border-[#F8C032] rounded-xl px-3 text-xs outline-none transition-all font-mono"
                         />
                       </div>
@@ -957,12 +957,12 @@ export default function ProductManagement() {
                       onClick={handleSaveNewCategoryInline}
                       className="w-full h-9.5 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs active:scale-[0.98]"
                     >
-                      บันทึกหมวดหมู่ใหม่
+                      เธเธฑเธเธ—เธถเธเธซเธกเธงเธ”เธซเธกเธนเนเนเธซเธกเน
                     </button>
                   </div>
                 ) : (
                   <div className="col-span-2 flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-gray-500">หมวดหมู่ (Category)</label>
+                    <label className="text-xs font-semibold text-gray-500">เธซเธกเธงเธ”เธซเธกเธนเน (Category)</label>
                     <div className="flex gap-2 relative">
                       <div className="flex-1 relative">
                         <button
@@ -971,7 +971,7 @@ export default function ProductManagement() {
                           className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm text-left flex items-center justify-between transition-all cursor-pointer"
                         >
                           <span className="font-semibold text-gray-800">
-                            {categories.find(c => c.id === form.category)?.name || "เลือกหมวดหมู่"}
+                            {categories.find(c => c.id === form.category)?.name || "เน€เธฅเธทเธญเธเธซเธกเธงเธ”เธซเธกเธนเน"}
                           </span>
                           <ChevronDownIcon className="w-4 h-4 text-gray-400" />
                         </button>
@@ -1027,14 +1027,14 @@ export default function ProductManagement() {
                                         onClick={() => handleSaveCategoryNameInline(c.id)}
                                         className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold hover:bg-emerald-100 cursor-pointer"
                                       >
-                                        ✓
+                                        โ“
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => setEditingCatId(null)}
                                         className="w-6 h-6 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center font-bold hover:bg-gray-200 cursor-pointer"
                                       >
-                                        ✕
+                                        โ•
                                       </button>
                                     </div>
                                   ) : (
@@ -1048,7 +1048,7 @@ export default function ProductManagement() {
                                             setEditingCatId(c.id);
                                             setEditingCatName(c.name);
                                           }}
-                                          title="แก้ไขชื่อหมวดหมู่"
+                                          title="เนเธเนเนเธเธเธทเนเธญเธซเธกเธงเธ”เธซเธกเธนเน"
                                           className="w-5 h-5 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
                                         >
                                           <PencilIcon className="w-3.5 h-3.5" />
@@ -1060,14 +1060,14 @@ export default function ProductManagement() {
                                               e.stopPropagation();
                                               handleDeleteCategoryById(c.id);
                                             }}
-                                            title={isUsed ? "หมวดหมู่นี้กำลังมีสินค้าใช้อยู่" : "ลบหมวดหมู่"}
+                                            title={isUsed ? "เธซเธกเธงเธ”เธซเธกเธนเนเธเธตเนเธเธณเธฅเธฑเธเธกเธตเธชเธดเธเธเนเธฒเนเธเนเธญเธขเธนเน" : "เธฅเธเธซเธกเธงเธ”เธซเธกเธนเน"}
                                             className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs transition-colors font-bold ${
                                               isUsed 
                                                 ? "text-gray-300 cursor-not-allowed" 
                                                 : "text-red-500 hover:bg-red-50 hover:text-red-700 cursor-pointer"
                                             }`}
                                           >
-                                            ✕
+                                            โ•
                                           </button>
                                         )}
                                       </div>
@@ -1089,14 +1089,14 @@ export default function ProductManagement() {
                         className="px-4 h-11 bg-[#F8C032]/10 hover:bg-[#F8C032]/20 text-[#F8C032] hover:text-[#F0B420] font-bold text-xs rounded-xl transition-all flex items-center gap-1 border border-[#F8C032]/25 cursor-pointer active:scale-95 shrink-0"
                       >
                         <PlusIcon className="w-4 h-4 text-[#F8C032]" />
-                        <span>เพิ่มหมวดหมู่</span>
+                        <span>เน€เธเธดเนเธกเธซเธกเธงเธ”เธซเธกเธนเน</span>
                       </button>
                     </div>
                   </div>
                 )}
 
                 <div className="col-span-2 flex flex-col gap-2 bg-gray-50 p-4.5 rounded-2xl border border-gray-150">
-                  <span className="text-xs font-bold text-gray-700">รูปภาพสินค้า (Product Image)</span>
+                  <span className="text-xs font-bold text-gray-700">เธฃเธนเธเธ เธฒเธเธชเธดเธเธเนเธฒ (Product Image)</span>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-4">
                       {previewUrl && (
@@ -1105,7 +1105,7 @@ export default function ProductManagement() {
                         </div>
                       )}
                       <div className="flex-1 flex flex-col gap-1">
-                        <label className="text-[11px] font-bold text-gray-500">ไฟล์รูปภาพ (JPG, PNG, WEBP)</label>
+                        <label className="text-[11px] font-bold text-gray-500">เนเธเธฅเนเธฃเธนเธเธ เธฒเธ (JPG, PNG, WEBP)</label>
                         <input
                           type="file"
                           accept="image/*"
@@ -1117,38 +1117,38 @@ export default function ProductManagement() {
                     </div>
                     {selectedFile && (
                       <p className="text-[10px] text-emerald-600 font-bold">
-                        ✓ ปรับขนาดรูปภาพเรียบร้อย (ขนาดจริง: {(selectedFile.size / 1024).toFixed(1)} KB)
+                        โ“ เธเธฃเธฑเธเธเธเธฒเธ”เธฃเธนเธเธ เธฒเธเน€เธฃเธตเธขเธเธฃเนเธญเธข (เธเธเธฒเธ”เธเธฃเธดเธ: {(selectedFile.size / 1024).toFixed(1)} KB)
                       </p>
                     )}
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">จุดรับสินค้า (Pickup Location)</label>
+                  <label className="text-xs font-semibold text-gray-500">เธเธธเธ”เธฃเธฑเธเธชเธดเธเธเนเธฒ (Pickup Location)</label>
                   <input
                     type="text"
                     value={form.pickupLocation}
                     onChange={(e) => setForm({ ...form, pickupLocation: e.target.value })}
-                    placeholder="เช่น ตู้จำหน่ายสินค้า A ชั้น 1"
+                    placeholder="เน€เธเนเธ เธ•เธนเนเธเธณเธซเธเนเธฒเธขเธชเธดเธเธเนเธฒ A เธเธฑเนเธ 1"
                     className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">สถานะสินค้า (Status)</label>
+                  <label className="text-xs font-semibold text-gray-500">เธชเธ–เธฒเธเธฐเธชเธดเธเธเนเธฒ (Status)</label>
                   <select
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value })}
                     className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
                   >
-                    <option value="In Stock">พร้อมจำหน่าย (In Stock)</option>
-                    <option value="Pre-Order">สั่งจองล่วงหน้า (Pre-Order)</option>
+                    <option value="In Stock">เธเธฃเนเธญเธกเธเธณเธซเธเนเธฒเธข (In Stock)</option>
+                    <option value="Pre-Order">เธชเธฑเนเธเธเธญเธเธฅเนเธงเธเธซเธเนเธฒ (Pre-Order)</option>
                   </select>
                 </div>
 
                 {form.status === "Pre-Order" && (
                   <div className="flex flex-col gap-1.5 animate-in fade-in duration-200">
-                    <label className="text-xs font-semibold text-[#A24B2C]">วันที่ปล่อยสินค้าพรีออเดอร์ (Release Date)</label>
+                    <label className="text-xs font-semibold text-[#A24B2C]">เธงเธฑเธเธ—เธตเนเธเธฅเนเธญเธขเธชเธดเธเธเนเธฒเธเธฃเธตเธญเธญเน€เธ”เธญเธฃเน (Release Date)</label>
                     <input
                       type="date"
                       required
@@ -1160,11 +1160,11 @@ export default function ProductManagement() {
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">จำกัดสิทธิ์การซื้อต่อคน (Purchase Limit)</label>
+                  <label className="text-xs font-semibold text-gray-500">เธเธณเธเธฑเธ”เธชเธดเธ—เธเธดเนเธเธฒเธฃเธเธทเนเธญเธ•เนเธญเธเธ (Purchase Limit)</label>
                   <input
                     type="number"
                     min="1"
-                    placeholder="ว่างหากไม่จำกัด"
+                    placeholder="เธงเนเธฒเธเธซเธฒเธเนเธกเนเธเธณเธเธฑเธ”"
                     value={form.purchaseLimit || ""}
                     onChange={(e) => setForm({ ...form, purchaseLimit: e.target.value ? parseInt(e.target.value, 10) : "" })}
                     className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
@@ -1180,7 +1180,7 @@ export default function ProductManagement() {
                     className="w-4 h-4 text-[#F8C032] focus:ring-[#F8C032]"
                   />
                   <label htmlFor="promotion" className="text-xs font-semibold text-gray-600 cursor-pointer">
-                    เป็นสินค้าโปรโมชั่น (Promotion Product)
+                    เน€เธเนเธเธชเธดเธเธเนเธฒเนเธเธฃเนเธกเธเธฑเนเธ (Promotion Product)
                   </label>
                 </div>
               </div>
@@ -1192,13 +1192,13 @@ export default function ProductManagement() {
                   onClick={handleCloseModal}
                   className="px-5 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#2B2B2B] font-semibold transition-all text-sm cursor-pointer"
                 >
-                  ยกเลิก
+                  เธขเธเน€เธฅเธดเธ
                 </button>
                 <button
                   type="submit"
                   className="px-6 h-11 rounded-xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold transition-all text-sm shadow-sm cursor-pointer"
                 >
-                  บันทึกข้อมูล
+                  เธเธฑเธเธ—เธถเธเธเนเธญเธกเธนเธฅ
                 </button>
               </div>
             </form>
@@ -1212,58 +1212,58 @@ export default function ProductManagement() {
           <div className="max-w-md w-full bg-white rounded-3xl border border-gray-150 shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
             <div>
               <h3 className="text-xl font-bold text-gray-800">
-                เพิ่มบัญชีพนักงานใหม่
+                เน€เธเธดเนเธกเธเธฑเธเธเธตเธเธเธฑเธเธเธฒเธเนเธซเธกเน
               </h3>
-              <p className="text-xs text-gray-400">สร้างบัญชีสำหรับพนักงาน (Staff) หรือผู้จัดการ (Admin)</p>
+              <p className="text-xs text-gray-400">เธชเธฃเนเธฒเธเธเธฑเธเธเธตเธชเธณเธซเธฃเธฑเธเธเธเธฑเธเธเธฒเธ (Staff) เธซเธฃเธทเธญเธเธนเนเธเธฑเธ”เธเธฒเธฃ (Admin)</p>
             </div>
 
             <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">ชื่อ-นามสกุลพนักงาน (Display Name)</label>
+                <label className="text-xs font-semibold text-gray-500">เธเธทเนเธญ-เธเธฒเธกเธชเธเธธเธฅเธเธเธฑเธเธเธฒเธ (Display Name)</label>
                 <input
                   type="text"
                   required
                   value={userForm.name}
                   onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                  placeholder="เช่น สมชาย ใจดี"
+                  placeholder="เน€เธเนเธ เธชเธกเธเธฒเธข เนเธเธ”เธต"
                   className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">ชื่อบัญชีผู้ใช้ (Username)</label>
+                <label className="text-xs font-semibold text-gray-500">เธเธทเนเธญเธเธฑเธเธเธตเธเธนเนเนเธเน (Username)</label>
                 <input
                   type="text"
                   required
                   value={userForm.username}
                   onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                  placeholder="เช่น staff3"
+                  placeholder="เน€เธเนเธ staff3"
                   className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all font-mono"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">รหัสผ่านสำหรับล็อกอิน (Password)</label>
+                <label className="text-xs font-semibold text-gray-500">เธฃเธซเธฑเธชเธเนเธฒเธเธชเธณเธซเธฃเธฑเธเธฅเนเธญเธเธญเธดเธ (Password)</label>
                 <input
                   type="password"
                   required
                   min={4}
                   value={userForm.password}
                   onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  placeholder="กำหนดรหัสผ่าน..."
+                  placeholder="เธเธณเธซเธเธ”เธฃเธซเธฑเธชเธเนเธฒเธ..."
                   className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-500">สิทธิ์ของบัญชีนี้ (Account Role)</label>
+                <label className="text-xs font-semibold text-gray-500">เธชเธดเธ—เธเธดเนเธเธญเธเธเธฑเธเธเธตเธเธตเน (Account Role)</label>
                 <select
                   value={userForm.role}
                   onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
                   className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
                 >
-                  <option value="staff">พนักงาน (Staff / Runner)</option>
-                  <option value="admin">ผู้ดูแลระบบ (Admin / Manager)</option>
+                  <option value="staff">เธเธเธฑเธเธเธฒเธ (Staff / Runner)</option>
+                  <option value="admin">เธเธนเนเธ”เธนเนเธฅเธฃเธฐเธเธ (Admin / Manager)</option>
                 </select>
               </div>
 
@@ -1273,13 +1273,13 @@ export default function ProductManagement() {
                   onClick={() => setIsUserModalOpen(false)}
                   className="px-5 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#2B2B2B] font-semibold transition-all text-sm"
                 >
-                  ยกเลิก
+                  เธขเธเน€เธฅเธดเธ
                 </button>
                 <button
                   type="submit"
                   className="px-6 h-11 rounded-xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold transition-all text-sm shadow-sm"
                 >
-                  เพิ่มพนักงาน
+                  เน€เธเธดเนเธกเธเธเธฑเธเธเธฒเธ
                 </button>
               </div>
             </form>
