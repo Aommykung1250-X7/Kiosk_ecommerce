@@ -261,7 +261,8 @@ export default function Home() {
       });
   };
 
-  const bottomDisplayTotal = cart.totalPrice;
+  const bottomHasPreOrder = cart.items?.some(item => item.product && item.product.status === "Pre-Order");
+  const bottomDisplayTotal = cart.totalPrice || 0;
 
   return (
     <div className="w-full h-full bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt'] relative">

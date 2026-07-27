@@ -145,7 +145,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
         <div className="bg-[#F4F4F6] rounded-xl px-3 py-2 flex items-center justify-between w-full min-w-0">
           <span className="text-xs font-black text-[#8E8E93] uppercase tracking-wider">PRICE</span>
           <span className="text-lg font-black text-[#F9C338]">
-            ฿{price.toFixed(0)}
+            ฿{Number(price || 0).toFixed(0)}
           </span>
         </div>
 

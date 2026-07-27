@@ -119,7 +119,7 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
               {name}
             </h2>
             <div className="text-3xl font-black text-[#F9C338]">
-              ฿{price.toFixed(0)}
+              ฿{Number(price || 0).toFixed(0)}
             </div>
           </div>
 
