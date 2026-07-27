@@ -8,7 +8,6 @@ import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import uploadRoutes from "./routes/uploadRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import memberRoutes from "./routes/memberRoutes.js";
 import screensaverRoutes from "./routes/screensaverRoutes.js";
@@ -38,7 +37,6 @@ app.use("/uploads", express.static("uploads"));
 
 // Register API routes
 app.use("/api/auth", authRoutes);
-app.use("/api", uploadRoutes);
 app.use("/api", productRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);

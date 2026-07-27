@@ -1,6 +1,26 @@
 // backend/src/services/emailService.js
 import nodemailer from "nodemailer";
 
+const formatThaiDate = (dateVal) => {
+  if (!dateVal) return "";
+  try {
+    const date = new Date(dateVal);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Asia/Bangkok"
+    });
+  } catch (err) {
+    const date = new Date(dateVal);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear() + 543;
+    return `${day}/${month}/${year}`;
+  }
+};
+
 class EmailService {
   constructor() {
     this.transporter = null;
@@ -70,6 +90,23 @@ class EmailService {
       fulfillmentMethodStr = "รับสินค้าหน้าร้าน (Store Pickup)";
     }
 
+    // Find the latest preorder release date
+    let latestPreorderDateStr = "";
+    if (hasPreOrder) {
+      const dates = preOrderItems
+        .map(item => item.product?.preorder_release_date || item.product?.preorderReleaseDate)
+        .filter(Boolean)
+        .map(d => new Date(d));
+      
+      if (dates.length > 0) {
+        const latestDate = new Date(Math.max(...dates));
+        if (!isNaN(latestDate.getTime())) {
+          latestPreorderDateStr = formatThaiDate(latestDate);
+        }
+      }
+    }
+    const latestPreorderDateText = latestPreorderDateStr || "จะแจ้งให้ทราบภายหลัง";
+
     const getCategoryEmoji = (category) => {
       const map = {
         drinks: "🥤",
@@ -103,6 +140,13 @@ class EmailService {
         ? ` <span style="background-color: #FF6B00; color: #FFFFFF; font-size: 8px; font-weight: bold; padding: 1px 4px; border-radius: 4px; margin-left: 5px; display: inline-block; vertical-align: middle;">Pre-Order</span>`
         : "";
 
+      const releaseDateVal = item.product?.preorder_release_date || item.product?.preorderReleaseDate;
+      const releaseDateHtml = isPreOrder && releaseDateVal
+        ? `<div style="margin: 4px 0 6px 0; font-size: 11.5px; color: #FFA800; font-weight: bold; text-align: left;">
+             📅 เริ่มจัดส่ง/พร้อมรับสินค้า: ${formatThaiDate(releaseDateVal)}
+           </div>`
+        : "";
+
       return `
         <!-- Product Item Row -->
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 16px; border-bottom: 1px solid #2C2E30; padding-bottom: 16px;">
@@ -121,6 +165,7 @@ class EmailService {
               <p style="margin: 0 0 6px 0; font-size: 11px; color: #888888;">
                 หมวดหมู่: ${categoryName}
               </p>
+              ${releaseDateHtml}
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="font-size: 13px; font-weight: bold; color: #FFA800; text-align: left;">
@@ -160,7 +205,7 @@ class EmailService {
                   🚚 จัดส่งทางพัสดุ (Delivery) - ${isSplit ? "แยกจัดส่งสินค้า (Split Shipping)" : "จัดส่งพร้อมกันทั้งหมด (Combined)"}
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
-                  <strong>การจัดส่ง:</strong> ${isSplit ? "ส่งสินค้า In Stock ทันที และส่ง Pre-Order ตามหลังเมื่อผลิตเสร็จ" : "รอส่งสินค้าพร้อมกันในกล่องเดียวเมื่อของผลิตครบ"}
+                  <strong>การจัดส่ง:</strong> ${isSplit ? `สินค้าพร้อมส่ง (In Stock) จะส่งให้ทันที ส่วนสินค้าสั่งซื้อล่วงหน้า (Pre-Order) เริ่มจัดส่งตั้งแต่วันที่: ${latestPreorderDateText}` : `เริ่มจัดส่งสินค้าทั้งหมดพร้อมกันเมื่อผลิตครบ (คาดว่าเริ่มจัดส่งตั้งแต่วันที่: ${latestPreorderDateText})`}
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
                   <strong>ที่อยู่จัดส่ง:</strong> ${order.customerName || "ยังไม่ได้ระบุที่อยู่"} ${order.customerAddress ? `, ${order.customerAddress}` : ""}
@@ -176,7 +221,7 @@ class EmailService {
                   🚚 จัดส่งทางพัสดุ (Delivery)
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
-                  <strong>การจัดส่ง:</strong> จัดส่งพัสดุไปยังที่อยู่ของลูกค้า
+                  <strong>การจัดส่ง:</strong> ${hasPreOrder ? `เริ่มจัดส่งสินค้าตั้งแต่วันที่: ${latestPreorderDateText}` : "จัดส่งพัสดุไปยังที่อยู่ของลูกค้า"}
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
                   <strong>ที่อยู่จัดส่ง:</strong> ${order.customerName || "ยังไม่ได้ระบุที่อยู่"} ${order.customerAddress ? `, ${order.customerAddress}` : ""}
@@ -186,17 +231,26 @@ class EmailService {
         `;
       }
     } else {
+      let pickupMessage = "";
+      if (hasInStock && hasPreOrder) {
+        pickupMessage = `รับสินค้าพร้อมส่งได้ทันที ณ <strong>${pickupLocationsStr}</strong> ส่วนสินค้าพรีออเดอร์ (Pre-Order) พร้อมรับตั้งแต่วันที่: <strong>${latestPreorderDateText}</strong>`;
+      } else if (hasPreOrder) {
+        pickupMessage = `สินค้าพรีออเดอร์ (Pre-Order) พร้อมรับตั้งแต่วันที่: <strong>${latestPreorderDateText}</strong> ณ ตู้จำหน่ายสินค้าของสถาบัน DIIC`;
+      } else {
+        pickupMessage = `รับสินค้าพร้อมส่งได้ทันที ณ <strong>${pickupLocationsStr}</strong>`;
+      }
+
       pickupDeliveryBoxHtml = `
-              <!-- In-Stock Only Items (Store Pickup) -->
+              <!-- Store Pickup Box -->
               <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
                 <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
                   🏪 รับสินค้าหน้าร้าน (Store Pickup)
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block;">
-                  <strong>สถานที่รับสินค้า:</strong> ${pickupLocationsStr}
+                  <strong>ข้อมูลการรับสินค้า:</strong> ${pickupMessage}
                 </span>
                 <span style="font-size: 11px; color: #888888; display: block; margin-top: 6px;">
-                  *กรุณานำหมายเลขคำสั่งซื้อนี้ไปรับสินค้ากับทาง Staff ณ ที่รับสินค้า
+                  *กรุณานำหมายเลขคำสั่งซื้อนี้ไปติดต่อรับสินค้ากับทางพนักงาน ณ จุดให้บริการ
                 </span>
               </div>
       `;

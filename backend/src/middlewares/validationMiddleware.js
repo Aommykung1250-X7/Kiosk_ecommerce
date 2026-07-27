@@ -30,55 +30,6 @@ export const validateCreateOrder = (req, res, next) => {
   next();
 };
 
-export const validateCheckoutSubmit = (req, res, next) => {
-  const {
-    orderId,
-    name,
-    phone,
-    email,
-    addressStreet,
-    subdistrict,
-    district,
-    province,
-    zipcode
-  } = req.body || {};
-
-  if (!orderId || typeof orderId !== "string" || !/^[A-Za-z0-9._-]{1,60}$/.test(orderId)) {
-    return res.status(400).json({ error: "Order ID is invalid." });
-  }
-
-  if (name !== undefined) {
-    const cleanName = sanitizeString(name);
-    if (cleanName.length > 100) {
-      return res.status(400).json({ error: "Name is too long." });
-    }
-  }
-
-  if (phone !== undefined && phone !== "") {
-    const cleanPhone = sanitizeString(phone);
-    if (!/^[0-9+()\-\s]{4,20}$/.test(cleanPhone)) {
-      return res.status(400).json({ error: "Phone number format is invalid." });
-    }
-  }
-
-  if (email !== undefined && email !== "" && !isValidEmail(email)) {
-    return res.status(400).json({ error: "Email format is invalid." });
-  }
-
-  const addressFields = [addressStreet, subdistrict, district, province, zipcode];
-  for (const field of addressFields) {
-    if (field !== undefined && typeof field === "string" && field.trim().length > 200) {
-      return res.status(400).json({ error: "Address field is too long." });
-    }
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ error: "Payment slip image is required." });
-  }
-
-  next();
-};
-
 export const validateLoginPayload = (req, res, next) => {
   const { username, password } = req.body || {};
 
