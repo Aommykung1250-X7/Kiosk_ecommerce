@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
-import MobileCheckout from "./pages/MobileCheckout";
 import MobileDelivery from "./pages/MobileDelivery";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
@@ -13,7 +12,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // ฟังก์ชันดึงออเดอร์เพื่อสลับไปหน้าจ่ายเงินบนมือถือ หรือกลับหน้าหลักของคีออส
 function KioskOrCheckout() {
   const urlParams = new URLSearchParams(window.location.search);
-  const orderId = urlParams.get("orderId");
   const kioskParam = urlParams.get("kiosk");
 
   // หากระบุพารามิเตอร์ kiosk=true ให้เปิดการยืนยันสิทธิ์เครื่องนี้
@@ -21,10 +19,6 @@ function KioskOrCheckout() {
     localStorage.setItem("isKiosk", "true");
   }
 
-  // อนุญาตการสแกนจ่ายของบนมือถือ
-  if (orderId) {
-    return <MobileCheckout />;
-  }
 
   // ตรวจสอบสิทธิ์ว่าได้รับการยืนยันเป็นเครื่องตู้ Kiosk หรือไม่
   const isKiosk = localStorage.getItem("isKiosk") === "true";

@@ -37,7 +37,6 @@ export default function OrderQueue() {
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // "all", "instock", "preorder", "history"
-  const [selectedSlipUrl, setSelectedSlipUrl] = useState(null);
   const [selectedDate, setSelectedDate] = useState(getTodayDateString()); // Defaults to today's date string
   const [toasts, setToasts] = useState([]);
   const prevOrderIdsRef = useRef(new Set());
@@ -51,35 +50,8 @@ export default function OrderQueue() {
   const [autoBook, setAutoBook] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const closeSlipPreview = () => {
-    if (selectedSlipUrl && selectedSlipUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(selectedSlipUrl);
-    }
-    setSelectedSlipUrl(null);
-  };
-
-  const handleOpenSlipPreview = async (slipUrl) => {
-    if (!slipUrl) return;
-
-    try {
-      const response = await fetch(slipUrl, {
-        credentials: "include"
-      });
-
-      if (!response.ok) {
-        throw new Error("Unable to load slip image");
-      }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      setSelectedSlipUrl(objectUrl);
-    } catch (err) {
-      setError("ไม่สามารถเปิดภาพสลิปได้ในขณะนี้");
-    }
-  };
 
   // Helper checks
-  const hasInStockItem = (order) => order.items.some(item => item.product && item.product.status === 'In Stock');
   const hasPreOrderItem = (order) => order.items.some(item => item.product && item.product.status === 'Pre-Order');
 
 
@@ -734,14 +706,14 @@ export default function OrderQueue() {
             <div className="flex flex-col gap-1">
               <h3 className="text-lg font-bold text-gray-700">
                 {activeTab === "all" && "ไม่มีรายการคำสั่งซื้อค้างส่ง"}
-                {activeTab === "instock" && "ไม่มีคิวสินค้าพร้อมส่งค้างจ่าย"}
-                {activeTab === "preorder" && "ไม่มีคิวสินค้า Pre-Order ค้างจัดส่ง"}
+                {activeTab === "pickup" && "ไม่มีคิวรับหน้าร้านค้างจ่าย"}
+                {activeTab === "delivery" && "ไม่มีคิวจัดส่งสินค้าค้างจัดส่ง"}
                 {activeTab === "history" && "ไม่มีประวัติการจ่ายสินค้าสำเร็จ"}
               </h3>
               <p className="text-sm text-gray-400 px-6">
                 {activeTab === "all" && "ออเดอร์ที่จ่ายเงินสำเร็จแต่มีสถานะค้างจ่ายจะแสดงที่นี่"}
-                {activeTab === "instock" && "ออเดอร์ที่มีสินค้าพร้อมส่ง (In Stock) จะแสดงที่นี่เพื่อหยิบของหน้าร้าน"}
-                {activeTab === "preorder" && "ออเดอร์ที่มีสินค้าจอง (Pre-Order) จะแสดงที่นี่เพื่อการเตรียมจัดส่งและบันทึกข้อมูล"}
+                {activeTab === "pickup" && "ออเดอร์ที่เลือกรับสินค้าหน้าร้านจะแสดงที่นี่"}
+                {activeTab === "delivery" && "ออเดอร์ที่จัดส่งพัสดุจะแสดงที่นี่"}
                 {activeTab === "history" && "ประวัติคำสั่งซื้อทั้งหมดที่ดำเนินการจัดส่งเรียบร้อยแล้ว"}
               </p>
             </div>
@@ -817,14 +789,7 @@ export default function OrderQueue() {
                             <span className="font-semibold text-[#2B2B2B]">ที่อยู่จัดส่ง:</span> {order.customerAddress || "รอลูกค้ากรอกที่อยู่ผ่านมือถือ..."}
                           </p>
                         )}
-                        {order.slipUrl && (
-                          <button
-                            onClick={() => handleOpenSlipPreview(order.slipUrl)}
-                            className="text-[#F8C032] hover:underline font-semibold mt-1 text-left inline-block"
-                          >
-                            [ดูภาพสลิปชำระเงิน]
-                          </button>
-                        )}
+
                       </div>
                     )}
                   </div>
@@ -1068,36 +1033,7 @@ export default function OrderQueue() {
         </div>
       )}
 
-      {/* Slip Image Viewer Modal Popup */}
-      {selectedSlipUrl && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={closeSlipPreview}
-        >
-          <div 
-            className="relative max-w-sm w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col p-5 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
-              <span className="font-bold text-[#2B2B2B] text-sm">สลิปหลักฐานการชำระเงิน</span>
-              <button 
-                onClick={closeSlipPreview}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="w-full aspect-[3/4] bg-gray-50 flex items-center justify-center rounded-2xl overflow-hidden border border-gray-100 p-2">
-              <img 
-                src={selectedSlipUrl} 
-                alt="Payment Slip" 
-                className="max-w-full max-h-full object-contain rounded-xl"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Toast Notifications Stack */}
       <div className="fixed top-6 right-6 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">

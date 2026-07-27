@@ -2,9 +2,8 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import orderController from "../controllers/orderController.js";
-import checkoutController, { upload } from "../controllers/checkoutController.js";
 import { authenticateJWT, checkRole } from "../middlewares/authMiddleware.js";
-import { validateCreateOrder, validateCheckoutSubmit } from "../middlewares/validationMiddleware.js";
+import { validateCreateOrder } from "../middlewares/validationMiddleware.js";
 import { auditSensitiveAction } from "../middlewares/auditMiddleware.js";
 import { authorizeOrderMutation } from "../middlewares/authorizationMiddleware.js";
 
@@ -40,17 +39,6 @@ router.get("/orders/history", authenticateJWT, checkRole(["staff", "admin"]), (r
 router.get("/orders/:orderId", (req, res) => orderController.getOrderDetails(req, res));
 router.get("/orders/:orderId/sse", (req, res) => orderController.sseOrder(req, res));
 
-// Checkout submit endpoint (accepts personal details + slip file upload)
-router.post("/checkout/submit", checkoutLimiter, (req, res, next) => {
-  upload.single("slip")(req, res, (err) => {
-    if (err) {
-      return res.status(400).json({ error: err.message || "Invalid upload." });
-    }
-    validateCheckoutSubmit(req, res, () => {
-      checkoutController.submitCheckout(req, res);
-    });
-  });
-});
 
 router.post("/orders/:orderId/fulfill", authenticateJWT, checkRole(["staff", "admin"]), authorizeOrderMutation, auditSensitiveAction, (req, res) =>
   orderController.fulfillOrder(req, res)
