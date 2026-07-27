@@ -119,6 +119,8 @@ const ILLUSTRATIONS = {
 export default function Screensaver({ onWake }) {
   const [time, setTime] = useState(new Date());
   const [bestSellers, setBestSellers] = useState([]);
+  const [slides, setSlides] = useState([]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -140,6 +142,33 @@ export default function Screensaver({ onWake }) {
         console.error("Error loading best sellers on screensaver:", err);
       });
   }, []);
+
+  useEffect(() => {
+    fetch("/api/screensavers/active")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch screensavers");
+        return res.json();
+      })
+      .then((data) => {
+        setSlides(data || []);
+      })
+      .catch((err) => {
+        console.error("Error loading screensavers:", err);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+
+    const currentSlide = slides[currentSlideIndex];
+    const durationMs = (currentSlide?.duration || 10) * 1000;
+
+    const slideTimer = setTimeout(() => {
+      setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length);
+    }, durationMs);
+
+    return () => clearTimeout(slideTimer);
+  }, [slides, currentSlideIndex]);
 
   const getThaiDateString = (date) => {
     const months = [
@@ -206,7 +235,7 @@ export default function Screensaver({ onWake }) {
             {name}
           </h4>
           <p className="text-[1.9cqw] font-black text-[#A24B2C] mt-[0.1cqw]">
-            ฿ {parseFloat(price).toFixed(0)}
+            ฿ {parseFloat(price).toLocaleString('th-TH')}
           </p>
         </div>
       </div>
@@ -238,16 +267,45 @@ export default function Screensaver({ onWake }) {
         className="relative aspect-[941/1672] h-full max-h-screen w-auto bg-[#F4EEE8] shadow-2xl overflow-hidden"
         style={{ containerType: "size" }}
       >
-        {/* Full wait screen image background */}
-        <img
-          src="/wait_screen.png"
-          alt="Lanna Souvenir Kiosk background"
-          className="w-full h-full object-cover"
-        />
+        {slides.length > 0 ? (
+          /* Render Active Slide Carousel */
+          <div className="w-full h-full relative">
+            <img
+              src={slides[currentSlideIndex].mediaUrl.startsWith("http") || slides[currentSlideIndex].mediaUrl.startsWith("blob")
+                ? slides[currentSlideIndex].mediaUrl
+                : `/uploads/screensavers/${slides[currentSlideIndex].mediaUrl}`
+              }
+              alt={slides[currentSlideIndex].title}
+              className="w-full h-full object-cover animate-fade-in transition-all duration-500"
+            />
+            {/* Slide Indicator Bar / Dots */}
+            <div className="absolute bottom-[4cqh] left-0 right-0 flex justify-center gap-[1.5cqw] z-10">
+              {slides.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`h-[1cqh] rounded-full transition-all duration-300 ${
+                    idx === currentSlideIndex ? "bg-[#F8C032] w-[6cqw]" : "bg-white/50 w-[2.5cqw]"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Fallback Kiosk wait screen image background */
+          <>
+            <img
+              src="/wait_screen.png"
+              alt="Lanna Souvenir Kiosk background"
+              className="w-full h-full object-cover"
+            />
+            {/* Dynamic Product Cards Overlays - exactly covering static cards */}
+            { [0, 1, 2, 3].map(index => renderCard(index)) }
+          </>
+        )}
 
         {/* Live Clock Overlay - exactly covering static clock */}
         <div
-          className="absolute left-[78.4cqw] top-[1.2cqh] w-[19.8cqw] h-[7.17cqh] bg-[#E7DCCE] rounded-[1.6cqw] flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(61,46,36,0.08)]"
+          className="absolute left-[78.4cqw] top-[1.2cqh] w-[19.8cqw] h-[7.17cqh] bg-[#E7DCCE] rounded-[1.6cqw] flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(61,46,36,0.08)] z-20"
           onClick={(e) => {
             // Wake up on click
             onWake();
@@ -262,11 +320,6 @@ export default function Screensaver({ onWake }) {
             {dateString}
           </div>
         </div>
-
-
-
-        {/* Dynamic Product Cards Overlays - exactly covering static cards */}
-        { [0, 1, 2, 3].map(index => renderCard(index)) }
       </div>
     </div>
   );

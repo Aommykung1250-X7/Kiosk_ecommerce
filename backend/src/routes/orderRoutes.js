@@ -18,9 +18,15 @@ const checkoutLimiter = rateLimit({
   message: { error: "Too many checkout submissions. Please try again later." }
 });
 
+// Shipping settings endpoints
+router.get("/settings/shipping", (req, res) => orderController.getShippingSettings(req, res));
+router.post("/settings/shipping", authenticateJWT, checkRole(["admin"]), (req, res) => orderController.updateShippingSettings(req, res));
+
 // Order creation & status endpoints (Public Kiosk)
 router.post("/orders", validateCreateOrder, (req, res) => orderController.createOrder(req, res));
 router.get("/orders/:orderId/status", (req, res) => orderController.getOrderStatus(req, res));
+router.post("/orders/:orderId/contact-info", (req, res) => orderController.updateContactInfo(req, res));
+router.put("/orders/:orderId/address", (req, res) => orderController.updateOrderAddress(req, res));
 
 // Protected Staff/Admin Order Management endpoints (placed above dynamic parameters to prevent conflicts)
 router.get("/orders/queue", authenticateJWT, checkRole(["staff", "admin"]), (req, res) =>

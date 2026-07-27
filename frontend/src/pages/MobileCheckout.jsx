@@ -243,7 +243,7 @@ export default function MobileCheckout() {
           <div className="p-6 bg-gray-50 border-b border-gray-100 flex flex-col gap-3">
             <div className="flex justify-between items-center text-sm font-bold text-[#2B2B2B]">
               <span>ยอดเงินที่ต้องโอน</span>
-              <span className="text-lg text-[#E53935] font-extrabold">฿{order.totalPrice.toFixed(0)}</span>
+              <span className="text-lg text-[#E53935] font-extrabold">฿{order.totalPrice.toLocaleString('th-TH')}</span>
             </div>
             
             <div className="text-xs text-gray-400 bg-white p-3 rounded-xl border border-gray-100 flex flex-col gap-1">

@@ -60,7 +60,7 @@ class OrderRepository {
    * @param {number} totalPrice 
    * @returns {Promise<object>}
    */
-  async create(items, totalPrice) {
+  async create(items, totalPrice, deliveryOption = "pickup", shippingOption = "combined") {
     const orderId = await this.generateOrderId();
     const hasInStock = items.some(item => item.product && item.product.status === 'In Stock');
     const hasPreOrder = items.some(item => item.product && item.product.status === 'Pre-Order');
@@ -69,11 +69,11 @@ class OrderRepository {
     const preorderStatus = hasPreOrder ? 'pending' : 'none';
 
     const query = `
-      INSERT INTO orders (order_uuid, total_amount, payment_status, items, fulfillment_status_instock, fulfillment_status_preorder)
-      VALUES ($1, $2, 'pending', $3, $4, $5)
+      INSERT INTO orders (order_uuid, total_amount, payment_status, items, fulfillment_status_instock, fulfillment_status_preorder, delivery_option, shipping_option)
+      VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7)
       RETURNING *
     `;
-    const values = [orderId, totalPrice, JSON.stringify(items), instockStatus, preorderStatus];
+    const values = [orderId, totalPrice, JSON.stringify(items), instockStatus, preorderStatus, deliveryOption, shippingOption];
 
     try {
       const res = await pool.query(query, values);
@@ -112,10 +112,14 @@ class OrderRepository {
     const paymentStatus = updates.status === "success" ? "paid" : updates.status;
     const paidAt = paymentStatus === "paid" ? new Date() : null;
 
-    let addressStr = "";
+    let addressStr = null;
     if (updates.customerAddress) {
-      const addr = updates.customerAddress;
-      addressStr = `${addr.street || ""}, ${addr.subdistrict || ""}, ${addr.district || ""}, ${addr.province || ""} ${addr.zipcode || ""}`;
+      if (typeof updates.customerAddress === "string") {
+        addressStr = updates.customerAddress;
+      } else {
+        const addr = updates.customerAddress;
+        addressStr = `${addr.street || ""}, ${addr.subdistrict || ""}, ${addr.district || ""}, ${addr.province || ""} ${addr.zipcode || ""}`;
+      }
     }
 
     const query = `
@@ -127,8 +131,15 @@ class OrderRepository {
         customer_phone = COALESCE($4, customer_phone),
         customer_email = COALESCE($5, customer_email),
         customer_address = COALESCE($6, customer_address),
-        slip_url = COALESCE($7, slip_url)
-      WHERE order_uuid = $8
+        slip_url = COALESCE($7, slip_url),
+        delivery_option = COALESCE($8, delivery_option),
+        shipping_option = COALESCE($9, shipping_option),
+        tracking_number_1 = COALESCE($10, tracking_number_1),
+        courier_1 = COALESCE($11, courier_1),
+        tracking_number_2 = COALESCE($12, tracking_number_2),
+        courier_2 = COALESCE($13, courier_2),
+        payment_gateway_ref = COALESCE($14, payment_gateway_ref)
+      WHERE order_uuid = $15
       RETURNING *
     `;
     const values = [
@@ -139,6 +150,13 @@ class OrderRepository {
       updates.customerEmail || null,
       addressStr || null,
       updates.slipUrl || null,
+      updates.deliveryOption || null,
+      updates.shippingOption || null,
+      updates.trackingNumber1 || null,
+      updates.courier1 || null,
+      updates.trackingNumber2 || null,
+      updates.courier2 || null,
+      updates.paymentGatewayRef || null,
       orderUuid
     ];
 
@@ -173,7 +191,14 @@ class OrderRepository {
       fulfillmentStatusPreorder: row.fulfillment_status_preorder,
       fulfilledAt: row.fulfilled_at,
       courier: row.courier,
-      trackingNumber: row.tracking_number
+      trackingNumber: row.tracking_number,
+      deliveryOption: row.delivery_option,
+      shippingOption: row.shipping_option,
+      trackingNumber1: row.tracking_number_1,
+      courier1: row.courier_1,
+      trackingNumber2: row.tracking_number_2,
+      courier2: row.courier_2,
+      paymentGatewayRef: row.payment_gateway_ref
     };
   }
 
@@ -248,7 +273,7 @@ class OrderRepository {
     }
   }
 
-  async fulfillInStock(orderUuid, handlerId) {
+  async fulfillInStock(orderUuid, handlerId, courier = null, trackingNumber = null) {
     const query = `
       UPDATE orders 
       SET 
@@ -264,12 +289,14 @@ class OrderRepository {
         handler_id = CASE 
           WHEN fulfillment_status_preorder IN ('fulfilled', 'none') THEN $1
           ELSE handler_id 
-        END
+        END,
+        courier_1 = COALESCE($3, courier_1),
+        tracking_number_1 = COALESCE($4, tracking_number_1)
       WHERE order_uuid = $2
       RETURNING *
     `;
     try {
-      const res = await pool.query(query, [handlerId, orderUuid]);
+      const res = await pool.query(query, [handlerId, orderUuid, courier, trackingNumber]);
       if (res.rows.length === 0) return null;
       return this.mapOrderRow(res.rows[0]);
     } catch (error) {
@@ -295,6 +322,8 @@ class OrderRepository {
           WHEN fulfillment_status_instock IN ('fulfilled', 'none') THEN $1
           ELSE handler_id 
         END,
+        courier_2 = COALESCE($3, courier_2),
+        tracking_number_2 = COALESCE($4, tracking_number_2),
         courier = COALESCE($3, courier),
         tracking_number = COALESCE($4, tracking_number)
       WHERE order_uuid = $2
@@ -327,6 +356,26 @@ class OrderRepository {
       console.error("Error deleting expired pending orders:", error);
       throw error;
     }
+  }
+
+  async getShippingSettings() {
+    const baseFeeRes = await pool.query("SELECT value FROM system_settings WHERE key = 'shipping_base_fee'");
+    const splitFeeRes = await pool.query("SELECT value FROM system_settings WHERE key = 'shipping_split_fee'");
+    
+    return {
+      baseShippingFee: parseFloat(baseFeeRes.rows[0]?.value || "40.00"),
+      additionalSplitShippingFee: parseFloat(splitFeeRes.rows[0]?.value || "30.00")
+    };
+  }
+
+  async updateShippingSettings(baseFee, splitFee) {
+    if (baseFee !== undefined) {
+      await pool.query("INSERT INTO system_settings (key, value) VALUES ('shipping_base_fee', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [baseFee.toString()]);
+    }
+    if (splitFee !== undefined) {
+      await pool.query("INSERT INTO system_settings (key, value) VALUES ('shipping_split_fee', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [splitFee.toString()]);
+    }
+    return true;
   }
 }
 

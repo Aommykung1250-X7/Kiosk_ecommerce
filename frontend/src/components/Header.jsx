@@ -34,7 +34,7 @@ export default function Header({ cart = { totalPrice: 0, totalItems: 0 }, onCart
         </div>
         <div className="flex flex-col leading-tight min-w-0">
           <span className="text-[clamp(18px,2vw,24px)] font-black text-[#1B1B1C] tracking-tight uppercase">
-            DIIC SHOP
+            DITC SHOP
           </span>
           <span className="text-[10px] font-extrabold text-gray-400 tracking-wider uppercase">
             Smart Retail Kiosk
@@ -49,7 +49,7 @@ export default function Header({ cart = { totalPrice: 0, totalItems: 0 }, onCart
             TOTAL
           </span>
           <span className="text-[clamp(18px,2.2vw,26px)] font-black text-black mt-0.5">
-            ฿{(cart.totalPrice || 0).toFixed(2)}
+            ฿{(cart.totalPrice || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
 

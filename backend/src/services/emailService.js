@@ -56,18 +56,16 @@ class EmailService {
     const preOrderItems = (order.items || []).filter(item => item.product?.status === "Pre-Order");
     const hasPreOrder = preOrderItems.length > 0;
 
-    const shippingFee = hasPreOrder ? 40 : 0;
-    const itemsSubtotal = parseFloat(order.totalPrice || 0) - shippingFee;
+    const itemsSubtotal = (order.items || []).reduce((acc, item) => acc + (parseFloat(item.product?.price || 0) * (item.quantity || 1)), 0);
+    const shippingFee = Math.max(0, parseFloat(order.totalPrice || 0) - itemsSubtotal);
 
     // Collect unique pickup locations for in-stock items
-    const pickupLocations = [...new Set(inStockItems.map(item => item.product?.pickup_location).filter(Boolean))];
+    const pickupLocations = [...new Set(inStockItems.map(item => item.product?.pickup_location || item.product?.pickupLocation).filter(Boolean))];
     const pickupLocationsStr = pickupLocations.length > 0 ? pickupLocations.join(", ") : "ตู้จำหน่ายสินค้าของสถาบัน DIIC";
 
     let fulfillmentMethodStr = "";
-    if (hasInStock && hasPreOrder) {
-      fulfillmentMethodStr = "รับหน้าร้าน และ จัดส่งพัสดุ";
-    } else if (hasPreOrder) {
-      fulfillmentMethodStr = "จัดส่งทางพัสดุ (Delivery)";
+    if (order.deliveryOption === "delivery") {
+      fulfillmentMethodStr = order.shippingOption === "split" ? "แยกจัดส่งพัสดุ (Split Shipping)" : "จัดส่งพัสดุรวมกัน (Combined Shipping)";
     } else {
       fulfillmentMethodStr = "รับสินค้าหน้าร้าน (Store Pickup)";
     }
@@ -139,49 +137,57 @@ class EmailService {
       `;
     }).join("");
 
-    let pickupDeliveryBoxHtml = "";
-    if (hasInStock && hasPreOrder) {
-      pickupDeliveryBoxHtml = `
-              <!-- Both In-Stock and Pre-Order Items -->
-              <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
-                <!-- In Stock Section -->
-                <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
-                  🏪 ส่วนสินค้าพร้อมส่ง (STORE PICKUP)
-                </span>
-                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 12px;">
-                  <strong>สถานที่รับสินค้า:</strong> ${pickupLocationsStr}
-                </span>
+    const isDelivery = order.deliveryOption === "delivery";
+    const isSplit = order.shippingOption === "split";
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const deliveryFormUrl = `${frontendUrl}/mobile/delivery?orderId=${orderId}`;
 
-                <!-- Pre-Order Section -->
-                <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px; border-top: 1px solid #2C2E30; padding-top: 12px;">
-                  🚚 ส่วนสินค้าสั่งซื้อล่วงหน้า (Pre-Order Items)
+    let pickupDeliveryBoxHtml = "";
+    if (isDelivery) {
+      const buttonHtml = `
+        <div style="text-align: center; margin: 18px 0 6px 0;">
+          <a href="${deliveryFormUrl}" style="background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%); color: #FFFFFF; text-decoration: none; font-weight: bold; padding: 12px 24px; border-radius: 8px; display: inline-block; font-size: 14px; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.25);">
+            กรอกรายละเอียดการจัดส่งสินค้า
+          </a>
+        </div>
+      `;
+
+      if (hasInStock && hasPreOrder) {
+        pickupDeliveryBoxHtml = `
+              <!-- Both In-Stock and Pre-Order Items (Delivery) -->
+              <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
+                <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
+                  🚚 จัดส่งทางพัสดุ (Delivery) - ${isSplit ? "แยกจัดส่งสินค้า (Split Shipping)" : "จัดส่งพร้อมกันทั้งหมด (Combined)"}
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
-                  <strong>กำหนดจัดส่ง:</strong> สำหรับสินค้า Pre-Order สินค้าจะจัดส่งประมาณ 15-20 วัน
+                  <strong>การจัดส่ง:</strong> ${isSplit ? "ส่งสินค้า In Stock ทันที และส่ง Pre-Order ตามหลังเมื่อผลิตเสร็จ" : "รอส่งสินค้าพร้อมกันในกล่องเดียวเมื่อของผลิตครบ"}
                 </span>
-                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block;">
-                  <strong>ที่อยู่จัดส่ง:</strong> ${order.customerName} , ${order.customerAddress || "ไม่ได้ระบุที่อยู่จัดส่ง"}
+                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
+                  <strong>ที่อยู่จัดส่ง:</strong> ${order.customerName || "ยังไม่ได้ระบุที่อยู่"} ${order.customerAddress ? `, ${order.customerAddress}` : ""}
                 </span>
+                ${order.customerAddress ? "" : buttonHtml}
               </div>
-      `;
-    } else if (hasPreOrder) {
-      pickupDeliveryBoxHtml = `
-              <!-- Pre-Order Only Items -->
+        `;
+      } else {
+        pickupDeliveryBoxHtml = `
+              <!-- Single Type Items (Delivery) -->
               <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
                 <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
                   🚚 จัดส่งทางพัสดุ (Delivery)
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
-                  <strong>กำหนดจัดส่ง:</strong> สินค้าจะจัดส่งประมาณ 15-20 วัน
+                  <strong>การจัดส่ง:</strong> จัดส่งพัสดุไปยังที่อยู่ของลูกค้า
                 </span>
-                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block;">
-                  <strong>ที่อยู่จัดส่ง:</strong> ${order.customerName} , ${order.customerAddress || "ไม่ได้ระบุที่อยู่จัดส่ง"}
+                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block; margin-bottom: 4px;">
+                  <strong>ที่อยู่จัดส่ง:</strong> ${order.customerName || "ยังไม่ได้ระบุที่อยู่"} ${order.customerAddress ? `, ${order.customerAddress}` : ""}
                 </span>
+                ${order.customerAddress ? "" : buttonHtml}
               </div>
-      `;
+        `;
+      }
     } else {
       pickupDeliveryBoxHtml = `
-              <!-- In-Stock Only Items -->
+              <!-- In-Stock Only Items (Store Pickup) -->
               <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
                 <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
                   🏪 รับสินค้าหน้าร้าน (Store Pickup)

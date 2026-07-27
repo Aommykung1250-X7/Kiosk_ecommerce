@@ -26,11 +26,11 @@ class OrderService {
    * @param {number} totalPrice 
    * @returns {object}
    */
-  async createOrder(items, totalPrice) {
+  async createOrder(items, totalPrice, deliveryOption = "pickup", shippingOption = "combined") {
     if (!items || items.length === 0) {
       throw new Error("Cannot create an order with empty items");
     }
-    return await orderRepository.create(items, totalPrice);
+    return await orderRepository.create(items, totalPrice, deliveryOption, shippingOption);
   }
 
   /**
@@ -118,6 +118,50 @@ class OrderService {
     return updatedOrder;
   }
 
+  async markOrderAsPaid(orderId, paymentGatewayRef) {
+    const order = await orderRepository.get(orderId);
+    if (!order) {
+      return null;
+    }
+    if (order.status === "success") {
+      return order; // Already paid
+    }
+
+    const updatedOrder = await orderRepository.update(orderId, {
+      status: "success",
+      paymentGatewayRef
+    });
+
+    if (updatedOrder) {
+      // หักสต็อกของสินค้าแต่ละรายการในออเดอร์
+      for (const item of order.items) {
+        const productId = item.product.id;
+        const quantity = item.quantity;
+        await productRepository.decreaseStock(productId, quantity);
+      }
+
+      // Notify all Kiosk listeners of this order
+      this.notifyKiosk(orderId, "success");
+    }
+
+    return updatedOrder;
+  }
+
+  async updateOrderContactInfo(orderId, updates) {
+    const updatedOrder = await orderRepository.update(orderId, updates);
+
+    if (updatedOrder && updates.customerEmail) {
+      // ส่งอีเมลใบเสร็จแบบ Async
+      import("./emailService.js").then(({ default: emailService }) => {
+        emailService.sendReceipt(updatedOrder, updates.customerEmail).catch(err => {
+          console.error("Error sending email receipt async:", err);
+        });
+      });
+    }
+
+    return updatedOrder;
+  }
+
   /**
    * Get all paid, unfulfilled orders
    * @returns {Promise<Array>}
@@ -147,9 +191,40 @@ class OrderService {
    * Fulfill the In Stock items of an order
    * @param {string} orderId 
    * @param {number} handlerId 
+   * @param {string} [courier]
+   * @param {string} [trackingNumber]
+   * @param {boolean} [autoBook]
    */
-  async fulfillOrderInStock(orderId, handlerId) {
-    return await orderRepository.fulfillInStock(orderId, handlerId);
+  async fulfillOrderInStock(orderId, handlerId, courier = null, trackingNumber = null, autoBook = false) {
+    let finalCourier = courier;
+    let finalTracking = trackingNumber;
+
+    if (autoBook && courier) {
+      const order = await orderRepository.get(orderId);
+      if (order) {
+        try {
+          const bookingResult = await shippingService.bookShipment(order, courier);
+          if (bookingResult.success) {
+            finalTracking = bookingResult.trackingNumber;
+          }
+        } catch (err) {
+          console.error(`[OrderService] Failed to auto-book shipment for order ${orderId}:`, err);
+        }
+      }
+    }
+
+    const updatedOrder = await orderRepository.fulfillInStock(orderId, handlerId, finalCourier, finalTracking);
+    
+    // Send email notification to customer if tracking is available
+    if (updatedOrder && updatedOrder.customerEmail && finalTracking) {
+      import("./emailService.js").then(({ default: emailService }) => {
+        emailService.sendShipmentNotification(updatedOrder).catch(err => {
+          console.error("[OrderService] Failed to send shipment notification email:", err);
+        });
+      });
+    }
+
+    return updatedOrder;
   }
 
   /**
@@ -191,6 +266,14 @@ class OrderService {
     }
 
     return updatedOrder;
+  }
+
+  async getShippingSettings() {
+    return await orderRepository.getShippingSettings();
+  }
+
+  async updateShippingSettings(baseFee, splitFee) {
+    return await orderRepository.updateShippingSettings(baseFee, splitFee);
   }
 }
 

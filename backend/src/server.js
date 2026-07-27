@@ -9,6 +9,10 @@ import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import memberRoutes from "./routes/memberRoutes.js";
+import screensaverRoutes from "./routes/screensaverRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
 import { initDb } from "./data/db.js";
 import { getAllowedOrigins } from "./config/security.js";
 
@@ -29,12 +33,19 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 
+// Serve uploads statically
+app.use("/uploads", express.static("uploads"));
+
 // Register API routes
 app.use("/api/auth", authRoutes);
 app.use("/api", uploadRoutes);
 app.use("/api", productRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
+app.use("/api", paymentRoutes);
+app.use("/api", memberRoutes);
+app.use("/api", screensaverRoutes);
+app.use("/api", categoryRoutes);
 
 await initDb();
 

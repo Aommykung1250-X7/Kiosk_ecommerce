@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   Squares2X2Icon,
   BeakerIcon,
@@ -14,14 +15,6 @@ import {
   PencilSquareIcon as PencilSquareSolid,
   TagIcon as TagSolid,
 } from "@heroicons/react/24/solid";
-const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "drinks", label: "Drinks" },
-  { id: "snacks", label: "Snacks" },
-  { id: "instant", label: "Instant Food" },
-  { id: "stationery", label: "Stationery" },
-  { id: "promotion", label: "Promotion" },
-];
 
 const ICONS = {
   all: [Squares2X2Icon, Squares2X2Solid],
@@ -33,29 +26,39 @@ const ICONS = {
 };
 
 export default function Sidebar({ selectedCategory, onSelectCategory }) {
-  const categories = (() => {
-    const stored = localStorage.getItem("kiosk_categories");
-    let custom = [];
-    if (stored) {
-      try {
-        custom = JSON.parse(stored);
-      } catch (e) { }
-    }
+  const [categories, setCategories] = useState([]);
 
-    const defaultList = [
-      { id: "all", label: "All" },
-      { id: "drinks", label: "Drinks" },
-      { id: "snacks", label: "Snacks" },
-      { id: "instant", label: "Instant Food" },
-      { id: "stationery", label: "Stationery" }
-    ];
-
-    const filteredCustom = custom
-      .filter(c => !["drinks", "snacks", "instant", "stationery"].includes(c.id))
-      .map(c => ({ id: c.id, label: c.name }));
-
-    return [...defaultList, ...filteredCustom, { id: "promotion", label: "Promotion" }];
-  })();
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        return res.json();
+      })
+      .then((data) => {
+        // Map database categories to label structure
+        const mapped = (data || []).map((c) => ({
+          id: c.id,
+          label: c.name,
+        }));
+        setCategories([
+          { id: "all", label: "All" },
+          ...mapped,
+          { id: "promotion", label: "Promotion" }
+        ]);
+      })
+      .catch((err) => {
+        console.error("Error loading categories in Sidebar:", err);
+        // Fallback list
+        setCategories([
+          { id: "all", label: "All" },
+          { id: "drinks", label: "Drinks" },
+          { id: "snacks", label: "Snacks" },
+          { id: "instant", label: "Instant Food" },
+          { id: "stationery", label: "Stationery" },
+          { id: "promotion", label: "Promotion" }
+        ]);
+      });
+  }, []);
 
   return (
     <aside
@@ -102,4 +105,3 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
     </aside>
   );
 }
-
