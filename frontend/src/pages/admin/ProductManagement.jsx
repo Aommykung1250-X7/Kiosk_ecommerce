@@ -267,7 +267,7 @@ export default function ProductManagement() {
   }).length;
 
   return (
-    <div className="min-h-screen bg-gray-50 font-['Prompt'] flex flex-col">
+    <div className="w-full h-full bg-gray-50 font-['Prompt'] flex flex-col overflow-hidden relative">
       {/* Top Navbar */}
       <nav className="bg-white border-b border-gray-150 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
@@ -299,7 +299,7 @@ export default function ProductManagement() {
         </div>
       </nav>
 
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
+      <main className="flex-1 overflow-y-auto p-5 sm:p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
 
         {/* Dashboard Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
@@ -525,7 +525,7 @@ export default function ProductManagement() {
 
       {/* Edit/Add Modal Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6 backdrop-blur-xs">
+        <div className="absolute inset-0 z-50 bg-black/40 flex items-center justify-center p-6 backdrop-blur-xs overflow-y-auto">
           <div className="max-w-xl w-full bg-white rounded-3xl border border-gray-150 shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
             <div>
               <h3 className="text-xl font-bold text-gray-800">
@@ -661,7 +661,7 @@ export default function ProductManagement() {
 
       {/* Add User Modal Overlay */}
       {isUserModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6 backdrop-blur-xs">
+        <div className="absolute inset-0 z-50 bg-black/40 flex items-center justify-center p-6 backdrop-blur-xs overflow-y-auto">
           <div className="max-w-md w-full bg-white rounded-3xl border border-gray-150 shadow-[0_20px_50px_rgba(0,0,0,0.12)] p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
             <div>
               <h3 className="text-xl font-bold text-gray-800">

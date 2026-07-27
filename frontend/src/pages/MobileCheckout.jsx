@@ -186,7 +186,7 @@ export default function MobileCheckout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-gray-500 font-['Prompt']">
+      <div className="w-full h-full bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-gray-500 font-['Prompt']">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#F8C032] mb-3"></div>
         <p className="font-semibold text-sm animate-pulse">กำลังโหลดข้อมูลออเดอร์...</p>
       </div>
@@ -195,7 +195,7 @@ export default function MobileCheckout() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-[#E53935] text-center font-['Prompt'] gap-4">
+      <div className="w-full h-full bg-[#FAF9F6] flex flex-col items-center justify-center p-6 text-[#E53935] text-center font-['Prompt'] gap-4">
         <p className="text-lg font-bold">เกิดข้อผิดพลาด</p>
         <p className="text-sm bg-red-50 py-3 px-6 rounded-2xl border border-red-100 max-w-sm">{error}</p>
       </div>
@@ -204,7 +204,7 @@ export default function MobileCheckout() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-center p-6 font-['Prompt'] text-center">
+      <div className="w-full h-full bg-[#FAF9F6] flex flex-col items-center justify-center p-6 font-['Prompt'] text-center overflow-y-auto">
         <div className="w-full max-w-md bg-white rounded-3xl p-8 border border-gray-100 shadow-[0_10px_35px_rgba(0,0,0,0.04)] flex flex-col items-center gap-6 animate-in fade-in-50 duration-200">
           <CheckCircleIcon className="w-20 h-20 text-[#2E7D32] animate-bounce" />
           
@@ -227,7 +227,7 @@ export default function MobileCheckout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] flex flex-col items-center justify-start py-8 px-4 font-['Prompt']">
+    <div className="w-full h-full bg-[#FAF9F6] flex flex-col items-center justify-start py-8 px-4 font-['Prompt'] overflow-y-auto">
       <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-[0_12px_40px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col animate-in fade-in-50 duration-200">
         
         {/* Header decoration */}

@@ -131,80 +131,69 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
     noodle: "bg-[#FFF3E6]",
     milo: "bg-[#EDF7EE]",
     pen: "bg-[#F1F0FA]",
-    notebook: "bg-[#FBF6EB]",
   };
-  const imgBg = bgColors[image] || "bg-gray-50";
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 font-['Prompt']"
+      className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-300 font-['Prompt']"
       onClick={onClose}
     >
-      {/* Modal Container */}
+      {/* Modal Container matching item detail.png */}
       <div 
-        className="relative w-full max-w-lg bg-white rounded-[32px] border-2 border-[#1B1B1C] shadow-[8px_8px_0px_0px_#1B1B1C] overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
+        className="relative w-full max-w-md bg-white rounded-[32px] border-2 border-black shadow-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Close Button matching item detail.png (X in circle) */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white text-[#1B1B1C] hover:bg-gray-100 shadow-md border-2 border-[#1B1B1C] transition-colors cursor-pointer"
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white text-black hover:bg-gray-100 border-2 border-black font-bold flex items-center justify-center transition-colors cursor-pointer shadow-sm text-sm"
         >
-          <XMarkIcon className="w-5 h-5" />
+          ✕
         </button>
 
         {/* Product Image Area */}
-        <div className={`w-full aspect-[8/5] ${imgBg} flex items-center justify-center p-12 border-b-2 border-[#1B1B1C]`}>
-          <div className="w-full h-full max-w-[200px] flex items-center justify-center">
+        <div className="w-full aspect-[4/3] bg-white flex items-center justify-center p-8 border-b-2 border-black">
+          <div className="w-full h-full max-w-[180px] flex items-center justify-center">
             <Illustration />
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="p-8 flex flex-col gap-5">
-          {/* Badges */}
-          <div className="flex items-center gap-2">
-            {promotion && (
-              <span className="bg-[#F9C338] text-black text-[10px] font-black px-3 py-1.5 rounded-full border border-[#1B1B1C] tracking-wider uppercase">
-                馃彿锔� PROMO
-              </span>
-            )}
-            {status && (
-              <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${
-                isOutOfStock
-                  ? "bg-red-50 text-red-600 border-red-200"
-                  : status === "In Stock"
-                    ? "bg-[#E0F2F1]/60 text-[#00796B] border-[#80CBC4]/40"
-                    : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
-              }`}>
-                {isOutOfStock ? "喔�复喔權竸喙夃覆喔�浮喔�" : status === "In Stock" ? "喔炧福喙夃腑喔∴釜喙堗竾" : status}
-              </span>
-            )}
+        {/* Content Area matching item detail.png */}
+        <div className="p-6 flex flex-col gap-4 text-left">
+          {/* Status Badge */}
+          <div>
+            <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
+              isOutOfStock
+                ? "bg-red-50 text-[#FF5252]"
+                : "bg-[#E0F2F1] text-[#00796B]"
+            }`}>
+              {isOutOfStock ? "Out of stock" : "Ready"}
+            </span>
           </div>
 
           {/* Title and Price */}
-          <div className="flex flex-col gap-1.5 text-left">
+          <div className="flex flex-col gap-1">
             <h2 className="text-2xl font-black text-black leading-tight">
               {name}
             </h2>
-            <div className="text-3xl font-black text-[#D99A1C] mt-1">
-              ฿{price.toFixed(2)}
+            <div className="text-3xl font-black text-[#F9C338]">
+              ฿{price.toFixed(0)}
             </div>
           </div>
 
-          <hr className="border-gray-200" />
+          <hr className="border-gray-200 my-1" />
 
-          {/* Description */}
-          <div className="flex flex-col gap-1.5 text-left">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-              喔｀覆喔⑧弗喔班箑喔�傅喔⑧笖喔�复喔權竸喙夃覆
+          {/* Detail Label and Text */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold text-gray-400">
+              Detail
             </span>
             <p className="text-gray-600 text-sm leading-relaxed font-semibold">
-              {description}
+              {description || "Product detail description."}
             </p>
           </div>
 
-          {/* Add to Cart Button */}
+          {/* Add to Cart Button matching item detail.png */}
           <button
             disabled={isOutOfStock}
             onClick={() => {
@@ -213,15 +202,15 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
                 onClose();
               }
             }}
-            className={`mt-4 h-14 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-[#1B1B1C]
-                       transition-all duration-150 font-black text-sm uppercase cursor-pointer ${
+            className={`mt-3 h-14 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-black
+                       transition-all duration-150 font-extrabold text-base uppercase cursor-pointer select-none ${
                          isOutOfStock
-                           ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
-                           : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
+                           ? "bg-[#E5E5E7] text-[#8E8E93] border-[#D1D1D6] cursor-not-allowed"
+                           : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98] shadow-sm"
                        }`}
           >
             <ShoppingCartIcon className="w-5 h-5" />
-            <span>{isOutOfStock ? "สินค้าหมด" : "ใส่ตะกร้าสินค้า"}</span>
+            <span>{isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}</span>
           </button>
         </div>
       </div>

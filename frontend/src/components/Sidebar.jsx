@@ -36,44 +36,31 @@ const ICONS = {
 export default function Sidebar({ selectedCategory, onSelectCategory }) {
   return (
     <aside
-      className="w-[clamp(180px,18vw,260px)] h-full bg-white border-r border-gray-150 shrink-0 flex flex-col 
-                 py-8 px-4 gap-2 overflow-y-auto font-['Prompt']"
+      className="w-36 sm:w-44 h-full bg-white border-r border-gray-200 shrink-0 flex flex-col 
+                 py-6 px-2.5 gap-2 overflow-y-auto font-['Prompt'] select-none"
     >
-      <div className="px-2 pb-4">
-        <p className="text-xs font-black text-gray-400 tracking-widest uppercase">
-          CATEGORIES
+      <div className="px-2 pb-2">
+        <p className="text-[10px] font-black text-gray-400 tracking-widest uppercase">
+          CATEGORY
         </p>
       </div>
 
       {CATEGORIES.map((cat) => {
         const isActive = selectedCategory === cat.id;
-        const [OutlineIcon, SolidIcon] = ICONS[cat.id];
-        const Icon = isActive ? SolidIcon : OutlineIcon;
 
         return (
           <button
             key={cat.id}
             onClick={() => onSelectCategory(cat.id)}
-            className={`h-14 w-full rounded-2xl flex items-center 
-                        gap-3 px-4 transition-all duration-150 active:scale-[0.97] cursor-pointer
+            className={`h-11 w-full rounded-xl flex items-center justify-start
+                        px-3.5 transition-all duration-150 active:scale-[0.97] cursor-pointer
                         ${
                           isActive
-                            ? "bg-[#5EBAA8] text-white shadow-sm"
-                            : "bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                            ? "bg-[#F9C338] text-black font-black shadow-xs border border-black/10"
+                            : "bg-transparent text-gray-600 hover:bg-gray-50 hover:text-black font-bold"
                         }`}
           >
-            <Icon
-              className={`w-6 h-6 shrink-0 ${
-                isActive ? "text-white" : "text-gray-400"
-              }`}
-            />
-            <span
-              className={`text-sm text-left leading-tight ${
-                isActive
-                  ? "font-bold text-white"
-                  : "font-semibold"
-              }`}
-            >
+            <span className="text-xs uppercase tracking-wider text-left truncate">
               {cat.label}
             </span>
           </button>

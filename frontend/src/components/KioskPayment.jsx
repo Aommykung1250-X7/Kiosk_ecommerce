@@ -77,7 +77,7 @@ export default function KioskPayment({ orderId, totalPrice, onPaymentSuccess, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F8F8F8] flex flex-col items-center justify-center p-6 font-['Prompt']">
+    <div className="absolute inset-0 z-50 bg-[#F8F8F8] flex flex-col items-center justify-center p-6 font-['Prompt']">
       <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-[0_15px_40px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col p-8 gap-8 animate-in fade-in-50 duration-200">
         
         {paymentStatus === "pending" ? (

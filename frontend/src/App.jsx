@@ -7,6 +7,7 @@ import Unauthorized from "./pages/Unauthorized";
 import OrderQueue from "./pages/admin/OrderQueue";
 import ProductManagement from "./pages/admin/ProductManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
+import KioskLayout from "./components/KioskLayout";
 
 // ฟังก์ชันดึงออเดอร์เพื่อสลับไปหน้าจ่ายเงินบนมือถือ หรือกลับหน้าหลักของคีออส
 function KioskOrCheckout() {
@@ -14,9 +15,17 @@ function KioskOrCheckout() {
   const orderId = urlParams.get("orderId");
 
   if (orderId) {
-    return <MobileCheckout />;
+    return (
+      <KioskLayout>
+        <MobileCheckout />
+      </KioskLayout>
+    );
   }
-  return <Home />;
+  return (
+    <KioskLayout>
+      <Home />
+    </KioskLayout>
+  );
 }
 
 export default function App() {
@@ -26,18 +35,32 @@ export default function App() {
         {/* หน้าหลักของตู้สินค้า / หน้าจ่ายเงินบนมือถือ */}
         <Route path="/" element={<KioskOrCheckout />} />
         
-        {/* หน้ายืนยันตัวตน */}
+        {/* หน้ายืนยันตัวตน (ยกเว้น Login ไม่ครอบ KioskLayout) */}
         <Route path="/ditc-portal-to-manager" element={<Login />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route 
+          path="/unauthorized" 
+          element={
+            <KioskLayout>
+              <Unauthorized />
+            </KioskLayout>
+          } 
+        />
 
-        {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (Staff & Admin) */}
+        {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (ยกเว้น Dashboard OrderQueue ไม่ครอบ KioskLayout) */}
         <Route element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}>
           <Route path="/dashboard/orders" element={<OrderQueue />} />
         </Route>
 
-        {/* ส่วนงานจัดการระบบเฉพาะแอดมินเท่านั้น (Admin Only) */}
+        {/* ส่วนงานจัดการระบบเฉพาะแอดมินเท่านั้น (ProductManagement ครอบ KioskLayout) */}
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-          <Route path="/dashboard/products" element={<ProductManagement />} />
+          <Route 
+            path="/dashboard/products" 
+            element={
+              <KioskLayout>
+                <ProductManagement />
+              </KioskLayout>
+            } 
+          />
         </Route>
 
         {/* เส้นทางกรณีไม่พบหน้าจอใดๆ ดีดกลับหน้าแรก */}
