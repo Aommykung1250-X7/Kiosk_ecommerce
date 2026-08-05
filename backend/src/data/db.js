@@ -163,8 +163,7 @@ export const initDb = async () => {
         // Seed system_settings
         await pool.query(`
             INSERT INTO system_settings (key, value) VALUES
-            ('shipping_base_fee', '40.00'),
-            ('shipping_split_fee', '30.00')
+            ('shipping_base_fee', '40.00')
             ON CONFLICT (key) DO NOTHING;
         `);
 
