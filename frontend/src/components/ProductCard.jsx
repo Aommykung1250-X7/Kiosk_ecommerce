@@ -39,7 +39,7 @@ function CategoryPlaceholder({ category }) {
   return (
     <div className="flex flex-col items-center justify-center gap-1 opacity-60">
       {getIcon()}
-      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{category || "Product"}</span>
+      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{category || ""}</span>
     </div>
   );
 }
@@ -69,11 +69,9 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
     if (prod.image === "milo") return "180ml • Malt Drink";
     if (prod.image === "pen") return "0.5mm • Blue ink";
     if (prod.image === "notebook") return "Grid • Notebook";
-    return "Product";
+    return "";
   };
   const subText = getSubText(product);
-
-
 
   return (
     <div
@@ -87,32 +85,17 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
                  transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-[8px_8px_0px_0px_#1B1B1C] font-['Prompt']
                  ${isOutOfStock ? "opacity-75 cursor-not-allowed" : ""}`}
     >
-      {/* Hot badge */}
+      {/* Hot badge - reduced size */}
       {isMostViewed && !isOutOfStock && (
-        <div className="absolute top-4 left-4 z-10 bg-[#EC4E63] text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
+        <div className="absolute top-2.5 left-2.5 z-10 bg-[#EC4E63] text-white text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider shadow-sm">
           🔥 HOT
         </div>
       )}
 
-      {/* Promo badge */}
+      {/* Promo badge - reduced size */}
       {promotion && !isMostViewed && !isOutOfStock && (
-        <div className="absolute top-4 left-4 z-10 bg-[#F9C338] text-black text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider border border-[#1B1B1C]">
+        <div className="absolute top-2.5 left-2.5 z-10 bg-[#F9C338] text-black text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider border border-[#1B1B1C] shadow-sm">
           🏷️ PROMO
-        </div>
-      )}
-
-      {/* Status Badge */}
-      {status && (
-        <div
-          className={`absolute top-4 right-4 z-10 text-[10px] font-black px-3 py-1 rounded-full border ${
-            isOutOfStock
-              ? "bg-red-50 text-red-600 border-red-200"
-              : status === "In Stock"
-                ? "bg-[#E0F2F1]/60 text-[#00796B] border-[#80CBC4]/40"
-                : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
-          }`}
-        >
-          {isOutOfStock ? "สินค้าหมด" : status === "In Stock" ? "พร้อมส่ง" : status}
         </div>
       )}
 
@@ -139,38 +122,56 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col px-5 py-5 gap-3 text-left">
+      <div className="flex-1 flex flex-col px-3.5 py-3.5 gap-2.5 text-left">
         <div>
-          <h3 className="text-base font-bold text-black leading-snug line-clamp-1">
-            {name}
-          </h3>
-          <p className="text-xs font-semibold text-gray-400 mt-0.5">
-            {subText}
-          </p>
+          <div className="flex items-center justify-between gap-1.5">
+            <h3 className="text-sm font-bold text-black leading-snug line-clamp-1 flex-1">
+              {name}
+            </h3>
+            {/* Status Badge moved to right of Product Name */}
+            {status && (
+              <span
+                className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${
+                  isOutOfStock
+                    ? "bg-red-50 text-red-600 border-red-200"
+                    : status === "In Stock"
+                      ? "bg-[#E0F2F1] text-[#00796B] border-[#80CBC4]"
+                      : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
+                }`}
+              >
+                {isOutOfStock ? "หมด" : status === "In Stock" ? "พร้อมส่ง" : status}
+              </span>
+            )}
+          </div>
+          {subText && (
+            <p className="text-[11px] font-semibold text-gray-400 mt-0.5">
+              {subText}
+            </p>
+          )}
         </div>
 
         {/* Price & Stock container */}
-        <div className="bg-[#F6F6F6] rounded-2xl p-4 flex flex-col gap-1 w-full">
+        <div className="bg-[#F6F6F6] rounded-2xl p-2.5 flex flex-col gap-1 w-full">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">PRICE</span>
-              <span className="text-2xl font-black text-[#D99A1C] mt-1.5 leading-none">
+              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">PRICE</span>
+              <span className="text-lg font-black text-[#D99A1C] mt-1 leading-none">
                 ฿{price.toLocaleString('th-TH')}
               </span>
             </div>
             {status !== "Pre-Order" && !isOutOfStock && (
               <div className="flex flex-col items-end justify-center">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">STOCK</span>
-                <span className="text-sm font-black text-[#5EBAA8] mt-1.5 leading-none">
-                  คงเหลือ {quantity} ชิ้น
+                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none">STOCK</span>
+                <span className="text-[11px] font-black text-[#5EBAA8] mt-1 leading-none">
+                  เหลือ {quantity} ชิ้น
                 </span>
               </div>
             )}
             {status === "Pre-Order" && (
               <div className="flex flex-col items-end">
-                <span className="text-[9px] font-black text-[#E65100] uppercase tracking-widest leading-none">PRE-ORDER</span>
-                <span className="text-[10px] font-bold text-[#E65100]/80 mt-2">
-                  รอสินค้า 15 วัน
+                <span className="text-[8px] font-black text-[#E65100] uppercase tracking-widest leading-none">PRE-ORDER</span>
+                <span className="text-[9px] font-bold text-[#E65100]/80 mt-1">
+                  รอ 15 วัน
                 </span>
               </div>
             )}
@@ -184,14 +185,14 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
             e.stopPropagation();
             onAddToCart(product);
           }}
-          className={`h-12 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-[#1B1B1C]
-                     transition-all duration-150 shrink-0 cursor-pointer font-black text-xs uppercase ${
+          className={`h-10 w-full rounded-xl flex items-center justify-center gap-1.5 border-2 border-[#1B1B1C]
+                     transition-all duration-150 shrink-0 cursor-pointer font-black text-[11px] uppercase ${
                        isOutOfStock
                          ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
                          : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
                      }`}
         >
-          <ShoppingCartIcon className="w-4 h-4" />
+          <ShoppingCartIcon className="w-3.5 h-3.5" />
           <span>{isOutOfStock ? "สินค้าหมด" : "Add to Cart"}</span>
         </button>
       </div>

@@ -21,8 +21,8 @@ function DiamondLogo() {
 export default function Header({ cart = { totalPrice: 0, totalItems: 0 }, onCartClick }) {
   return (
     <header
-      className="w-full h-[100px] bg-white border-b border-gray-150 flex items-center justify-between 
-                 px-[clamp(16px,2.5vw,40px)] shrink-0 font-['Prompt']"
+      className="w-full h-[88px] bg-white border-b border-gray-150 flex items-center justify-between 
+                 px-4 shrink-0 font-['Prompt']"
     >
       {/* Left: Logo + Store name */}
       <div className="flex items-center gap-3 min-w-0">

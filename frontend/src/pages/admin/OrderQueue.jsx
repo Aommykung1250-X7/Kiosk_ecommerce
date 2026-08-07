@@ -762,9 +762,9 @@ export default function OrderQueue() {
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                         รายการสินค้าทั้งหมด
                       </span>
-                      <ul className="flex flex-col gap-2">
+                      <ul className="flex flex-col gap-2 h-[195px] overflow-y-auto pr-1 rounded-xl">
                         {displayItems.map((item, index) => (
-                          <li key={index} className="flex justify-between items-center text-sm bg-gray-50/60 p-2.5 rounded-xl border border-gray-100">
+                          <li key={index} className="flex justify-between items-center text-sm bg-gray-50/60 p-2.5 rounded-xl border border-gray-100 shrink-0">
                             <div className="flex flex-col">
                               <span className="font-semibold text-gray-700">{item.product?.name || "สินค้า"}</span>
                               <span className={`text-[10px] font-bold ${item.product?.status === 'In Stock' ? 'text-green-600' : 'text-orange-500'}`}>
@@ -795,7 +795,7 @@ export default function OrderQueue() {
                   </div>
 
                   {/* Card Footer Actions based on activeTab & deliveryOptions */}
-                  <div className="p-5 bg-gray-50/30 border-t border-gray-100">
+                  <div className="p-5 bg-gray-50/30 border-t border-gray-100 mt-auto">
                     {/* ALL / PICKUP TAB - KIOSK PICKUP FLOW */}
                     {order.deliveryOption === "pickup" && (
                       <div className="flex flex-col gap-2">
@@ -1053,7 +1053,7 @@ export default function OrderQueue() {
                 REF: {t.order.id.slice(-4)} ({t.order.id})
               </p>
               <p className="text-xs text-gray-600 font-semibold mt-1">
-                คุณ {t.order.customerName || "ไม่ระบุชื่อ"} • ฿{t.order.totalAmount}
+                ยอดรวม: ฿{t.order.totalPrice || t.order.totalAmount || 0}
               </p>
             </div>
             <button
