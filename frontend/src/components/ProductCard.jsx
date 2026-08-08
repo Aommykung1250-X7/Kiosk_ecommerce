@@ -73,8 +73,6 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
   };
   const subText = getSubText(product);
 
-
-
   return (
     <div
       onClick={() => {
@@ -82,118 +80,127 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           onSelectProduct(product);
         }
       }}
-      className={`w-full bg-white rounded-[24px] border-2 border-[#1B1B1C] 
-                 shadow-[6px_6px_0px_0px_#1B1B1C] flex flex-col overflow-hidden relative 
-                 transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-[8px_8px_0px_0px_#1B1B1C] font-['Prompt']
-                 ${isOutOfStock ? "opacity-75 cursor-not-allowed" : ""}`}
+      className={`relative w-[217px] h-[256px] shrink-0 font-['Prompt'] cursor-pointer group ${
+        isOutOfStock ? "opacity-75 cursor-not-allowed" : ""
+      }`}
     >
-      {/* Hot badge */}
-      {isMostViewed && !isOutOfStock && (
-        <div className="absolute top-4 left-4 z-10 bg-[#EC4E63] text-white text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
-          🔥 HOT
-        </div>
-      )}
+      {/* Stacked Card Behind (Borderless Black with Blurred Edges) */}
+      <div 
+        className="absolute inset-0 bg-black rounded-[20px] 
+                   translate-x-1 translate-y-1 blur-[3px] opacity-75
+                   pointer-events-none" 
+      />
 
-      {/* Promo badge */}
-      {promotion && !isMostViewed && !isOutOfStock && (
-        <div className="absolute top-4 left-4 z-10 bg-[#F9C338] text-black text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 uppercase tracking-wider border border-[#1B1B1C]">
-          🏷️ PROMO
-        </div>
-      )}
-
-      {/* Status Badge */}
-      {status && (
-        <div
-          className={`absolute top-4 right-4 z-10 text-[10px] font-black px-3 py-1 rounded-full border ${
-            isOutOfStock
-              ? "bg-red-50 text-red-600 border-red-200"
-              : status === "In Stock"
-                ? "bg-[#E0F2F1]/60 text-[#00796B] border-[#80CBC4]/40"
-                : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
-          }`}
-        >
-          {isOutOfStock ? "สินค้าหมด" : status === "In Stock" ? "พร้อมส่ง" : status}
-        </div>
-      )}
-
-      {/* Image Area */}
-      <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden`}>
-        <div className={`absolute inset-0 flex items-center justify-center p-6 ${isOutOfStock ? "opacity-35 grayscale" : ""}`}>
-          {image && image.includes(".") ? (
-            <img
-              src={`/uploads/products/${image}`}
-              alt={name}
-              className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg"
-            />
-          ) : (
-            <CategoryPlaceholder category={product.category} />
-          )}
-        </div>
-        {isOutOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="bg-red-600 text-white text-[12px] font-black px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transform -rotate-12 border-2 border-white">
-              สินค้าหมด
-            </span>
+      {/* Main Foreground Card (Borderless) */}
+      <div 
+        className="relative z-10 w-full h-full bg-white rounded-[20px] 
+                   flex flex-col overflow-hidden"
+      >
+        {/* Hot badge */}
+        {isMostViewed && !isOutOfStock && (
+          <div className="absolute top-2 left-2 z-10 bg-[#EC4E63] text-white text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider">
+            🔥 HOT
           </div>
         )}
-      </div>
 
-      {/* Content Area */}
-      <div className="flex-1 flex flex-col px-5 py-5 gap-3 text-left">
-        <div>
-          <h3 className="text-base font-bold text-black leading-snug line-clamp-1">
-            {name}
-          </h3>
-          <p className="text-xs font-semibold text-gray-400 mt-0.5">
-            {subText}
-          </p>
+        {/* Promo badge */}
+        {promotion && !isMostViewed && !isOutOfStock && (
+          <div className="absolute top-2 left-2 z-10 bg-[#F9C338] text-black text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider">
+            🏷️ PROMO
+          </div>
+        )}
+
+        {/* Status Badge */}
+        {status && (
+          <div
+            className={`absolute top-2 right-2 z-10 text-[8px] font-black px-2 py-0.5 rounded-full border ${
+              isOutOfStock
+                ? "bg-red-50 text-red-600 border-red-200"
+                : status === "In Stock"
+                  ? "bg-[#E0F2F1]/90 text-[#00796B] border-[#80CBC4]/40"
+                  : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
+            }`}
+          >
+            {isOutOfStock ? "Out of stock" : status === "In Stock" ? "Ready" : status}
+          </div>
+        )}
+
+        {/* Image Area */}
+        <div className={`w-full h-[125px] ${imgBg} border-b border-gray-300 relative overflow-hidden shrink-0`}>
+          <div className={`absolute inset-0 flex items-center justify-center p-3 ${isOutOfStock ? "opacity-35 grayscale" : ""}`}>
+            {image && image.includes(".") ? (
+              <img
+                src={`/uploads/products/${image}`}
+                alt={name}
+                className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg"
+              />
+            ) : (
+              <CategoryPlaceholder category={product.category} />
+            )}
+          </div>
+          {isOutOfStock && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="bg-red-600 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md uppercase tracking-wider transform -rotate-12 border border-white">
+                สินค้าหมด
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Price & Stock container */}
-        <div className="bg-[#F6F6F6] rounded-2xl p-4 flex flex-col gap-1 w-full">
-          <div className="flex items-center justify-between">
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col p-2.5 justify-between text-left min-h-0">
+          <div>
+            <h3 className="text-xs font-bold text-black leading-tight line-clamp-1">
+              {name}
+            </h3>
+            <p className="text-[9px] font-semibold text-gray-400 mt-0.5 line-clamp-1">
+              {subText}
+            </p>
+          </div>
+
+          {/* Price & Stock container */}
+          <div className="bg-[#F6F6F6] rounded-lg px-2 py-1 flex items-center justify-between gap-1 w-full">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">PRICE</span>
-              <span className="text-2xl font-black text-[#D99A1C] mt-1.5 leading-none">
+              <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">PRICE</span>
+              <span className="text-sm font-black text-[#D99A1C] mt-0.5 leading-none">
                 ฿{price.toLocaleString('th-TH')}
               </span>
             </div>
             {status !== "Pre-Order" && !isOutOfStock && (
               <div className="flex flex-col items-end justify-center">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">STOCK</span>
-                <span className="text-sm font-black text-[#5EBAA8] mt-1.5 leading-none">
-                  คงเหลือ {quantity} ชิ้น
+                <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">STOCK</span>
+                <span className="text-[10px] font-black text-[#5EBAA8] mt-0.5 leading-none">
+                  {quantity} ชิ้น
                 </span>
               </div>
             )}
             {status === "Pre-Order" && (
               <div className="flex flex-col items-end">
-                <span className="text-[9px] font-black text-[#E65100] uppercase tracking-widest leading-none">PRE-ORDER</span>
-                <span className="text-[10px] font-bold text-[#E65100]/80 mt-2">
-                  รอสินค้า 15 วัน
+                <span className="text-[7px] font-black text-[#E65100] uppercase tracking-widest leading-none">PRE-ORDER</span>
+                <span className="text-[8px] font-bold text-[#E65100]/80 mt-0.5">
+                  15 วัน
                 </span>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Add to Cart Button */}
-        <button
-          disabled={isOutOfStock}
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddToCart(product);
-          }}
-          className={`h-12 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-[#1B1B1C]
-                     transition-all duration-150 shrink-0 cursor-pointer font-black text-xs uppercase ${
+          {/* Add to Cart Button */}
+          <button
+            disabled={isOutOfStock}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToCart(product);
+            }}
+            className={`h-8 w-full rounded-lg flex items-center justify-center gap-1 transition-all duration-150 shrink-0 cursor-pointer font-black text-[10px] uppercase ${
                        isOutOfStock
-                         ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                         ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                          : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
                      }`}
-        >
-          <ShoppingCartIcon className="w-4 h-4" />
-          <span>{isOutOfStock ? "สินค้าหมด" : "Add to Cart"}</span>
-        </button>
+          >
+            <ShoppingCartIcon className="w-3.5 h-3.5" />
+            <span>{isOutOfStock ? "สินค้าหมด" : "Add to Cart"}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

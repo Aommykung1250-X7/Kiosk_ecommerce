@@ -1,29 +1,4 @@
 import React, { useState, useEffect } from "react";
-import {
-  Squares2X2Icon,
-  BeakerIcon,
-  ShoppingBagIcon,
-  FireIcon,
-  PencilSquareIcon,
-  TagIcon,
-} from "@heroicons/react/24/outline";
-import {
-  Squares2X2Icon as Squares2X2Solid,
-  BeakerIcon as BeakerSolid,
-  ShoppingBagIcon as ShoppingBagSolid,
-  FireIcon as FireSolid,
-  PencilSquareIcon as PencilSquareSolid,
-  TagIcon as TagSolid,
-} from "@heroicons/react/24/solid";
-
-const ICONS = {
-  all: [Squares2X2Icon, Squares2X2Solid],
-  drinks: [BeakerIcon, BeakerSolid],
-  snacks: [ShoppingBagIcon, ShoppingBagSolid],
-  instant: [FireIcon, FireSolid],
-  stationery: [PencilSquareIcon, PencilSquareSolid],
-  promotion: [TagIcon, TagSolid],
-};
 
 export default function Sidebar({ selectedCategory, onSelectCategory }) {
   const [categories, setCategories] = useState([]);
@@ -35,73 +10,60 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
         return res.json();
       })
       .then((data) => {
-        // Map database categories to label structure
         const mapped = (data || []).map((c) => ({
           id: c.id,
           label: c.name,
         }));
         setCategories([
-          { id: "all", label: "All" },
+          { id: "all", label: "ALL" },
           ...mapped,
-          { id: "promotion", label: "Promotion" }
+          { id: "promotion", label: "PROMOTION" }
         ]);
       })
       .catch((err) => {
         console.error("Error loading categories in Sidebar:", err);
-        // Fallback list
         setCategories([
-          { id: "all", label: "All" },
-          { id: "drinks", label: "Drinks" },
-          { id: "snacks", label: "Snacks" },
-          { id: "instant", label: "Instant Food" },
-          { id: "stationery", label: "Stationery" },
-          { id: "promotion", label: "Promotion" }
+          { id: "all", label: "ALL" },
+          { id: "drinks", label: "DRINKS" },
+          { id: "snacks", label: "SNACKS" },
+          { id: "instant", label: "INSTANT FOOD" },
+          { id: "stationery", label: "STATIONERY" },
+          { id: "promotion", label: "PROMOTION" }
         ]);
       });
   }, []);
 
   return (
     <aside
-      className="w-[clamp(180px,18vw,260px)] h-full bg-white border-r border-gray-150 shrink-0 flex flex-col 
-                 py-8 px-4 gap-2 overflow-y-auto font-['Prompt']"
+      className="w-[180px] h-full bg-white border-r border-gray-150 shrink-0 flex flex-col 
+                 py-8 px-5 gap-3 overflow-y-auto font-['Prompt']"
     >
-      <div className="px-2 pb-4">
+      <div className="px-3 pb-3">
         <p className="text-xs font-black text-gray-400 tracking-widest uppercase">
-          CATEGORIES
+          CATEGORY
         </p>
       </div>
 
-      {categories.map((cat) => {
-        const isActive = selectedCategory === cat.id;
-        const [OutlineIcon, SolidIcon] = ICONS[cat.id] || [ShoppingBagIcon, ShoppingBagSolid];
-        const Icon = isActive ? SolidIcon : OutlineIcon;
+      <div className="flex flex-col gap-2">
+        {categories.map((cat) => {
+          const isActive = selectedCategory === cat.id;
 
-        return (
-          <button
-            key={cat.id}
-            onClick={() => onSelectCategory(cat.id)}
-            className={`h-14 w-full rounded-2xl flex items-center 
-                        gap-3 px-4 transition-all duration-150 active:scale-[0.97] cursor-pointer
-                        ${isActive
-                ? "bg-[#5EBAA8] text-white shadow-sm"
-                : "bg-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-              }`}
-          >
-            <Icon
-              className={`w-6 h-6 shrink-0 ${isActive ? "text-white" : "text-gray-400"
-                }`}
-            />
-            <span
-              className={`text-sm text-left leading-tight ${isActive
-                  ? "font-bold text-white"
-                  : "font-semibold"
-                }`}
+          return (
+            <button
+              key={cat.id}
+              onClick={() => onSelectCategory(cat.id)}
+              className={`h-12 w-full rounded-2xl flex items-center justify-start
+                          px-5 transition-all duration-150 active:scale-[0.97] cursor-pointer font-black text-sm uppercase ${
+                            isActive
+                              ? "bg-[#F9C338] text-white shadow-sm"
+                              : "bg-transparent text-gray-400 hover:text-gray-700"
+                          }`}
             >
-              {cat.label}
-            </span>
-          </button>
-        );
-      })}
+              <span>{cat.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </aside>
   );
 }

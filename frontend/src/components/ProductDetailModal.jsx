@@ -70,7 +70,7 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
     >
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-lg bg-white rounded-[32px] border-2 border-[#1B1B1C] shadow-[8px_8px_0px_0px_#1B1B1C] overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
+        className="relative w-full max-w-lg bg-white rounded-[32px] border border-gray-200 shadow-[0_25px_60px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

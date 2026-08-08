@@ -301,10 +301,10 @@ export default function Home() {
           ) : (
             <>
               {/* Category Heading matching the screenshot */}
-              <div className="px-8 pt-8 flex items-end justify-between">
+              <div className="px-5 pt-5 flex items-end justify-between">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Now Showing</span>
-                  <h1 className="text-3xl font-black text-black mt-1.5 leading-none">
+                  <h1 className="text-2xl font-black text-black mt-1.5 leading-none">
                     {selectedCategory === "all" ? "ทั้งหมด" :
                       selectedCategory === "drinks" ? "เครื่องดื่ม" :
                         selectedCategory === "snacks" ? "ขนมขบเคี้ยว" :
@@ -313,13 +313,13 @@ export default function Home() {
                               selectedCategory === "promotion" ? "โปรโมชั่น" : "สินค้า"}
                   </h1>
                 </div>
-                <span className="text-sm font-black text-gray-400">
+                <span className="text-xs font-black text-gray-400">
                   {products.length} รายการ
                 </span>
               </div>
 
               <div
-                className="grid grid-cols-2 gap-6 p-8"
+                className="grid grid-cols-2 gap-4 p-5 justify-items-center"
               >
                 {(() => {
                   const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
