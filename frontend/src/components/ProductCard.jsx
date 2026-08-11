@@ -39,7 +39,7 @@ function CategoryPlaceholder({ category }) {
   return (
     <div className="flex flex-col items-center justify-center gap-1 opacity-60">
       {getIcon()}
-      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{category || "Product"}</span>
+      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{category || ""}</span>
     </div>
   );
 }
@@ -69,7 +69,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
     if (prod.image === "milo") return "180ml • Malt Drink";
     if (prod.image === "pen") return "0.5mm • Blue ink";
     if (prod.image === "notebook") return "Grid • Notebook";
-    return "Product";
+    return "";
   };
   const subText = getSubText(product);
 
@@ -192,10 +192,10 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
               onAddToCart(product);
             }}
             className={`h-8 w-full rounded-lg flex items-center justify-center gap-1 transition-all duration-150 shrink-0 cursor-pointer font-black text-[10px] uppercase ${
-                       isOutOfStock
-                         ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                         : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
-                     }`}
+              isOutOfStock
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
+            }`}
           >
             <ShoppingCartIcon className="w-3.5 h-3.5" />
             <span>{isOutOfStock ? "สินค้าหมด" : "Add to Cart"}</span>

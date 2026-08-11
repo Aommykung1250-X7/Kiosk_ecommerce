@@ -6,4 +6,39 @@ body {
   padding: 0;
   min-height: 100vh;
   font-family: 'Prompt', sans-serif;
+  background-color: #F8F8F8;
 }
+
+/* Wide screen PC desktop view: center 600px wide kiosk container with dark ambient background */
+@media (min-width: 601px) {
+  body:has(.kiosk-app-container) {
+    background-color: #0E0F12;
+  }
+
+  .kiosk-app-container {
+    max-width: 600px;
+    width: 600px;
+    height: 100vh;
+    max-height: 1200px;
+    margin: 0 auto;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
+}
+
+/* Kiosk hardware / F12 DevTools set to 600x1200 (<= 600px viewport) */
+@media (max-width: 600px) {
+  .kiosk-app-container {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100%;
+    margin: 0;
+    box-shadow: none;
+    position: relative;
+    overflow: hidden;
+  }
+}
+

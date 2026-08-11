@@ -81,33 +81,33 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#FAF9F6] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['Prompt'] overflow-hidden"
+      className="absolute inset-0 z-50 bg-[#FAF9F6] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['Prompt'] overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Premium Fullscreen Header */}
-      <div className="bg-white border-b border-gray-100 px-8 py-6 flex items-center justify-between shadow-sm">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-extrabold text-[#2B2B2B]">ตะกร้าสินค้าของคุณ</h2>
+      <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between shadow-sm shrink-0">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-extrabold text-[#2B2B2B]">ตะกร้าสินค้าของคุณ</h2>
             {totalItems > 0 && (
-              <span className="bg-[#F8C032] text-[#2B2B2B] text-xs font-extrabold px-3 py-1 rounded-full shadow-sm">
+              <span className="bg-[#F8C032] text-[#2B2B2B] text-xs font-extrabold px-2.5 py-0.5 rounded-full shadow-sm">
                 {totalItems} รายการ
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400">รายการพัสดุและค่าจัดส่งคำนวณตามมาตรฐานตู้สินค้า Kiosk</p>
+          <p className="text-[11px] text-gray-400">รายการพัสดุและค่าจัดส่งคำนวณตามมาตรฐานตู้สินค้า Kiosk</p>
         </div>
 
         <button
           onClick={onClose}
-          className="p-3 rounded-full hover:bg-gray-100 border border-gray-100 transition-colors cursor-pointer"
+          className="p-2 rounded-full hover:bg-gray-100 border border-gray-100 transition-colors cursor-pointer"
         >
-          <XMarkIcon className="w-6 h-6 text-gray-500" />
+          <XMarkIcon className="w-5 h-5 text-gray-500" />
         </button>
       </div>
 
       {/* Cart Content Body */}
-      <div className="flex-1 flex p-8 gap-8 overflow-hidden">
+      <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
         {totalItems === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100">
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
@@ -237,10 +237,10 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
               </div>
             </div>
 
-            {/* Right Column: Order Summary Card */}
-            <div className="w-full lg:w-96 bg-white p-6 rounded-3xl border border-gray-100 shadow-[0_10px_30px_rgba(0,0,0,0.03)] flex flex-col justify-between shrink-0 h-fit lg:sticky lg:top-8 gap-6 animate-in slide-in-from-bottom duration-300">
-              <div className="flex flex-col gap-4">
-                <h3 className="text-lg font-black text-[#2B2B2B] border-b border-gray-50 pb-3">สรุปยอดชำระเงิน</h3>
+            {/* Order Summary Section */}
+            <div className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between shrink-0 gap-3 animate-in slide-in-from-bottom duration-300">
+              <div className="flex flex-col gap-2.5">
+                <h3 className="text-base font-black text-[#2B2B2B] border-b border-gray-50 pb-2">สรุปยอดชำระเงิน</h3>
 
                 {/* รูปแบบการรับสินค้า (Delivery Method Selection) */}
                 <div className="flex flex-col gap-2">
@@ -254,7 +254,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                           : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
-                      🏪 รับที่ตู้ Kiosk
+                      🏪 รับสินค้าเองที่นี่
                     </button>
                     <button
                       onClick={() => setDeliveryOption("delivery")}

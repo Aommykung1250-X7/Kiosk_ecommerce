@@ -245,7 +245,7 @@ export default function Screensaver({ onWake }) {
   return (
     <div
       onClick={onWake}
-      className="fixed inset-0 z-50 bg-[#121214] flex items-center justify-center select-none cursor-pointer overflow-hidden font-['Prompt']"
+      className="absolute inset-0 z-50 bg-[#121214] flex items-center justify-center select-none cursor-pointer overflow-hidden font-['Prompt']"
     >
       {/* Inject custom CSS keyframes for animations */}
       <style>{`

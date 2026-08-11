@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 
 export default function Sidebar({ selectedCategory, onSelectCategory }) {
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState([
+    { id: "all", label: "ALL" },
+    { id: "promotion", label: "PROMOTION" },
+  ]);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -10,25 +13,43 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
         return res.json();
       })
       .then((data) => {
-        const mapped = (data || []).map((c) => ({
-          id: c.id,
-          label: c.name,
-        }));
+        let promoCategory = { id: "promotion", label: "PROMOTION" };
+        const otherCategories = [];
+
+        (data || []).forEach((c) => {
+          const cleanId = String(c.id || "").trim().toLowerCase();
+          const cleanName = String(c.name || "").trim().toLowerCase();
+
+          if (cleanId === "all" || cleanName === "all" || cleanName === "ทั้งหมด") {
+            return;
+          }
+
+          if (cleanId === "promotion" || cleanName === "promotion" || cleanName === "โปรโมชั่น") {
+            promoCategory = { id: c.id, label: (c.name || "PROMOTION").toUpperCase() };
+            return;
+          }
+
+          otherCategories.push({
+            id: c.id,
+            label: (c.name || "").toUpperCase(),
+          });
+        });
+
         setCategories([
           { id: "all", label: "ALL" },
-          ...mapped,
-          { id: "promotion", label: "PROMOTION" }
+          promoCategory,
+          ...otherCategories,
         ]);
       })
       .catch((err) => {
         console.error("Error loading categories in Sidebar:", err);
         setCategories([
           { id: "all", label: "ALL" },
+          { id: "promotion", label: "PROMOTION" },
           { id: "drinks", label: "DRINKS" },
           { id: "snacks", label: "SNACKS" },
           { id: "instant", label: "INSTANT FOOD" },
           { id: "stationery", label: "STATIONERY" },
-          { id: "promotion", label: "PROMOTION" }
         ]);
       });
   }, []);

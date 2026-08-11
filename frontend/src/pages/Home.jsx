@@ -9,10 +9,6 @@ import KioskPayment from "../components/KioskPayment";
 import Screensaver from "../components/Screensaver";
 import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 
-
-
-
-
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cart, setCart] = useState({ items: [], totalPrice: 0, totalItems: 0 });
@@ -267,13 +263,11 @@ export default function Home() {
       });
   };
 
-
-
   const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
   const bottomDisplayTotal = cart.totalPrice;
 
   return (
-    <div className="w-screen h-screen bg-[#F8F8F8] flex flex-col overflow-hidden font-['Prompt']">
+    <div className="kiosk-app-container flex flex-col font-['Prompt']">
       <Header cart={cart} onCartClick={handleCartClick} />
 
       <div className="flex flex-1 overflow-hidden">
@@ -300,7 +294,7 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {/* Category Heading matching the screenshot */}
+              {/* Category Heading */}
               <div className="px-5 pt-5 flex items-end justify-between">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Now Showing</span>
@@ -367,10 +361,10 @@ export default function Home() {
       {cart.totalItems > 0 && (
         <div
           onClick={handleCartClick}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 
-                     w-[90%] max-w-lg h-16 bg-[#2B2B2B] text-white rounded-2xl 
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 
+                     w-[92%] h-14 bg-[#2B2B2B] text-white rounded-2xl 
                      shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-white/10
-                     flex items-center justify-between px-6 cursor-pointer 
+                     flex items-center justify-between px-4 cursor-pointer 
                      hover:bg-[#3A3A3A] active:scale-[0.98] transition-all duration-200
                      animate-in slide-in-from-bottom-10"
         >
@@ -404,7 +398,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
 
       {activeOrder && (
         <KioskPayment
