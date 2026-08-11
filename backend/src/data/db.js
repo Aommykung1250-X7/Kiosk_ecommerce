@@ -176,17 +176,45 @@ export const initDb = async () => {
             ON CONFLICT (id) DO NOTHING;
         `);
 
-        // Create line_members table
+        // Create unified customer_profiles table
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS line_members (
-                line_user_id VARCHAR(100) PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS customer_profiles (
+                id SERIAL PRIMARY KEY,
+                line_user_id VARCHAR(100) UNIQUE,
+                customer_email VARCHAR(100) UNIQUE,
                 customer_name VARCHAR(255),
                 customer_phone VARCHAR(50),
-                customer_email VARCHAR(100),
                 customer_address TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Migrate data from old line_members table if it exists, then drop line_members
+        try {
+            const tableCheck = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'line_members'
+                );
+            `);
+
+            if (tableCheck.rows[0].exists) {
+                await pool.query(`
+                    INSERT INTO customer_profiles (line_user_id, customer_email, customer_name, customer_phone, customer_address)
+                    SELECT 
+                      CASE WHEN line_user_id LIKE 'email:%' THEN NULL ELSE line_user_id END,
+                      customer_email, customer_name, customer_phone, customer_address
+                    FROM line_members
+                    ON CONFLICT DO NOTHING;
+                `);
+
+                await pool.query("DROP TABLE IF EXISTS line_members CASCADE;");
+                console.log("Migrated line_members data to customer_profiles and dropped line_members table.");
+            }
+        } catch (mErr) {
+            console.error("Error migrating line_members to customer_profiles:", mErr);
+        }
 
         // Create screensavers table
         await pool.query(`

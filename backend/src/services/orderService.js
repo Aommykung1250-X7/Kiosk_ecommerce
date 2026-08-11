@@ -140,6 +140,15 @@ class OrderService {
         await productRepository.decreaseStock(productId, quantity);
       }
 
+      // ส่งอีเมลใบเสร็จหากมีอีเมลลูกค้าบันทึกไว้แล้ว
+      if (updatedOrder.customerEmail) {
+        import("./emailService.js").then(({ default: emailService }) => {
+          emailService.sendReceipt(updatedOrder, updatedOrder.customerEmail).catch(err => {
+            console.error("Error sending email receipt on markOrderAsPaid:", err);
+          });
+        });
+      }
+
       // Notify all Kiosk listeners of this order
       this.notifyKiosk(orderId, "success");
     }
@@ -150,8 +159,8 @@ class OrderService {
   async updateOrderContactInfo(orderId, updates) {
     const updatedOrder = await orderRepository.update(orderId, updates);
 
-    if (updatedOrder && updates.customerEmail) {
-      // ส่งอีเมลใบเสร็จแบบ Async
+    if (updatedOrder && updates.customerEmail && updatedOrder.status === "success") {
+      // ส่งอีเมลใบเสร็จแบบ Async กรณีออเดอร์ชำระเงินสำเร็จแล้ว
       import("./emailService.js").then(({ default: emailService }) => {
         emailService.sendReceipt(updatedOrder, updates.customerEmail).catch(err => {
           console.error("Error sending email receipt async:", err);

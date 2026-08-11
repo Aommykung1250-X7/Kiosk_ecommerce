@@ -20,13 +20,13 @@ class OrderController {
       }
 
       const order = await orderService.createOrder(items, totalPrice, deliveryOption || "pickup", shippingOption || "combined");
-      
+
       // Request dynamic QR from active payment gateway provider
       let qrPayload = "";
       try {
         const paymentData = await PaymentGatewayService.generateQrCode(order.id, order.totalPrice);
         qrPayload = paymentData.qrPayload;
-        
+
         // Save the payment gateway reference
         await orderService.updateOrderContactInfo(order.id, { paymentGatewayRef: paymentData.transactionId });
       } catch (err) {
@@ -287,6 +287,10 @@ class OrderController {
         return res.status(404).json({ error: "Order not found." });
       }
 
+      if (order.customerAddress && order.customerAddress.trim() !== "") {
+        return res.status(400).json({ error: "คำสั่งซื้อนี้ได้รับการบันทึกที่อยู่จัดส่งเรียบร้อยแล้ว" });
+      }
+
       const addressStr = `${addressStreet}, ${subdistrict}, ${district}, ${province} ${zipcode}`;
 
       // Update the order in database
@@ -297,18 +301,49 @@ class OrderController {
         customerAddress: addressStr
       });
 
-      // If lineUserId is provided, also upsert member address in DB
-      if (lineUserId) {
-        await pool.query(
-          `INSERT INTO line_members (line_user_id, customer_name, customer_phone, customer_email, customer_address)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (line_user_id) DO UPDATE SET
-             customer_name = EXCLUDED.customer_name,
-             customer_phone = EXCLUDED.customer_phone,
-             customer_email = EXCLUDED.customer_email,
-             customer_address = EXCLUDED.customer_address`,
-          [lineUserId, name, phone, email, addressStr]
-        );
+      // Upsert customer profile in DB for future auto-fill
+      const cleanEmail = email ? email.trim() : null;
+      try {
+        let profileRes = null;
+        if (lineUserId && cleanEmail) {
+          profileRes = await pool.query(
+            "SELECT id FROM customer_profiles WHERE line_user_id = $1 OR LOWER(customer_email) = LOWER($2)",
+            [lineUserId, cleanEmail]
+          );
+        } else if (lineUserId) {
+          profileRes = await pool.query(
+            "SELECT id FROM customer_profiles WHERE line_user_id = $1",
+            [lineUserId]
+          );
+        } else if (cleanEmail) {
+          profileRes = await pool.query(
+            "SELECT id FROM customer_profiles WHERE LOWER(customer_email) = LOWER($1)",
+            [cleanEmail]
+          );
+        }
+
+        if (profileRes && profileRes.rows.length > 0) {
+          const profileId = profileRes.rows[0].id;
+          await pool.query(
+            `UPDATE customer_profiles SET
+               line_user_id = COALESCE($1, line_user_id),
+               customer_email = COALESCE($2, customer_email),
+               customer_name = $3,
+               customer_phone = $4,
+               customer_address = $5,
+               updated_at = NOW()
+             WHERE id = $6`,
+            [lineUserId || null, cleanEmail, name, phone, addressStr, profileId]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO customer_profiles (line_user_id, customer_email, customer_name, customer_phone, customer_address)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [lineUserId || null, cleanEmail, name, phone, addressStr]
+          );
+        }
+      } catch (profErr) {
+        console.error("Error saving customer profile:", profErr);
       }
 
       return res.json({
