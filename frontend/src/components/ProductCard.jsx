@@ -80,32 +80,32 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           onSelectProduct(product);
         }
       }}
-      className={`relative w-[217px] h-[256px] shrink-0 font-['Prompt'] cursor-pointer group ${
+      className={`relative w-full h-[268px] font-['Prompt'] cursor-pointer group select-none ${
         isOutOfStock ? "opacity-75 cursor-not-allowed" : ""
       }`}
     >
-      {/* Stacked Card Behind (Borderless Black with Blurred Edges) */}
+      {/* Stacked Card Shadow (Blurred Edges) */}
       <div 
         className="absolute inset-0 bg-black rounded-[20px] 
                    translate-x-1 translate-y-1 blur-[3px] opacity-75
                    pointer-events-none" 
       />
 
-      {/* Main Foreground Card (Borderless) */}
+      {/* Main Foreground Card */}
       <div 
         className="relative z-10 w-full h-full bg-white rounded-[20px] 
-                   flex flex-col overflow-hidden"
+                   flex flex-col overflow-hidden transition-transform duration-150 group-active:scale-[0.99]"
       >
         {/* Hot badge */}
         {isMostViewed && !isOutOfStock && (
-          <div className="absolute top-2 left-2 z-10 bg-[#EC4E63] text-white text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider">
+          <div className="absolute top-2.5 left-2.5 z-10 bg-[#EC4E63] text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider shadow-sm">
             🔥 HOT
           </div>
         )}
 
         {/* Promo badge */}
         {promotion && !isMostViewed && !isOutOfStock && (
-          <div className="absolute top-2 left-2 z-10 bg-[#F9C338] text-black text-[8px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider">
+          <div className="absolute top-2.5 left-2.5 z-10 bg-[#F9C338] text-black text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-0.5 uppercase tracking-wider shadow-sm">
             🏷️ PROMO
           </div>
         )}
@@ -113,7 +113,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
         {/* Status Badge */}
         {status && (
           <div
-            className={`absolute top-2 right-2 z-10 text-[8px] font-black px-2 py-0.5 rounded-full border ${
+            className={`absolute top-2.5 right-2.5 z-10 text-[9px] font-black px-2 py-0.5 rounded-full border shadow-sm ${
               isOutOfStock
                 ? "bg-red-50 text-red-600 border-red-200"
                 : status === "In Stock"
@@ -121,13 +121,13 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
                   : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
             }`}
           >
-            {isOutOfStock ? "Out of stock" : status === "In Stock" ? "Ready" : status}
+            {isOutOfStock ? "สินค้าหมด" : status === "In Stock" ? "พร้อมส่ง" : status}
           </div>
         )}
 
         {/* Image Area */}
-        <div className={`w-full h-[125px] ${imgBg} border-b border-gray-300 relative overflow-hidden shrink-0`}>
-          <div className={`absolute inset-0 flex items-center justify-center p-3 ${isOutOfStock ? "opacity-35 grayscale" : ""}`}>
+        <div className={`w-full h-[130px] ${imgBg} border-b border-gray-200 relative overflow-hidden shrink-0`}>
+          <div className={`absolute inset-0 flex items-center justify-center p-3.5 ${isOutOfStock ? "opacity-35 grayscale" : ""}`}>
             {image && image.includes(".") ? (
               <img
                 src={`/uploads/products/${image}`}
@@ -140,7 +140,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           </div>
           {isOutOfStock && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="bg-red-600 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md uppercase tracking-wider transform -rotate-12 border border-white">
+              <span className="bg-red-600 text-white text-[11px] font-black px-3 py-1 rounded-xl shadow-md uppercase tracking-wider transform -rotate-12 border-2 border-white">
                 สินค้าหมด
               </span>
             </div>
@@ -148,18 +148,18 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col p-2.5 justify-between text-left min-h-0">
+        <div className="flex-1 flex flex-col p-3 justify-between text-left min-h-0">
           <div>
             <h3 className="text-xs font-bold text-black leading-tight line-clamp-1">
               {name}
             </h3>
-            <p className="text-[9px] font-semibold text-gray-400 mt-0.5 line-clamp-1">
+            <p className="text-[10px] font-semibold text-gray-400 mt-0.5 line-clamp-1">
               {subText}
             </p>
           </div>
 
           {/* Price & Stock container */}
-          <div className="bg-[#F6F6F6] rounded-lg px-2 py-1 flex items-center justify-between gap-1 w-full">
+          <div className="bg-[#F6F6F6] rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-1 w-full">
             <div className="flex flex-col">
               <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">PRICE</span>
               <span className="text-sm font-black text-[#D99A1C] mt-0.5 leading-none">
@@ -177,7 +177,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
             {status === "Pre-Order" && (
               <div className="flex flex-col items-end">
                 <span className="text-[7px] font-black text-[#E65100] uppercase tracking-widest leading-none">PRE-ORDER</span>
-                <span className="text-[8px] font-bold text-[#E65100]/80 mt-0.5">
+                <span className="text-[9px] font-bold text-[#E65100]/80 mt-0.5">
                   15 วัน
                 </span>
               </div>
@@ -191,10 +191,10 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
               e.stopPropagation();
               onAddToCart(product);
             }}
-            className={`h-8 w-full rounded-lg flex items-center justify-center gap-1 transition-all duration-150 shrink-0 cursor-pointer font-black text-[10px] uppercase ${
+            className={`h-8 w-full rounded-xl flex items-center justify-center gap-1.5 transition-all duration-150 shrink-0 cursor-pointer font-black text-[10px] uppercase ${
               isOutOfStock
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
+                : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98] shadow-sm"
             }`}
           >
             <ShoppingCartIcon className="w-3.5 h-3.5" />

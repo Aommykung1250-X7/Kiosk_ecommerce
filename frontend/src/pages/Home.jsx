@@ -276,7 +276,7 @@ export default function Home() {
           onSelectCategory={setSelectedCategory}
         />
 
-        <main className="flex-1 overflow-y-auto min-w-0 bg-[#F8F8F8]">
+        <main className="flex-1 overflow-y-auto min-w-0 bg-[#F8F8F8] pb-24">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#2B2B2B]/60">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#5EBAA8] mb-4"></div>
@@ -295,7 +295,7 @@ export default function Home() {
           ) : (
             <>
               {/* Category Heading */}
-              <div className="px-5 pt-5 flex items-end justify-between">
+              <div className="px-5 pt-5 pb-1 flex items-end justify-between">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Now Showing</span>
                   <h1 className="text-2xl font-black text-black mt-1.5 leading-none">
@@ -312,9 +312,7 @@ export default function Home() {
                 </span>
               </div>
 
-              <div
-                className="grid grid-cols-2 gap-4 p-5 justify-items-center"
-              >
+              <div className="grid grid-cols-2 gap-4 p-5">
                 {(() => {
                   const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
                   return products.map((product) => (
@@ -362,37 +360,37 @@ export default function Home() {
         <div
           onClick={handleCartClick}
           className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 
-                     w-[92%] h-14 bg-[#2B2B2B] text-white rounded-2xl 
-                     shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-white/10
-                     flex items-center justify-between px-4 cursor-pointer 
-                     hover:bg-[#3A3A3A] active:scale-[0.98] transition-all duration-200
-                     animate-in slide-in-from-bottom-10"
+                     w-[92%] max-w-[620px] h-16 bg-[#1B1B1C] text-white rounded-2xl 
+                     shadow-[0_10px_30px_rgba(0,0,0,0.35)] border border-white/10
+                     flex items-center justify-between px-5 cursor-pointer 
+                     hover:bg-black active:scale-[0.98] transition-all duration-200
+                     animate-in slide-in-from-bottom-10 select-none"
         >
           <div className="flex items-center gap-3">
-            <div className="relative p-2 bg-[#F8C032] rounded-xl text-[#2B2B2B]">
+            <div className="relative p-2.5 bg-[#F8C032] rounded-xl text-[#2B2B2B] shadow-sm">
               <ShoppingCartIcon className="w-6 h-6" />
-              <span className="absolute -top-1.5 -right-1.5 bg-[#E53935] text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
+              <span className="absolute -top-1.5 -right-1.5 bg-[#EC4E63] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#1B1B1C]">
                 {cart.totalItems}
               </span>
             </div>
-            <span className="font-bold text-[clamp(14px,1.5vw,16px)]">ดูตะกร้าสินค้าของคุณ</span>
+            <span className="font-extrabold text-sm sm:text-base">ดูตะกร้าสินค้าของคุณ</span>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end justify-center leading-none">
+            <div className="flex flex-col items-end justify-center leading-tight">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-white/60">ยอดรวมสุทธิ:</span>
-                <span className="text-xl font-extrabold text-[#F8C032]">
+                <span className="text-xs text-white/60 font-medium">ยอดรวม:</span>
+                <span className="text-xl font-black text-[#F8C032]">
                   ฿{bottomDisplayTotal.toLocaleString('th-TH')}
                 </span>
               </div>
               {bottomHasPreOrder && (
-                <span className="text-[10px] text-red-400 font-bold mt-1">
-                  (มีค่าจัดส่งเพิ่มเติมสำหรับสินค้า Pre-order)
+                <span className="text-[9px] text-red-400 font-bold mt-0.5">
+                  (มีค่าจัดส่งสินค้า Pre-order)
                 </span>
               )}
             </div>
-            <span className="text-xs font-semibold text-[#F8C032] bg-[#F8C032]/10 px-2 py-0.5 rounded-lg">
+            <span className="text-xs font-black text-[#F8C032] bg-[#F8C032]/10 px-2.5 py-1 rounded-xl">
               เปิด {'>'}
             </span>
           </div>
