@@ -43,6 +43,8 @@ export default function MobileDelivery() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [savedAddressText, setSavedAddressText] = useState("");
   const [preorderShippingDate, setPreorderShippingDate] = useState("");
+  const [hasInStock, setHasInStock] = useState(false);
+  const [hasPreOrder, setHasPreOrder] = useState(false);
   const [isMixed, setIsMixed] = useState(false);
 
   const parseAndFillAddress = (addrStr) => {
@@ -120,9 +122,11 @@ export default function MobileDelivery() {
 
           // Check if mixed order and find preorder release dates
           const items = data.items || [];
-          const hasInStock = items.some(item => item.product?.status === "In Stock");
-          const hasPreOrder = items.some(item => item.product?.status === "Pre-Order");
-          setIsMixed(hasInStock && hasPreOrder);
+          const inStockExist = items.some(item => item.product?.status === "In Stock");
+          const preOrderExist = items.some(item => item.product?.status === "Pre-Order");
+          setHasInStock(inStockExist);
+          setHasPreOrder(preOrderExist);
+          setIsMixed(inStockExist && preOrderExist);
 
           if (hasPreOrder) {
             const releaseDates = items
@@ -674,10 +678,6 @@ export default function MobileDelivery() {
                       <input
                         type="text"
                         required
-                        maxLength={5}
-                        pattern="[0-9]{5}"
-                        placeholder="10400"
-                        value={zipcode}
                         onChange={(e) => setZipcode(e.target.value.replace(/\D/g, ""))}
                         className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
                       />
@@ -720,13 +720,13 @@ export default function MobileDelivery() {
                 <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
                   <SparklesIcon className="w-4 h-4 text-amber-600" />
                   <span>
-                    {order?.shippingOption === "combined"
+                    {isMixed && order?.shippingOption === "combined"
                       ? "🚚 การจัดส่งสินค้าแบบรวมส่ง (Combined Shipping)"
                       : "📦 กำหนดการจัดส่งสินค้าพรีออเดอร์ (Pre-Order)"}
                   </span>
                 </span>
                 <p className="text-xs text-amber-900 leading-relaxed font-medium">
-                  {order?.shippingOption === "combined" ? (
+                  {isMixed && order?.shippingOption === "combined" ? (
                     <>
                       ออเดอร์นี้มีสินค้า Pre-Order และท่านเลือกจัดส่งแบบรวมส่ง <strong>ทางร้านจะจัดส่งสินค้าทุกรายการพร้อมกันทั้งหมด เมื่อสินค้า Pre-Order ผลิตเสร็จเรียบร้อยแล้ว</strong> (คาดว่าเริ่มจัดส่งตั้งแต่วันที่: <strong className="underline font-bold text-amber-950">{preorderShippingDate}</strong> เป็นต้นไป)
                     </>
@@ -744,10 +744,10 @@ export default function MobileDelivery() {
               </div>
             )}
 
-            {/* Tracking Cards for Packages (Combined vs Split) */}
+            {/* Tracking Cards for Packages (Combined vs Split vs Single) */}
             <div className="w-full flex flex-col gap-3">
-              {order?.shippingOption === "combined" ? (
-                /* Combined Package Tracking Box */
+              {isMixed && order?.shippingOption === "combined" ? (
+                /* Combined Package Tracking Box (Only when order is mixed and combined shipping is chosen) */
                 <div className="w-full bg-[#FFF3E0]/70 border border-[#FFE0B2] rounded-2xl p-4 text-left flex flex-col gap-2 shadow-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-[#E65100] flex items-center gap-1.5">
@@ -795,22 +795,22 @@ export default function MobileDelivery() {
                   )}
                 </div>
               ) : (
-                /* Split Package Tracking Boxes */
+                /* Single or Split Package Tracking Boxes */
                 <>
                   {/* Package 1: In-Stock Package Tracking */}
-                  {(order?.fulfillmentStatusInstock !== "none" || order?.courier1 || order?.trackingNumber1) && (
+                  {(hasInStock || (!hasPreOrder && (order?.courier1 || order?.trackingNumber1))) && (
                     <div className="w-full bg-[#E0F2F1]/40 border border-[#80CBC4]/60 rounded-2xl p-4 text-left flex flex-col gap-2 shadow-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-[#00796B] flex items-center gap-1.5">
                           <TruckIcon className="w-4 h-4 text-[#00796B]" />
-                          📦 พัสดุ 1: สินค้าพร้อมส่ง
+                          {isMixed ? "📦 พัสดุ 1: สินค้าพร้อมส่ง" : "📦 พัสดุจัดส่งสินค้า"}
                         </span>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                          order?.fulfillmentStatusInstock === "fulfilled" 
+                          order?.fulfillmentStatusInstock === "fulfilled" || order?.fulfillmentStatus === "fulfilled"
                             ? "bg-emerald-100 text-emerald-700" 
                             : "bg-amber-100 text-amber-800"
                         }`}>
-                          {order?.fulfillmentStatusInstock === "fulfilled" ? "จัดส่งแล้ว" : "กำลังเตรียมจัดส่ง"}
+                          {order?.fulfillmentStatusInstock === "fulfilled" || order?.fulfillmentStatus === "fulfilled" ? "จัดส่งแล้ว" : "กำลังเตรียมจัดส่ง"}
                         </span>
                       </div>
                       {(order?.courier1 || order?.trackingNumber1) ? (
@@ -824,7 +824,7 @@ export default function MobileDelivery() {
                               type="button"
                               onClick={() => {
                                 navigator.clipboard.writeText(order.trackingNumber1);
-                                notify.success("คัดลอกเลขติดตามพัสดุ 1 เรียบร้อยแล้ว");
+                                notify.success("คัดลอกเลขติดตามพัสดุเรียบร้อยแล้ว");
                               }}
                               className="px-3 py-1.5 bg-[#00796B] text-white text-[11px] font-bold rounded-lg hover:bg-[#00695C] transition-colors"
                             >
@@ -841,19 +841,19 @@ export default function MobileDelivery() {
                   )}
 
                   {/* Package 2: Pre-Order Package Tracking */}
-                  {(order?.fulfillmentStatusPreorder !== "none" || order?.courier2 || order?.trackingNumber2 || isMixed) && (
+                  {(hasPreOrder || (!hasInStock && (order?.courier2 || order?.trackingNumber2))) && (
                     <div className="w-full bg-[#FFF3E0]/60 border border-[#FFE0B2] rounded-2xl p-4 text-left flex flex-col gap-2 shadow-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-[#E65100] flex items-center gap-1.5">
                           <SparklesIcon className="w-4 h-4 text-[#E65100]" />
-                          ⏳ พัสดุ 2: สินค้าพรีออเดอร์
+                          {isMixed ? "⏳ พัสดุ 2: สินค้าพรีออเดอร์" : "📦 พัสดุสินค้าพรีออเดอร์ (Pre-Order)"}
                         </span>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                          order?.fulfillmentStatusPreorder === "fulfilled" 
+                          order?.fulfillmentStatusPreorder === "fulfilled" || order?.fulfillmentStatus === "fulfilled"
                             ? "bg-emerald-100 text-emerald-700" 
                             : "bg-amber-100 text-amber-800"
                         }`}>
-                          {order?.fulfillmentStatusPreorder === "fulfilled" ? "จัดส่งแล้ว" : "รอสินค้าพรีออเดอร์"}
+                          {order?.fulfillmentStatusPreorder === "fulfilled" || order?.fulfillmentStatus === "fulfilled" ? "จัดส่งแล้ว" : "รอสินค้าพรีออเดอร์"}
                         </span>
                       </div>
                       {preorderShippingDate && (
@@ -861,17 +861,17 @@ export default function MobileDelivery() {
                           คาดว่าจะจัดส่งตั้งแต่วันที่: <strong>{preorderShippingDate}</strong>
                         </p>
                       )}
-                      {(order?.courier2 || order?.trackingNumber2) ? (
+                      {(order?.courier2 || order?.trackingNumber2 || order?.courier1 || order?.trackingNumber1) ? (
                         <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#FFE0B2] mt-1">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-bold text-[#A34000]">ขนส่ง: {order?.courier2 || "พัสดุทั่วไป"}</span>
-                            <span className="text-sm font-black text-slate-800 tracking-wide font-mono">{order?.trackingNumber2 || "รอดำเนินการ"}</span>
+                            <span className="text-[10px] font-bold text-[#A34000]">ขนส่ง: {order?.courier2 || order?.courier1 || "พัสดุทั่วไป"}</span>
+                            <span className="text-sm font-black text-slate-800 tracking-wide font-mono">{order?.trackingNumber2 || order?.trackingNumber1 || "รอดำเนินการ"}</span>
                           </div>
-                          {order?.trackingNumber2 && (
+                          {(order?.trackingNumber2 || order?.trackingNumber1) && (
                             <button
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText(order.trackingNumber2);
+                                navigator.clipboard.writeText(order.trackingNumber2 || order.trackingNumber1);
                                 notify.success("คัดลอกเลขติดตามพัสดุ Pre-Order เรียบร้อยแล้ว");
                               }}
                               className="px-3 py-1.5 bg-[#E65100] text-white text-[11px] font-bold rounded-lg hover:bg-[#D84315] transition-colors"

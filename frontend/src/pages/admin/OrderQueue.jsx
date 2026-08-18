@@ -13,6 +13,16 @@ const getLocalDateString = (dateStr) => {
   return `${year}-${month}-${date}`;
 };
 
+const formatDMYDateString = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const day = d.getDate();
+  const month = d.getMonth() + 1;
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
 const getTodayDateString = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -678,63 +688,63 @@ export default function OrderQueue() {
                   {/* Items details */}
                   <div className="p-5 flex-1 flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        รายการสินค้าทั้งหมด
-                      </span>
-                      <ul className="flex flex-col gap-2 h-[220px] overflow-y-auto pr-1 rounded-xl">
-                        {displayItems.map((item, index) => {
-                          const isPreOrder = item.product?.status === "Pre-Order";
-                          const relDateStr = isPreOrder ? (item.product?.preorder_release_date || item.product?.preorderReleaseDate) : null;
-                          const isItemReleased = !relDateStr || (new Date() >= new Date(relDateStr)) || manualUnlockedOrders.has(order.id);
-                          const isItemFulfilled = item.fulfillmentStatus === "fulfilled" || order.fulfillmentStatus === "fulfilled";
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          รายการสินค้าทั้งหมด ({displayItems.length})
+                        </span>
+                      </div>
 
-                          return (
-                            <li key={index} className="flex justify-between items-center text-sm bg-gray-50/80 p-3 rounded-xl border border-gray-150/80 shrink-0">
-                              {/* Left: Product Information */}
-                              <div className="flex flex-col flex-1 pr-2">
-                                <span className="font-semibold text-gray-800 leading-snug">{item.product?.name || "สินค้า"}</span>
-                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                  <span className={`text-[10px] font-bold ${isPreOrder ? 'text-orange-600' : 'text-green-600'}`}>
-                                    ({isPreOrder ? 'Pre-Order' : 'In Stock'})
-                                  </span>
-                                  {isPreOrder && relDateStr && (
-                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
-                                      isItemReleased 
-                                        ? "bg-green-50 text-green-700 border-green-200" 
-                                        : "bg-amber-50 text-amber-700 border-amber-200 font-mono"
-                                    }`}>
-                                      {isItemReleased ? "🟢 พร้อมรับ" : `🔒 ปล่อย ${getLocalDateString(relDateStr)}`}
+                      {/* Product Items Frame Container */}
+                      <div className="border border-gray-200 bg-gray-50/70 rounded-2xl p-2.5 shadow-2xs">
+                        <ul className="flex flex-col gap-2 h-[220px] overflow-y-auto pr-1">
+                          {displayItems.map((item, index) => {
+                            const isPreOrder = item.product?.status === "Pre-Order";
+                            const relDateStr = isPreOrder ? (item.product?.preorder_release_date || item.product?.preorderReleaseDate) : null;
+                            const isItemReleased = !relDateStr || (new Date() >= new Date(relDateStr)) || manualUnlockedOrders.has(order.id);
+                            const isItemFulfilled = item.fulfillmentStatus === "fulfilled" || order.fulfillmentStatus === "fulfilled";
+
+                            return (
+                              <li key={index} className="flex justify-between items-center text-sm bg-white p-3 rounded-xl border border-gray-200/80 shadow-2xs shrink-0">
+                                {/* Left: Product Information */}
+                                <div className="flex flex-col flex-1 pr-2">
+                                  <span className="font-semibold text-gray-800 leading-snug">{item.product?.name || "สินค้า"}</span>
+                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    <span className={`text-[10px] font-bold ${isPreOrder ? 'text-orange-600' : 'text-green-600'}`}>
+                                      ({isPreOrder ? 'Pre-Order' : 'In Stock'})
                                     </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Right: Quantity Badge + Confirm / Unlock Button Underneath */}
-                              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                <span className="font-bold text-[#E53935] px-2.5 py-0.5 bg-red-50 border border-red-150 rounded-lg text-xs">
-                                  x{item.quantity}
-                                </span>
-
-                                {/* Item Action Button for Pickup Orders */}
-                                {order.deliveryOption === "pickup" && activeTab !== "history" && order.fulfillmentStatus !== "fulfilled" && (
-                                  <div>
-                                    {isItemFulfilled ? (
-                                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
-                                        <CheckIcon className="w-3 h-3" /> จ่ายแล้ว
+                                    {isPreOrder && relDateStr && (
+                                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
+                                        isItemReleased 
+                                          ? "bg-green-50 text-green-700 border-green-200" 
+                                          : "bg-amber-50 text-amber-700 border-amber-200 font-mono"
+                                      }`}>
+                                        {isItemReleased ? "🟢 พร้อมรับ" : `🔒 รอของ ${formatDMYDateString(relDateStr)}`}
                                       </span>
-                                    ) : isItemReleased ? (
-                                      <button
-                                        onClick={() => handleFulfillSingleItem(order.id, item.id, item.product?.name || "สินค้า")}
-                                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer active:scale-95"
-                                      >
-                                        <CheckIcon className="w-3.5 h-3.5" /> ยืนยันจ่าย
-                                      </button>
-                                    ) : (
-                                      <div className="flex flex-col items-end gap-1">
-                                        <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 flex items-center gap-1">
-                                          <LockClosedIcon className="w-3 h-3 text-amber-600" />
-                                          <span>รอปล่อย</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Right: Quantity Badge + Confirm / Unlock Button Underneath */}
+                                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                  <span className="font-bold text-[#E53935] px-2.5 py-0.5 bg-red-50 border border-red-150 rounded-lg text-xs">
+                                    x{item.quantity}
+                                  </span>
+
+                                  {/* Item Action Button for Pickup Orders */}
+                                  {order.deliveryOption === "pickup" && activeTab !== "history" && order.fulfillmentStatus !== "fulfilled" && (
+                                    <div>
+                                      {isItemFulfilled ? (
+                                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                                          <CheckIcon className="w-3 h-3" /> จ่ายแล้ว
                                         </span>
+                                      ) : isItemReleased ? (
+                                        <button
+                                          onClick={() => handleFulfillSingleItem(order.id, item.id, item.product?.name || "สินค้า")}
+                                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                                        >
+                                          <CheckIcon className="w-3.5 h-3.5" /> ยืนยันจ่าย
+                                        </button>
+                                      ) : (
                                         <button
                                           onClick={() => toggleManualUnlock(order.id)}
                                           className="text-[10px] font-bold text-amber-800 bg-amber-100/90 hover:bg-amber-200/90 px-2 py-0.5 rounded-md border border-amber-300 transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-2xs"
@@ -743,18 +753,18 @@ export default function OrderQueue() {
                                           <LockOpenIcon className="w-3 h-3 text-amber-600 stroke-[2]" />
                                           <span>ปลดล็อก</span>
                                         </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </li>
-                          );
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </li>
+                            );
                         })}
                       </ul>
                     </div>
+                  </div>
 
-                    {/* Customer & Delivery Address details */}
+                  {/* Customer & Delivery Address details */}
                     {order.customerName && (
                       <div className="border-t border-gray-100 pt-3 flex flex-col gap-1 text-xs text-gray-500">
                         <p><span className="font-semibold">ผู้สั่งซื้อ:</span> {order.customerName}</p>

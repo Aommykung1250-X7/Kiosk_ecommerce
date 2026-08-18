@@ -1,5 +1,7 @@
 // backend/src/services/emailService.js
 import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
 
 const formatThaiDate = (dateVal) => {
   if (!dateVal) return "";
@@ -148,7 +150,9 @@ class EmailService {
       return map[catKey] || catKey || "สินค้าทั่วไป";
     };
 
-    const itemsHtml = (order.items || []).map(item => {
+    const attachments = [];
+
+    const itemsHtml = (order.items || []).map((item, index) => {
       const name = item.product?.name || "สินค้าไม่ระบุชื่อ";
       const quantity = item.quantity || 1;
       const price = parseFloat(item.product?.price || 0);
@@ -172,9 +176,20 @@ class EmailService {
       let thumbnailHtml = "";
       if (rawImage && typeof rawImage === "string" && rawImage.trim() !== "") {
         let imageUrl = rawImage;
-        if (!rawImage.startsWith("http://") && !rawImage.startsWith("https://") && !rawImage.startsWith("data:")) {
+        const filename = rawImage.replace(/^\/?(uploads\/products\/|uploads\/)/, "");
+        const localFilePath = path.join(process.cwd(), "uploads", "products", filename);
+
+        if (fs.existsSync(localFilePath)) {
+          const cid = `prod_img_${item.product?.id || index}_${index}`;
+          attachments.push({
+            filename: filename,
+            path: localFilePath,
+            cid: cid
+          });
+          imageUrl = `cid:${cid}`;
+        } else if (!rawImage.startsWith("http://") && !rawImage.startsWith("https://") && !rawImage.startsWith("data:")) {
           const backendUrl = process.env.BACKEND_URL || "http://localhost:5001";
-          const cleanImgPath = rawImage.startsWith("/") ? rawImage : `/uploads/${rawImage}`;
+          const cleanImgPath = rawImage.startsWith("/") ? rawImage : `/uploads/products/${rawImage}`;
           imageUrl = `${backendUrl}${cleanImgPath}`;
         }
 
@@ -326,7 +341,7 @@ class EmailService {
       }
     }
 
-    return `
+    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -461,6 +476,8 @@ class EmailService {
 </body>
 </html>
     `;
+
+    return { htmlContent, attachments };
   }
 
   /**
@@ -477,7 +494,7 @@ class EmailService {
       return;
     }
 
-    const htmlContent = this.generateReceiptHtml(order);
+    const { htmlContent, attachments } = this.generateReceiptHtml(order);
 
     if (this.transporter) {
       const mailOptions = {
@@ -485,6 +502,7 @@ class EmailService {
         to: customerEmail.trim(),
         subject: `[DITC Shop Kiosk] ใบเสร็จรับเงินสำหรับคำสั่งซื้อ #${order.id}`,
         html: htmlContent,
+        attachments: attachments || []
       };
 
       try {
