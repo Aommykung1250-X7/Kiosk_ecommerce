@@ -51,10 +51,23 @@ class OrderController {
   async getOrderStatus(req, res) {
     try {
       const { orderId } = req.params;
-      const order = await orderService.getOrder(orderId);
+      let order = await orderService.getOrder(orderId);
 
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
+      }
+
+      // Auto-sync Omise status if order is pending and has payment gateway reference
+      if (order.status === "pending" && order.paymentGatewayRef) {
+        try {
+          const chargeStatus = await PaymentGatewayService.checkChargeStatus(order.paymentGatewayRef);
+          if (chargeStatus && (chargeStatus.status === "successful" || chargeStatus.paid)) {
+            console.log(`[OrderController] Charge ${order.paymentGatewayRef} verified paid on Omise API, marking order ${orderId} as paid`);
+            order = await orderService.markOrderAsPaid(orderId, order.paymentGatewayRef);
+          }
+        } catch (syncErr) {
+          console.error("[OrderController] Failed to sync Omise charge status:", syncErr);
+        }
       }
 
       return res.json({ status: order.status });
@@ -166,9 +179,9 @@ class OrderController {
     try {
       const { orderId } = req.params;
       const handlerId = req.user.id;
-      const { courier, trackingNumber, autoBook } = req.body;
+      const { courier, trackingNumber } = req.body;
 
-      const order = await orderService.fulfillOrderInStock(orderId, handlerId, courier, trackingNumber, autoBook);
+      const order = await orderService.fulfillOrderInStock(orderId, handlerId, courier, trackingNumber);
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
       }
@@ -187,9 +200,9 @@ class OrderController {
     try {
       const { orderId } = req.params;
       const handlerId = req.user.id;
-      const { courier, trackingNumber, autoBook } = req.body;
+      const { courier, trackingNumber } = req.body;
 
-      const order = await orderService.fulfillOrderPreOrder(orderId, handlerId, courier, trackingNumber, autoBook);
+      const order = await orderService.fulfillOrderPreOrder(orderId, handlerId, courier, trackingNumber);
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
       }
@@ -197,6 +210,62 @@ class OrderController {
       return res.json({ message: "Pre-order items fulfilled successfully.", order });
     } catch (error) {
       console.error("Error in OrderController.fulfillOrderPreOrder:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+
+  /**
+   * Fulfill a combined order (POST /api/orders/:orderId/fulfill/combined)
+   */
+  async fulfillOrderCombined(req, res) {
+    try {
+      const { orderId } = req.params;
+      const handlerId = req.user.id;
+      const { courier, trackingNumber } = req.body;
+
+      const order = await orderService.fulfillOrderCombined(orderId, handlerId, courier, trackingNumber);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found." });
+      }
+
+      return res.json({ message: "Combined order fulfilled successfully.", order });
+    } catch (error) {
+      console.error("Error in OrderController.fulfillOrderCombined:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+
+  /**
+   * Fulfill an individual item by itemId (POST /api/orders/items/:itemId/fulfill)
+   */
+  async fulfillOrderItem(req, res) {
+    try {
+      const { itemId } = req.params;
+      const handlerId = req.user ? req.user.id : null;
+      const order = await orderService.fulfillOrderItem(itemId, handlerId);
+      if (!order) {
+        return res.status(404).json({ error: "ไม่พบรายการสินค้าในคำสั่งซื้อ" });
+      }
+      return res.json({ message: "ยืนยันจ่ายสินค้าเรียบร้อยแล้ว", order });
+    } catch (error) {
+      console.error("Error in OrderController.fulfillOrderItem:", error);
+      return res.status(500).json({ error: "เกิดข้อผิดพลาดในการบันทึกรายการสินค้า" });
+    }
+  }
+
+  /**
+   * Cancel and delete an unpaid pending order (POST /api/orders/:orderId/cancel or DELETE /api/orders/:orderId)
+   */
+  async cancelOrder(req, res) {
+    try {
+      const { orderId } = req.params;
+      const cancelled = await orderService.cancelPendingOrder(orderId);
+      if (!cancelled) {
+        return res.status(404).json({ error: "Order not found or already processed." });
+      }
+      return res.json({ message: "Order cancelled and deleted successfully.", orderId });
+    } catch (error) {
+      console.error("Error in OrderController.cancelOrder:", error);
       return res.status(500).json({ error: "Internal server error occurred." });
     }
   }
@@ -275,10 +344,12 @@ class OrderController {
         district,
         province,
         zipcode,
-        lineUserId
+        customerAddressFormatted
       } = req.body;
 
-      if (!name || !phone || !email || !addressStreet || !subdistrict || !district || !province || !zipcode) {
+      const addressStr = customerAddressFormatted || `${addressStreet}, ${subdistrict}, ${district}, ${province} ${zipcode}`;
+
+      if (!name || !phone || !email || !addressStr || addressStr.trim() === "" || addressStr.includes("undefined")) {
         return res.status(400).json({ error: "All address fields are required." });
       }
 
@@ -286,12 +357,6 @@ class OrderController {
       if (!order) {
         return res.status(404).json({ error: "Order not found." });
       }
-
-      if (order.customerAddress && order.customerAddress.trim() !== "") {
-        return res.status(400).json({ error: "คำสั่งซื้อนี้ได้รับการบันทึกที่อยู่จัดส่งเรียบร้อยแล้ว" });
-      }
-
-      const addressStr = `${addressStreet}, ${subdistrict}, ${district}, ${province} ${zipcode}`;
 
       // Update the order in database
       const updatedOrder = await orderService.updateOrderContactInfo(orderId, {
@@ -305,17 +370,7 @@ class OrderController {
       const cleanEmail = email ? email.trim() : null;
       try {
         let profileRes = null;
-        if (lineUserId && cleanEmail) {
-          profileRes = await pool.query(
-            "SELECT id FROM customer_profiles WHERE line_user_id = $1 OR LOWER(customer_email) = LOWER($2)",
-            [lineUserId, cleanEmail]
-          );
-        } else if (lineUserId) {
-          profileRes = await pool.query(
-            "SELECT id FROM customer_profiles WHERE line_user_id = $1",
-            [lineUserId]
-          );
-        } else if (cleanEmail) {
+        if (cleanEmail) {
           profileRes = await pool.query(
             "SELECT id FROM customer_profiles WHERE LOWER(customer_email) = LOWER($1)",
             [cleanEmail]
@@ -326,20 +381,19 @@ class OrderController {
           const profileId = profileRes.rows[0].id;
           await pool.query(
             `UPDATE customer_profiles SET
-               line_user_id = COALESCE($1, line_user_id),
-               customer_email = COALESCE($2, customer_email),
-               customer_name = $3,
-               customer_phone = $4,
-               customer_address = $5,
+               customer_email = $1,
+               customer_name = $2,
+               customer_phone = $3,
+               customer_address = $4,
                updated_at = NOW()
-             WHERE id = $6`,
-            [lineUserId || null, cleanEmail, name, phone, addressStr, profileId]
+             WHERE id = $5`,
+            [cleanEmail, name, phone, addressStr, profileId]
           );
         } else {
           await pool.query(
-            `INSERT INTO customer_profiles (line_user_id, customer_email, customer_name, customer_phone, customer_address)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [lineUserId || null, cleanEmail, name, phone, addressStr]
+            `INSERT INTO customer_profiles (customer_email, customer_name, customer_phone, customer_address)
+             VALUES ($1, $2, $3, $4)`,
+            [cleanEmail, name, phone, addressStr]
           );
         }
       } catch (profErr) {

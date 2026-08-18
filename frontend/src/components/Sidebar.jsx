@@ -7,16 +7,16 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
   ]);
 
   useEffect(() => {
-    fetch("/api/categories")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch categories");
-        return res.json();
-      })
-      .then((data) => {
+    Promise.all([
+      fetch("/api/categories").then((res) => (res.ok ? res.json() : [])),
+      fetch("/api/products").then((res) => (res.ok ? res.json() : []))
+    ])
+      .then(([categoriesData, productsData]) => {
+        const allProducts = Array.isArray(productsData) ? productsData : [];
         let promoCategory = { id: "promotion", label: "PROMOTION" };
         const otherCategories = [];
 
-        (data || []).forEach((c) => {
+        (categoriesData || []).forEach((c) => {
           const cleanId = String(c.id || "").trim().toLowerCase();
           const cleanName = String(c.name || "").trim().toLowerCase();
 
@@ -35,11 +35,33 @@ export default function Sidebar({ selectedCategory, onSelectCategory }) {
           });
         });
 
-        setCategories([
-          { id: "all", label: "ALL" },
-          promoCategory,
-          ...otherCategories,
-        ]);
+        // Check if promotion category has any active products
+        const hasPromoProducts = allProducts.some(
+          (p) => p.promotion === true || p.promotion === 1 || String(p.promotion).toLowerCase() === "true"
+        );
+
+        // Filter categories: only keep categories that have at least 1 product
+        const availableCategories = otherCategories.filter((cat) => {
+          const cleanId = String(cat.id || "").trim().toLowerCase();
+          const cleanLabel = String(cat.label || "").trim().toLowerCase();
+          return allProducts.some((p) => {
+            const prodCat = String(p.category || "").trim().toLowerCase();
+            return prodCat === cleanId || prodCat === cleanLabel;
+          });
+        });
+
+        const finalCategories = [{ id: "all", label: "ALL" }];
+        if (hasPromoProducts) {
+          finalCategories.push(promoCategory);
+        }
+        finalCategories.push(...availableCategories);
+
+        setCategories(finalCategories);
+
+        // Fallback to "all" if current selected category is no longer available
+        if (selectedCategory && selectedCategory !== "all" && !finalCategories.some((c) => c.id === selectedCategory)) {
+          onSelectCategory("all");
+        }
       })
       .catch((err) => {
         console.error("Error loading categories in Sidebar:", err);

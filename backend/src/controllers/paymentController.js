@@ -7,16 +7,19 @@ class PaymentController {
    */
   async handleWebhook(req, res) {
     try {
-      const event = req.body;
+      const event = req.body || {};
+      console.log(`[Webhook] Received Omise event key: ${event.key}, object: ${event.object}`);
       
       // Look for Omise charge.complete event
       if (event.key === "charge.complete" || (event.object === "event" && event.key === "charge.complete")) {
-        const charge = event.data;
+        const charge = event.data || {};
         const orderId = charge.metadata?.orderId || charge.metadata?.order_id;
         const status = charge.status;
         const transactionId = charge.id;
 
-        if (orderId && status === "successful") {
+        console.log(`[Webhook] Omise charge ${transactionId} status: ${status}, orderId: ${orderId}`);
+
+        if (orderId && (status === "successful" || charge.paid)) {
           console.log(`[Webhook] Omise payment successful for order: ${orderId}`);
           await orderService.markOrderAsPaid(orderId, transactionId);
           return res.json({ success: true, message: "Order payment marked as paid." });

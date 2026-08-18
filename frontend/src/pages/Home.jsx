@@ -7,13 +7,20 @@ import ProductDetailModal from "../components/ProductDetailModal";
 import CartDrawer from "../components/CartDrawer";
 import KioskPayment from "../components/KioskPayment";
 import Screensaver from "../components/Screensaver";
-import { ShoppingCartIcon } from "@heroicons/react/24/solid";
+import FooterBar from "../components/FooterBar";
+import SupportModal from "../components/SupportModal";
+import { ShoppingCartIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { notify } from "../components/notify";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [popularSearchTags, setPopularSearchTags] = useState([]);
   const [cart, setCart] = useState({ items: [], totalPrice: 0, totalItems: 0 });
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [products, setProducts] = useState([]);
+  const [categoryList, setCategoryList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -22,7 +29,7 @@ export default function Home() {
   const [isWaking, setIsWaking] = useState(false);
   const [sessionViewedProductIds, setSessionViewedProductIds] = useState([]);
 
-  // Fetch cart details on mount
+  // Fetch cart details & categories on mount
   const fetchCart = () => {
     fetch("/api/cart")
       .then((res) => res.json())
@@ -32,14 +39,35 @@ export default function Home() {
 
   useEffect(() => {
     fetchCart();
+    fetch("/api/categories")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setCategoryList(data))
+      .catch((err) => console.error("Error loading categories in Home:", err));
+
+    fetch("/api/settings/search-tags")
+      .then((res) => (res.ok ? res.json() : { popularSearchTags: [] }))
+      .then((data) => {
+        if (data.popularSearchTags && Array.isArray(data.popularSearchTags)) {
+          setPopularSearchTags(data.popularSearchTags);
+        }
+      })
+      .catch((err) => console.error("Error loading popular search tags:", err));
   }, []);
 
   // Fetch products catalog
   const fetchProducts = () => {
     setLoading(true);
     setError(null);
-    const query = selectedCategory !== "all" ? `?category=${selectedCategory}` : "";
-    return fetch(`/api/products${query}`)
+    const queryParams = new URLSearchParams();
+    if (selectedCategory !== "all") {
+      queryParams.append("category", selectedCategory);
+    }
+    if (searchQuery.trim() !== "") {
+      queryParams.append("search", searchQuery.trim());
+    }
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+
+    return fetch(`/api/products${queryString}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to load products");
@@ -71,27 +99,31 @@ export default function Home() {
 
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory]);
+  }, [selectedCategory, searchQuery]);
 
-  // Idle detection timer (2 minutes)
+  // Idle detection timer (2 minutes) - Paused when payment modal (activeOrder) is open
   useEffect(() => {
     let idleTimer;
-    const timeoutDuration = 1000; // 2 minutes in ms
+    const timeoutDuration = 240000; // 240 seconds in ms
 
     const resetTimer = () => {
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        setIsIdle(true);
-      }, timeoutDuration);
+      if (!activeOrder) {
+        idleTimer = setTimeout(() => {
+          setIsIdle(true);
+        }, timeoutDuration);
+      }
     };
 
     const activityEvents = ["mousemove", "mousedown", "keypress", "touchstart", "scroll"];
 
-    if (!isIdle) {
+    if (!isIdle && !activeOrder) {
       activityEvents.forEach((event) => {
         window.addEventListener(event, resetTimer);
       });
       resetTimer();
+    } else if (activeOrder) {
+      clearTimeout(idleTimer);
     }
 
     return () => {
@@ -100,7 +132,7 @@ export default function Home() {
         window.removeEventListener(event, resetTimer);
       });
     };
-  }, [isIdle]);
+  }, [isIdle, activeOrder]);
 
   // Clear cart and close active modals when entering screensaver mode
   useEffect(() => {
@@ -111,8 +143,10 @@ export default function Home() {
         .catch((err) => console.error("Error clearing cart on idle:", err));
 
       setIsCartOpen(false);
+      setIsSupportOpen(false);
       setSelectedProduct(null);
       setActiveOrder(null);
+      setSearchQuery("");
       setSessionViewedProductIds([]);
     }
   }, [isIdle]);
@@ -161,7 +195,7 @@ export default function Home() {
     const existingItem = cart.items.find(item => item.product?.id === product.id);
     const limit = product.purchaseLimit || product.purchase_limit;
     if (existingItem && limit && existingItem.quantity >= limit) {
-      alert(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+      notify.warning(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
       return;
     }
 
@@ -208,38 +242,34 @@ export default function Home() {
     setIsCartOpen(true);
   };
 
-  const handleCheckout = (deliveryOption, shippingOption) => {
+  const handleCheckout = (param1, param2, param3) => {
     if (cart.items.length === 0) return;
 
-    fetch("/api/settings/shipping")
-      .then((res) => res.json())
-      .then((shippingSettings) => {
-        const hasInStock = cart.items.some(item => item.product && item.product.status === "In Stock");
-        const hasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-        const isMixed = hasInStock && hasPreOrder;
+    let shippingFee = 0;
+    let deliveryOption = "pickup";
+    let shippingOption = "combined";
 
-        let shippingFee = 0;
-        if (deliveryOption === "delivery") {
-          if (isMixed && shippingOption === "split") {
-            shippingFee = shippingSettings.baseShippingFee + shippingSettings.additionalSplitShippingFee;
-          } else {
-            shippingFee = shippingSettings.baseShippingFee;
-          }
-        }
+    if (typeof param1 === "number") {
+      shippingFee = param1;
+      deliveryOption = param2 || "pickup";
+      shippingOption = param3 || "combined";
+    } else if (typeof param1 === "string") {
+      deliveryOption = param1;
+      shippingFee = (param1 === "delivery" || param1 === "home") ? 20 : 0;
+    }
 
-        const grandTotal = cart.totalPrice + shippingFee;
+    const grandTotal = cart.totalPrice + shippingFee;
 
-        return fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items: cart.items,
-            totalPrice: grandTotal,
-            deliveryOption,
-            shippingOption
-          })
-        });
+    fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: cart.items,
+        totalPrice: grandTotal,
+        deliveryOption,
+        shippingOption
       })
+    })
       .then((res) => {
         if (!res.ok) throw new Error("ไม่สามารถสร้างออเดอร์ได้");
         return res.json();
@@ -251,7 +281,7 @@ export default function Home() {
           qrPayload: data.qrPayload
         });
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => notify.error(err.message));
   };
 
   const handlePaymentSuccess = () => {
@@ -263,12 +293,26 @@ export default function Home() {
       });
   };
 
+  const handleCancelOrder = () => {
+    if (activeOrder && activeOrder.orderId) {
+      fetch(`/api/orders/${activeOrder.orderId}/cancel`, {
+        method: "POST"
+      }).catch((err) => console.error("Error cancelling order:", err));
+    }
+    setActiveOrder(null);
+    setIsCartOpen(true);
+  };
   const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
   const bottomDisplayTotal = cart.totalPrice;
 
   return (
     <div className="kiosk-app-container flex flex-col font-['Prompt']">
-      <Header cart={cart} onCartClick={handleCartClick} />
+      <Header
+        cart={cart}
+        onCartClick={handleCartClick}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -294,42 +338,109 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {/* Category Heading */}
-              <div className="px-5 pt-5 pb-1 flex items-end justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">Now Showing</span>
-                  <h1 className="text-2xl font-black text-black mt-1.5 leading-none">
-                    {selectedCategory === "all" ? "ทั้งหมด" :
-                      selectedCategory === "drinks" ? "เครื่องดื่ม" :
-                        selectedCategory === "snacks" ? "ขนมขบเคี้ยว" :
-                          selectedCategory === "instant" ? "อาหารพร้อมทาน" :
-                            selectedCategory === "stationery" ? "เครื่องเขียน" :
-                              selectedCategory === "promotion" ? "โปรโมชั่น" : "สินค้า"}
-                  </h1>
+              {/* Quick Search Chips */}
+              {popularSearchTags.length > 0 && (
+                <div className="px-5 pt-4 flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">คำค้นยอดนิยม:</span>
+                  {popularSearchTags.map((tag) => {
+                    const isSelected = searchQuery === tag;
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => setSearchQuery(isSelected ? "" : tag)}
+                        className={`text-xs px-3 py-1 rounded-full border font-semibold transition-all active:scale-95 cursor-pointer ${
+                          isSelected
+                            ? "bg-[#1B1B1C] text-white border-[#1B1B1C] shadow-sm"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
                 </div>
-                <span className="text-xs font-black text-gray-400">
+              )}
+
+              {/* Category / Search Heading */}
+              <div className="px-5 pt-3 flex items-end justify-between">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">
+                    {searchQuery ? "Search Results" : "Now Showing"}
+                  </span>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <h1 className="text-2xl font-black text-black leading-none">
+                      {searchQuery ? `ค้นหา: "${searchQuery}"` : (() => {
+                        if (selectedCategory === "all") return "ทั้งหมด";
+                        if (selectedCategory === "promotion") return "โปรโมชั่น";
+                        const match = categoryList.find(
+                          (c) => String(c.id).toLowerCase() === String(selectedCategory).toLowerCase()
+                        );
+                        if (match && match.name) return match.name;
+                        if (selectedCategory === "drinks") return "เครื่องดื่ม";
+                        if (selectedCategory === "snacks") return "ขนมขบเคี้ยว";
+                        if (selectedCategory === "instant") return "อาหารพร้อมทาน";
+                        if (selectedCategory === "stationery") return "เครื่องเขียน";
+                        if (selectedCategory === "souvenirs") return "ของที่ระลึก";
+                        return "สินค้า";
+                      })()}
+                    </h1>
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <XMarkIcon className="w-3.5 h-3.5" />
+                        ล้างค้นหา
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs font-black text-gray-400 shrink-0">
                   {products.length} รายการ
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 p-5">
-                {(() => {
-                  const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
-                  return products.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      onAddToCart={handleAddToCart}
-                      onSelectProduct={handleSelectProduct}
-                      isMostViewed={maxViews > 0 && product.views === maxViews}
-                    />
-                  ));
-                })()}
-              </div>
-
-              {products.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-[60vh] text-[#2B2B2B]/40">
-                  <p className="text-xl font-medium">ไม่มีสินค้าในหมวดหมู่นี้ในขณะนี้</p>
+{products.length > 0 ? (
+                <div
+                  className={`grid grid-cols-2 gap-4 p-5 ${cart.totalItems > 0 ? "pb-36" : "pb-20"}`}
+                >
+                  {(() => {
+                    const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
+                    return products.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onAddToCart={handleAddToCart}
+                        onSelectProduct={handleSelectProduct}
+                        isMostViewed={maxViews > 0 && product.views === maxViews}
+                      />
+                    ));
+                  })()}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                  <div className="w-16 h-16 rounded-3xl bg-gray-200/60 flex items-center justify-center text-gray-400 mb-4 shadow-inner">
+                    <MagnifyingGlassIcon className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-[#1B1B1C]">ไม่พบสินค้าที่ตรงกับการค้นหา</h3>
+                  <p className="text-xs font-medium text-gray-500 mt-1 max-w-xs leading-relaxed">
+                    {searchQuery
+                      ? `ไม่พบข้อมูลสำหรับคำว่า "${searchQuery}" ลองค้นหาด้วยคำอื่น หรือกดล้างการค้นหาเพื่อดูสินค้าทั้งหมด`
+                      : `ไม่มีสินค้าในหมวดหมู่นี้ในขณะนี้`}
+                  </p>
+                  {(searchQuery || selectedCategory !== "all") && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSelectedCategory("all");
+                      }}
+                      className="mt-5 px-6 py-2.5 bg-[#5EBAA8] text-white font-bold rounded-xl active:scale-95 transition-all shadow-md text-sm cursor-pointer"
+                    >
+                      ดูสินค้าทั้งหมด
+                    </button>
+                  )}
+                </div>
+              )}
                 </div>
               )}
             </>
@@ -355,11 +466,11 @@ export default function Home() {
         onCheckout={handleCheckout}
       />
 
-      {/* Floating Cart Pop-up Bar at Bottom */}
+      {/* Floating Cart Pop-up Bar at Bottom matching home.jpg */}
       {cart.totalItems > 0 && (
         <div
           onClick={handleCartClick}
-          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 
+className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 
                      w-[92%] max-w-[620px] h-16 bg-[#1B1B1C] text-white rounded-2xl 
                      shadow-[0_10px_30px_rgba(0,0,0,0.35)] border border-white/10
                      flex items-center justify-between px-5 cursor-pointer 
@@ -390,7 +501,7 @@ export default function Home() {
                 </span>
               )}
             </div>
-            <span className="text-xs font-black text-[#F8C032] bg-[#F8C032]/10 px-2.5 py-1 rounded-xl">
+<span className="text-xs font-black text-[#F8C032] bg-[#F8C032]/10 px-2.5 py-1 rounded-xl">
               เปิด {'>'}
             </span>
           </div>
@@ -403,9 +514,18 @@ export default function Home() {
           totalPrice={activeOrder.totalPrice}
           qrPayload={activeOrder.qrPayload}
           onPaymentSuccess={handlePaymentSuccess}
-          onCancel={() => setActiveOrder(null)}
+          onCancel={handleCancelOrder}
         />
       )}
+
+      {/* Footer Bar at bottom of screen */}
+      <FooterBar onOpenSupport={() => setIsSupportOpen(true)} />
+
+      {/* Support / Contact Staff Modal */}
+      <SupportModal
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+      />
 
       {/* Screensaver overlay */}
       {isIdle && (
@@ -414,7 +534,7 @@ export default function Home() {
 
       {/* Waking / loading transition */}
       {isWaking && (
-        <div className="fixed inset-0 z-[60] bg-[#0B0B0C]/90 backdrop-blur-md flex flex-col items-center justify-center font-['Prompt'] text-white animate-in fade-in-50 duration-200">
+        <div className="absolute inset-0 z-[60] bg-[#0B0B0C]/90 backdrop-blur-md flex flex-col items-center justify-center font-['Prompt'] text-white animate-in fade-in-50 duration-200">
           <div className="w-16 h-16 rounded-full border-4 border-t-[#F8C032] border-[#F8C032]/20 animate-spin mb-4"></div>
           <p className="text-lg font-semibold tracking-wider text-gray-200 animate-pulse">กำลังอัปเดตข้อมูลสินค้าล่าสุด...</p>
         </div>

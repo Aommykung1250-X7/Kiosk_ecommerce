@@ -46,7 +46,7 @@ export default class KerryExpressProvider extends BaseShippingProvider {
         
         // ข้อมูลผู้ส่ง (จากทางร้านค้า)
         sender: {
-          name: "DIIC Shop Kiosk Store",
+          name: "DITC Shop Kiosk Store",
           mobile: "020000000",
           address: "123 อาคารพาณิชย์ ถนนพระราม 4",
           subdistrict: "คลองเตย",

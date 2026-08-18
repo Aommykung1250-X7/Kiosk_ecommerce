@@ -70,7 +70,7 @@ export default class JTExpressProvider extends BaseShippingProvider {
         
         // ข้อมูลร้านค้าผู้ส่ง
         sender: {
-          name: "DIIC Shop Kiosk Store",
+          name: "DITC Shop Kiosk Store",
           phone: "020000000",
           mobile: "020000000",
           prov: "กรุงเทพมหานคร",

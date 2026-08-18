@@ -48,53 +48,201 @@ class OrderRepository {
       return `CAMT-${dateStr}-${counterStr}`;
     } catch (error) {
       console.error("Error generating order ID:", error);
-      // Fallback fallback if DB query fails
       const timestamp = Date.now();
       return `CAMT-${dateStr}-${timestamp}`;
     }
   }
 
   /**
-   * Create a new order in PostgreSQL
-   * @param {Array} items 
-   * @param {number} totalPrice 
-   * @returns {Promise<object>}
+   * Helper เพื่อดึง order_items สำหรับ order เดียวหรือหลาย order
+   */
+  async fetchItemsForOrders(orderIds) {
+    if (!orderIds || orderIds.length === 0) return {};
+    const query = `
+      SELECT oi.*, p.image, p.preorder_release_date, p.pickup_location, p.category_id, c.name AS category_name 
+      FROM order_items oi
+      LEFT JOIN products p ON oi.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE oi.order_id = ANY($1) 
+      ORDER BY oi.id ASC
+    `;
+    const res = await pool.query(query, [orderIds]);
+    const itemsByOrderId = {};
+
+    res.rows.forEach(row => {
+      if (!itemsByOrderId[row.order_id]) {
+        itemsByOrderId[row.order_id] = [];
+      }
+      itemsByOrderId[row.order_id].push({
+        id: row.id,
+        quantity: row.quantity,
+        price: parseFloat(row.unit_price),
+        fulfillmentStatus: row.fulfillment_status || "pending",
+        fulfilledAt: row.fulfilled_at,
+        product: {
+          id: row.product_id,
+          name: row.product_name,
+          price: parseFloat(row.unit_price),
+          status: row.product_status || "In Stock",
+          image: row.image,
+          imageUrl: row.image,
+          preorder_release_date: row.preorder_release_date,
+          preorderReleaseDate: row.preorder_release_date,
+          pickup_location: row.pickup_location,
+          pickupLocation: row.pickup_location,
+          category: row.category_id,
+          category_name: row.category_name,
+          categoryName: row.category_name
+        }
+      });
+    });
+
+    return itemsByOrderId;
+  }
+
+  /**
+   * Helper เพื่อดึง order_shipments สำหรับ order เดียวหรือหลาย order
+   */
+  async fetchShipmentsForOrders(orderIds) {
+    if (!orderIds || orderIds.length === 0) return {};
+    const query = `
+      SELECT * FROM order_shipments 
+      WHERE order_id = ANY($1) 
+      ORDER BY id ASC
+    `;
+    const res = await pool.query(query, [orderIds]);
+    const shipmentsByOrderId = {};
+    res.rows.forEach(row => {
+      if (!shipmentsByOrderId[row.order_id]) {
+        shipmentsByOrderId[row.order_id] = [];
+      }
+      shipmentsByOrderId[row.order_id].push(row);
+    });
+    return shipmentsByOrderId;
+  }
+
+  /**
+   * Helper เพื่อแมปคอลัมน์จาก DB เป็นออบเจกต์ที่ใช้งานในระบบ
+   */
+  mapOrderRow(row, items = [], shipments = []) {
+    const combinedShip = shipments.find(s => s.shipment_type === 'combined');
+    const instockShip = shipments.find(s => s.shipment_type === 'instock') || combinedShip;
+    const preorderShip = shipments.find(s => s.shipment_type === 'preorder') || combinedShip;
+
+    return {
+      id: row.order_uuid,
+      dbId: row.id,
+      items,
+      shipments,
+      totalPrice: parseFloat(row.total_amount),
+      status: row.payment_status === "paid" ? "success" : row.payment_status,
+      customerName: row.customer_name,
+      customerPhone: row.customer_phone,
+      customerEmail: row.customer_email,
+      customerAddress: row.customer_address,
+      createdAt: row.created_at,
+      paidAt: row.paid_at,
+      fulfillmentStatus: row.fulfillment_status,
+      fulfillmentStatusInstock: row.fulfillment_status_instock,
+      fulfillmentStatusPreorder: row.fulfillment_status_preorder,
+      fulfilledAt: row.fulfilled_at,
+      deliveryOption: row.delivery_option,
+      shippingOption: row.shipping_option,
+      trackingNumber1: instockShip ? instockShip.tracking_number : null,
+      courier1: instockShip ? instockShip.courier_name : null,
+      trackingNumber2: preorderShip ? preorderShip.tracking_number : null,
+      courier2: preorderShip ? preorderShip.courier_name : null,
+      paymentGatewayRef: row.payment_gateway_ref
+    };
+  }
+
+  /**
+   * Create a new order in PostgreSQL (บันทึก orders + order_items)
    */
   async create(items, totalPrice, deliveryOption = "pickup", shippingOption = "combined") {
     const orderId = await this.generateOrderId();
-    const hasInStock = items.some(item => item.product && item.product.status === 'In Stock');
-    const hasPreOrder = items.some(item => item.product && item.product.status === 'Pre-Order');
+    const hasInStock = items.some(item => (item.product?.status || item.status) === 'In Stock');
+    const hasPreOrder = items.some(item => (item.product?.status || item.status) === 'Pre-Order');
     
     const instockStatus = hasInStock ? 'pending' : 'none';
     const preorderStatus = hasPreOrder ? 'pending' : 'none';
 
-    const query = `
-      INSERT INTO orders (order_uuid, total_amount, payment_status, items, fulfillment_status_instock, fulfillment_status_preorder, delivery_option, shipping_option)
-      VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7)
-      RETURNING *
-    `;
-    const values = [orderId, totalPrice, JSON.stringify(items), instockStatus, preorderStatus, deliveryOption, shippingOption];
-
+    const client = await pool.connect();
     try {
-      const res = await pool.query(query, values);
-      return this.mapOrderRow(res.rows[0]);
+      await client.query("BEGIN");
+
+      // 1. Insert into orders
+      const orderQuery = `
+        INSERT INTO orders (order_uuid, total_amount, payment_status, fulfillment_status_instock, fulfillment_status_preorder, delivery_option, shipping_option)
+        VALUES ($1, $2, 'pending', $3, $4, $5, $6)
+        RETURNING *
+      `;
+      const orderRes = await client.query(orderQuery, [orderId, totalPrice, instockStatus, preorderStatus, deliveryOption, shippingOption]);
+      const newOrder = orderRes.rows[0];
+
+      // 2. Insert into order_items
+      const mappedItemsForReturn = [];
+      for (const item of items) {
+        const pId = item.product?.id || item.id || item.product_id;
+        const pName = item.product?.name || item.name || "สินค้า";
+        const pPrice = parseFloat(item.product?.price || item.price || 0);
+        const pQty = parseInt(item.quantity || item.qty || 1, 10);
+        const pStatus = item.product?.status || item.status || "In Stock";
+
+        const itemQuery = `
+          INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, product_status)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *
+        `;
+        const itemRes = await client.query(itemQuery, [newOrder.id, pId ? parseInt(pId, 10) : null, pName, pPrice, pQty, pStatus]);
+        const insertedItem = itemRes.rows[0];
+
+        mappedItemsForReturn.push({
+          id: insertedItem.id,
+          quantity: insertedItem.quantity,
+          price: parseFloat(insertedItem.unit_price),
+          product: {
+            id: insertedItem.product_id,
+            name: insertedItem.product_name,
+            price: parseFloat(insertedItem.unit_price),
+            status: insertedItem.product_status,
+            image: item.product?.image || item.product?.imageUrl || item.image,
+            imageUrl: item.product?.image || item.product?.imageUrl || item.image,
+            preorder_release_date: item.product?.preorder_release_date || item.product?.preorderReleaseDate,
+            preorderReleaseDate: item.product?.preorder_release_date || item.product?.preorderReleaseDate,
+            pickup_location: item.product?.pickup_location || item.product?.pickupLocation,
+            pickupLocation: item.product?.pickup_location || item.product?.pickupLocation,
+            category: item.product?.category_id || item.product?.category,
+            category_name: item.product?.category_name || item.product?.categoryName || item.product?.category_id || item.product?.category,
+            categoryName: item.product?.category_name || item.product?.categoryName || item.product?.category_id || item.product?.category
+          }
+        });
+      }
+
+      await client.query("COMMIT");
+      return this.mapOrderRow(newOrder, mappedItemsForReturn, []);
     } catch (error) {
+      await client.query("ROLLBACK");
       console.error("Error creating order in DB:", error);
       throw error;
+    } finally {
+      client.release();
     }
   }
 
   /**
-   * Fetch order by ID from PostgreSQL
-   * @param {string} orderUuid 
-   * @returns {Promise<object|null>}
+   * Fetch order by UUID from PostgreSQL
    */
   async get(orderUuid) {
     const query = `SELECT * FROM orders WHERE order_uuid = $1`;
     try {
       const res = await pool.query(query, [orderUuid]);
       if (res.rows.length === 0) return null;
-      return this.mapOrderRow(res.rows[0]);
+
+      const orderRow = res.rows[0];
+      const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
+      const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
+      return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
     } catch (error) {
       console.error("Error fetching order from DB:", error);
       throw error;
@@ -103,12 +251,8 @@ class OrderRepository {
 
   /**
    * Update order status and details in PostgreSQL
-   * @param {string} orderUuid 
-   * @param {object} updates 
-   * @returns {Promise<object|null>}
    */
   async update(orderUuid, updates) {
-    // แมปสถานะ 'success' ฝั่งแอปพลิเคชันเป็น 'paid' ในฐานข้อมูล PostgreSQL
     const paymentStatus = updates.status === "success" ? "paid" : updates.status;
     const paidAt = paymentStatus === "paid" ? new Date() : null;
 
@@ -131,31 +275,22 @@ class OrderRepository {
         customer_phone = COALESCE($4, customer_phone),
         customer_email = COALESCE($5, customer_email),
         customer_address = COALESCE($6, customer_address),
-        slip_url = COALESCE($7, slip_url),
-        delivery_option = COALESCE($8, delivery_option),
-        shipping_option = COALESCE($9, shipping_option),
-        tracking_number_1 = COALESCE($10, tracking_number_1),
-        courier_1 = COALESCE($11, courier_1),
-        tracking_number_2 = COALESCE($12, tracking_number_2),
-        courier_2 = COALESCE($13, courier_2),
-        payment_gateway_ref = COALESCE($14, payment_gateway_ref)
-      WHERE order_uuid = $15
+        delivery_option = COALESCE($7, delivery_option),
+        shipping_option = COALESCE($8, shipping_option),
+        payment_gateway_ref = COALESCE($9, payment_gateway_ref)
+      WHERE order_uuid = $10
       RETURNING *
     `;
+
     const values = [
-      paymentStatus || null,
+      paymentStatus,
       paidAt,
       updates.customerName || null,
       updates.customerPhone || null,
       updates.customerEmail || null,
-      addressStr || null,
-      updates.slipUrl || null,
+      addressStr,
       updates.deliveryOption || null,
       updates.shippingOption || null,
-      updates.trackingNumber1 || null,
-      updates.courier1 || null,
-      updates.trackingNumber2 || null,
-      updates.courier2 || null,
       updates.paymentGatewayRef || null,
       orderUuid
     ];
@@ -163,7 +298,32 @@ class OrderRepository {
     try {
       const res = await pool.query(query, values);
       if (res.rows.length === 0) return null;
-      return this.mapOrderRow(res.rows[0]);
+
+      const orderRow = res.rows[0];
+
+      if (updates.courier1 || updates.trackingNumber1 || updates.courier || updates.trackingNumber) {
+        const c1 = updates.courier1 || updates.courier;
+        const t1 = updates.trackingNumber1 || updates.trackingNumber;
+        if (c1 || t1) {
+          await pool.query(
+            `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status)
+             VALUES ($1, 'instock', $2, $3, 'shipped')`,
+            [orderRow.id, c1 || null, t1 || null]
+          );
+        }
+      }
+
+      if (updates.courier2 || updates.trackingNumber2) {
+        await pool.query(
+          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status)
+           VALUES ($1, 'preorder', $2, $3, 'shipped')`,
+          [orderRow.id, updates.courier2 || null, updates.trackingNumber2 || null]
+        );
+      }
+
+      const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
+      const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
+      return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
     } catch (error) {
       console.error("Error updating order in DB:", error);
       throw error;
@@ -171,50 +331,29 @@ class OrderRepository {
   }
 
   /**
-   * Helper เพื่อแมปคอลัมน์จาก DB เป็นออบเจกต์ที่ใช้งานในระบบ
-   */
-  mapOrderRow(row) {
-    return {
-      id: row.order_uuid,
-      items: typeof row.items === "string" ? JSON.parse(row.items) : row.items,
-      totalPrice: parseFloat(row.total_amount),
-      status: row.payment_status === "paid" ? "success" : row.payment_status,
-      customerName: row.customer_name,
-      customerPhone: row.customer_phone,
-      customerEmail: row.customer_email,
-      customerAddress: row.customer_address,
-      slipUrl: row.slip_url,
-      createdAt: row.created_at,
-      paidAt: row.paid_at,
-      fulfillmentStatus: row.fulfillment_status,
-      fulfillmentStatusInstock: row.fulfillment_status_instock,
-      fulfillmentStatusPreorder: row.fulfillment_status_preorder,
-      fulfilledAt: row.fulfilled_at,
-      courier: row.courier,
-      trackingNumber: row.tracking_number,
-      deliveryOption: row.delivery_option,
-      shippingOption: row.shipping_option,
-      trackingNumber1: row.tracking_number_1,
-      courier1: row.courier_1,
-      trackingNumber2: row.tracking_number_2,
-      courier2: row.courier_2,
-      paymentGatewayRef: row.payment_gateway_ref
-    };
-  }
-
-  /**
    * Fetch all paid and unfulfilled orders
-   * @returns {Promise<Array>}
    */
   async getQueue() {
     const query = `
       SELECT * FROM orders 
-      WHERE payment_status = 'paid' AND fulfillment_status = 'pending' 
+      WHERE payment_status = 'paid' 
+        AND NOT (
+          fulfillment_status = 'fulfilled'
+          OR (
+            fulfillment_status_instock IN ('fulfilled', 'none') 
+            AND fulfillment_status_preorder IN ('fulfilled', 'none')
+          )
+        )
       ORDER BY created_at ASC
     `;
     try {
       const res = await pool.query(query);
-      return res.rows.map(row => this.mapOrderRow(row));
+      if (res.rows.length === 0) return [];
+
+      const orderIds = res.rows.map(r => r.id);
+      const itemsMap = await this.fetchItemsForOrders(orderIds);
+      const shipmentsMap = await this.fetchShipmentsForOrders(orderIds);
+      return res.rows.map(row => this.mapOrderRow(row, itemsMap[row.id] || [], shipmentsMap[row.id] || []));
     } catch (error) {
       console.error("Error fetching order queue from DB:", error);
       throw error;
@@ -223,19 +362,30 @@ class OrderRepository {
 
   /**
    * Fetch all paid and fulfilled orders (order history)
-   * @returns {Promise<Array>}
    */
   async getHistory() {
     const query = `
       SELECT o.*, u.name as handler_name FROM orders o
       LEFT JOIN users u ON o.handler_id = u.id
-      WHERE o.payment_status = 'paid' AND o.fulfillment_status = 'fulfilled' 
-      ORDER BY o.fulfilled_at DESC
+      WHERE o.payment_status = 'paid' 
+        AND (
+          o.fulfillment_status = 'fulfilled' 
+          OR (
+            o.fulfillment_status_instock IN ('fulfilled', 'none') 
+            AND o.fulfillment_status_preorder IN ('fulfilled', 'none')
+          )
+        )
+      ORDER BY o.fulfilled_at DESC NULLS LAST, o.id DESC
     `;
     try {
       const res = await pool.query(query);
+      if (res.rows.length === 0) return [];
+
+      const orderIds = res.rows.map(r => r.id);
+      const itemsMap = await this.fetchItemsForOrders(orderIds);
+      const shipmentsMap = await this.fetchShipmentsForOrders(orderIds);
       return res.rows.map(row => {
-        const order = this.mapOrderRow(row);
+        const order = this.mapOrderRow(row, itemsMap[row.id] || [], shipmentsMap[row.id] || []);
         order.handlerName = row.handler_name;
         return order;
       });
@@ -247,17 +397,14 @@ class OrderRepository {
 
   /**
    * Mark order as fulfilled by a staff/admin
-   * @param {string} orderUuid 
-   * @param {number} handlerId 
-   * @returns {Promise<object|null>}
    */
   async fulfill(orderUuid, handlerId) {
     const query = `
       UPDATE orders 
       SET 
         fulfillment_status = 'fulfilled',
-        fulfillment_status_instock = 'fulfilled',
-        fulfillment_status_preorder = 'fulfilled',
+        fulfillment_status_instock = CASE WHEN fulfillment_status_instock = 'pending' THEN 'fulfilled' ELSE fulfillment_status_instock END,
+        fulfillment_status_preorder = CASE WHEN fulfillment_status_preorder = 'pending' THEN 'fulfilled' ELSE fulfillment_status_preorder END,
         handler_id = $1,
         fulfilled_at = NOW()
       WHERE order_uuid = $2
@@ -266,7 +413,10 @@ class OrderRepository {
     try {
       const res = await pool.query(query, [handlerId, orderUuid]);
       if (res.rows.length === 0) return null;
-      return this.mapOrderRow(res.rows[0]);
+      const orderRow = res.rows[0];
+      const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
+      const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
+      return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
     } catch (error) {
       console.error("Error fulfilling order in DB:", error);
       throw error;
@@ -289,16 +439,26 @@ class OrderRepository {
         handler_id = CASE 
           WHEN fulfillment_status_preorder IN ('fulfilled', 'none') THEN $1
           ELSE handler_id 
-        END,
-        courier_1 = COALESCE($3, courier_1),
-        tracking_number_1 = COALESCE($4, tracking_number_1)
+        END
       WHERE order_uuid = $2
       RETURNING *
     `;
     try {
-      const res = await pool.query(query, [handlerId, orderUuid, courier, trackingNumber]);
+      const res = await pool.query(query, [handlerId, orderUuid]);
       if (res.rows.length === 0) return null;
-      return this.mapOrderRow(res.rows[0]);
+      const orderRow = res.rows[0];
+
+      if (courier || trackingNumber) {
+        await pool.query(
+          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status, shipped_at)
+           VALUES ($1, 'instock', $2, $3, 'shipped', NOW())`,
+          [orderRow.id, courier, trackingNumber]
+        );
+      }
+
+      const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
+      const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
+      return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
     } catch (error) {
       console.error("Error fulfilling in-stock order in DB:", error);
       throw error;
@@ -321,18 +481,26 @@ class OrderRepository {
         handler_id = CASE 
           WHEN fulfillment_status_instock IN ('fulfilled', 'none') THEN $1
           ELSE handler_id 
-        END,
-        courier_2 = COALESCE($3, courier_2),
-        tracking_number_2 = COALESCE($4, tracking_number_2),
-        courier = COALESCE($3, courier),
-        tracking_number = COALESCE($4, tracking_number)
+        END
       WHERE order_uuid = $2
       RETURNING *
     `;
     try {
-      const res = await pool.query(query, [handlerId, orderUuid, courier, trackingNumber]);
+      const res = await pool.query(query, [handlerId, orderUuid]);
       if (res.rows.length === 0) return null;
-      return this.mapOrderRow(res.rows[0]);
+      const orderRow = res.rows[0];
+
+      if (courier || trackingNumber) {
+        await pool.query(
+          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status, shipped_at)
+           VALUES ($1, 'preorder', $2, $3, 'shipped', NOW())`,
+          [orderRow.id, courier, trackingNumber]
+        );
+      }
+
+      const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
+      const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
+      return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
     } catch (error) {
       console.error("Error fulfilling pre-order in DB:", error);
       throw error;
@@ -340,8 +508,122 @@ class OrderRepository {
   }
 
   /**
+   * Fulfill a combined order (both In-Stock and Pre-Order items together)
+   */
+  async fulfillCombined(orderUuid, handlerId, courier = null, trackingNumber = null) {
+    const query = `
+      UPDATE orders 
+      SET fulfillment_status_instock = 'fulfilled',
+          fulfillment_status_preorder = 'fulfilled',
+          fulfillment_status = 'fulfilled',
+          fulfilled_at = NOW(),
+          handler_id = $1
+      WHERE order_uuid = $2
+      RETURNING *
+    `;
+    try {
+      const res = await pool.query(query, [handlerId, orderUuid]);
+      if (res.rows.length === 0) return null;
+      const orderRow = res.rows[0];
+
+      // Mark all order_items as fulfilled
+      await pool.query(
+        `UPDATE order_items SET fulfillment_status = 'fulfilled', fulfilled_at = NOW() WHERE order_id = $1`,
+        [orderRow.id]
+      );
+
+      if (courier || trackingNumber) {
+        await pool.query(
+          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status, shipped_at)
+           VALUES ($1, 'combined', $2, $3, 'shipped', NOW())`,
+          [orderRow.id, courier, trackingNumber]
+        );
+      }
+
+      const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
+      const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
+      return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
+    } catch (error) {
+      console.error("Error fulfilling combined order in DB:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fulfill an individual order item by itemId
+   */
+  async fulfillItem(itemId, handlerId) {
+    try {
+      const itemRes = await pool.query(
+        `UPDATE order_items 
+         SET fulfillment_status = 'fulfilled', fulfilled_at = NOW() 
+         WHERE id = $1 
+         RETURNING *`,
+        [itemId]
+      );
+
+      if (itemRes.rows.length === 0) return null;
+      const itemRow = itemRes.rows[0];
+
+      // Check if ALL items for this order are fulfilled
+      const allItemsRes = await pool.query(
+        `SELECT fulfillment_status FROM order_items WHERE order_id = $1`,
+        [itemRow.order_id]
+      );
+
+      const allFulfilled = allItemsRes.rows.every(r => r.fulfillment_status === 'fulfilled');
+
+      let orderRow;
+      if (allFulfilled) {
+        const orderRes = await pool.query(
+          `UPDATE orders 
+           SET fulfillment_status = 'fulfilled', 
+               fulfillment_status_instock = 'fulfilled', 
+               fulfillment_status_preorder = 'fulfilled',
+               fulfilled_at = NOW(), 
+               handler_id = $2 
+           WHERE id = $1 
+           RETURNING *`,
+          [itemRow.order_id, handlerId]
+        );
+        orderRow = orderRes.rows[0];
+      } else {
+        const orderRes = await pool.query(
+          `SELECT * FROM orders WHERE id = $1`,
+          [itemRow.order_id]
+        );
+        orderRow = orderRes.rows[0];
+      }
+
+      const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
+      const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
+      return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
+    } catch (error) {
+      console.error("Error fulfilling item in DB:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a pending order by orderUuid (when user cancels payment)
+   */
+  async deletePendingOrder(orderUuid) {
+    const query = `
+      DELETE FROM orders 
+      WHERE order_uuid = $1 AND payment_status = 'pending'
+      RETURNING *
+    `;
+    try {
+      const res = await pool.query(query, [orderUuid]);
+      return res.rows[0] || null;
+    } catch (error) {
+      console.error("Error deleting pending order:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete pending orders older than 30 minutes
-   * @returns {Promise<number>} Number of deleted orders
    */
   async deleteExpiredPending() {
     const query = `
@@ -364,7 +646,7 @@ class OrderRepository {
     
     return {
       baseShippingFee: parseFloat(baseFeeRes.rows[0]?.value || "40.00"),
-      additionalSplitShippingFee: parseFloat(splitFeeRes.rows[0]?.value || "30.00")
+      additionalSplitShippingFee: parseFloat(splitFeeRes.rows[0]?.value || "40.00")
     };
   }
 

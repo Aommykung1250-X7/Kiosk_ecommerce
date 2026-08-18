@@ -2,6 +2,7 @@
 import orderRepository from "../repositories/orderRepository.js";
 import productRepository from "../repositories/productRepository.js";
 import shippingService from "./shippingService.js";
+import PaymentGatewayService from "./payment/PaymentGatewayService.js";
 
 class OrderService {
   constructor() {
@@ -196,38 +197,28 @@ class OrderService {
     return await orderRepository.fulfill(orderId, handlerId);
   }
 
+  async fulfillOrderItem(itemId, handlerId) {
+    return await orderRepository.fulfillItem(itemId, handlerId);
+  }
+
   /**
    * Fulfill the In Stock items of an order
    * @param {string} orderId 
    * @param {number} handlerId 
    * @param {string} [courier]
    * @param {string} [trackingNumber]
-   * @param {boolean} [autoBook]
    */
-  async fulfillOrderInStock(orderId, handlerId, courier = null, trackingNumber = null, autoBook = false) {
-    let finalCourier = courier;
-    let finalTracking = trackingNumber;
-
-    if (autoBook && courier) {
-      const order = await orderRepository.get(orderId);
-      if (order) {
-        try {
-          const bookingResult = await shippingService.bookShipment(order, courier);
-          if (bookingResult.success) {
-            finalTracking = bookingResult.trackingNumber;
-          }
-        } catch (err) {
-          console.error(`[OrderService] Failed to auto-book shipment for order ${orderId}:`, err);
-        }
-      }
-    }
-
-    const updatedOrder = await orderRepository.fulfillInStock(orderId, handlerId, finalCourier, finalTracking);
+  async fulfillOrderInStock(orderId, handlerId, courier = null, trackingNumber = null) {
+    const updatedOrder = await orderRepository.fulfillInStock(orderId, handlerId, courier, trackingNumber);
     
     // Send email notification to customer if tracking is available
-    if (updatedOrder && updatedOrder.customerEmail && finalTracking) {
+    if (updatedOrder && updatedOrder.customerEmail && trackingNumber) {
       import("./emailService.js").then(({ default: emailService }) => {
-        emailService.sendShipmentNotification(updatedOrder).catch(err => {
+        emailService.sendShipmentNotification(updatedOrder, {
+          courier,
+          trackingNumber,
+          type: "instock"
+        }).catch(err => {
           console.error("[OrderService] Failed to send shipment notification email:", err);
         });
       });
@@ -242,39 +233,57 @@ class OrderService {
    * @param {number} handlerId 
    * @param {string} [courier]
    * @param {string} [trackingNumber]
-   * @param {boolean} [autoBook]
    */
-  async fulfillOrderPreOrder(orderId, handlerId, courier = null, trackingNumber = null, autoBook = false) {
-    let finalCourier = courier;
-    let finalTracking = trackingNumber;
-
-    if (autoBook && courier) {
-      const order = await orderRepository.get(orderId);
-      if (order) {
-        try {
-          const bookingResult = await shippingService.bookShipment(order, courier);
-          if (bookingResult.success) {
-            finalTracking = bookingResult.trackingNumber;
-          }
-        } catch (err) {
-          console.error(`[OrderService] Failed to auto-book shipment for order ${orderId}:`, err);
-        }
-      }
-    }
-
-    const updatedOrder = await orderRepository.fulfillPreOrder(orderId, handlerId, finalCourier, finalTracking);
+  async fulfillOrderPreOrder(orderId, handlerId, courier = null, trackingNumber = null) {
+    const updatedOrder = await orderRepository.fulfillPreOrder(orderId, handlerId, courier, trackingNumber);
     
     // Send email notification to customer if tracking is available
-    if (updatedOrder && updatedOrder.customerEmail && finalTracking) {
+    if (updatedOrder && updatedOrder.customerEmail && trackingNumber) {
       // Import emailService dynamically to avoid circular dependencies
       import("./emailService.js").then(({ default: emailService }) => {
-        emailService.sendShipmentNotification(updatedOrder).catch(err => {
+        emailService.sendShipmentNotification(updatedOrder, {
+          courier,
+          trackingNumber,
+          type: "preorder"
+        }).catch(err => {
           console.error("[OrderService] Failed to send shipment notification email:", err);
         });
       });
     }
 
     return updatedOrder;
+  }
+
+  /**
+   * Fulfill a combined order (sending single email for combined shipment)
+   */
+  async fulfillOrderCombined(orderId, handlerId, courier = null, trackingNumber = null) {
+    const updatedOrder = await orderRepository.fulfillCombined(orderId, handlerId, courier, trackingNumber);
+    
+    // Send ONLY 1 email notification for combined shipment
+    if (updatedOrder && updatedOrder.customerEmail && trackingNumber) {
+      import("./emailService.js").then(({ default: emailService }) => {
+        emailService.sendShipmentNotification(updatedOrder, {
+          courier,
+          trackingNumber,
+          type: "combined"
+        }).catch(err => {
+          console.error("[OrderService] Failed to send combined shipment email:", err);
+        });
+      });
+    }
+
+    return updatedOrder;
+  }
+
+  async cancelPendingOrder(orderId) {
+    const order = await orderRepository.get(orderId);
+    if (order && order.paymentGatewayRef) {
+      PaymentGatewayService.cancelCharge(order.paymentGatewayRef).catch(err => {
+        console.error("[OrderService] Error cancelling payment gateway charge:", err);
+      });
+    }
+    return await orderRepository.deletePendingOrder(orderId);
   }
 
   async getShippingSettings() {

@@ -90,7 +90,7 @@ export default class ThailandPostProvider extends BaseShippingProvider {
             // ในทางปฏิบัติ คุณควรแยก รหัสไปรษณีย์ และ อำเภอ/จังหวัด ออกจากที่อยู่หลัก
             // นี่คือส่วนที่ผู้ใช้สามารถขยายโค้ดเพื่อแมพฟิลด์ปลายทางเพิ่มเติมได้
             receiver_postcode: this.extractPostcode(order.customerAddress) || "10000", 
-            sender_name: "DIIC Shop Kiosk Store",
+            sender_name: "DITC Shop Kiosk Store",
             sender_phone: "020000000",
             sender_address: "123 อาคารพาณิชย์ กรุงเทพฯ",
             sender_postcode: "10110",

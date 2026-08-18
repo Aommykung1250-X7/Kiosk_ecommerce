@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 
@@ -46,10 +47,18 @@ function CategoryPlaceholder({ category }) {
 }
 
 export default function ProductDetailModal({ product, onClose, onAddToCart }) {
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
   if (!product) return null;
 
-  const { name, price, image, promotion, description, status, quantity } = product;
+  const { name, price, image, images, promotion, description, status, quantity } = product;
   const isOutOfStock = status === "In Stock" && quantity <= 0;
+
+  const imagesList = Array.isArray(images) && images.length > 0 
+    ? images 
+    : (image && image.includes(".") ? [image] : []);
+
+  const currentImg = imagesList[activeImageIndex] || image;
 
   const bgColors = {
     water: "bg-[#E9F4FA]",
@@ -59,91 +68,130 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
     noodle: "bg-[#FFF3E6]",
     milo: "bg-[#EDF7EE]",
     pen: "bg-[#F1F0FA]",
-    notebook: "bg-[#FBF6EB]",
   };
-  const imgBg = bgColors[image] || "bg-gray-50";
+  const imgBg = bgColors[currentImg] || "bg-gray-50";
+
+  const handlePrevImage = (e) => {
+    e.stopPropagation();
+    setActiveImageIndex(prev => (prev === 0 ? imagesList.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = (e) => {
+    e.stopPropagation();
+    setActiveImageIndex(prev => (prev === imagesList.length - 1 ? 0 : prev + 1));
+  };
 
   return (
     <div 
       className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 font-['Prompt']"
       onClick={onClose}
     >
-      {/* Modal Container */}
+      {/* Modal Container matching item detail.png */}
       <div 
         className="relative w-full max-w-lg bg-white rounded-[32px] border border-gray-200 shadow-[0_25px_60px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Close Button matching item detail.png (X in circle) */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white text-[#1B1B1C] hover:bg-gray-100 shadow-md border-2 border-[#1B1B1C] transition-colors cursor-pointer"
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white text-black hover:bg-gray-100 border-2 border-black font-bold flex items-center justify-center transition-colors cursor-pointer shadow-sm text-sm"
         >
-          <XMarkIcon className="w-5 h-5" />
+          ✕
         </button>
 
-        {/* Product Image Area */}
-        <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden`}>
-          <div className="absolute inset-0 flex items-center justify-center p-12">
+        {/* Product Image Area / Carousel */}
+        <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden group`}>
+          <div className="absolute inset-0 flex items-center justify-center p-10">
             <div className="w-full h-full max-w-[200px] flex items-center justify-center">
-              {image && image.includes(".") ? (
+              {currentImg && currentImg.includes(".") ? (
                 <img
-                  src={`/uploads/products/${image}`}
+                  src={currentImg.startsWith("/") || currentImg.startsWith("http") ? currentImg : `/uploads/products/${currentImg}`}
                   alt={name}
-                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg"
+                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg transition-all duration-300"
                 />
               ) : (
                 <CategoryPlaceholder category={product.category} />
               )}
             </div>
           </div>
+
+          {/* Carousel Navigation Controls */}
+          {imagesList.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrevImage}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 text-[#1B1B1C] border-2 border-[#1B1B1C] shadow-md flex items-center justify-center hover:bg-amber-400 active:scale-95 transition-all cursor-pointer z-10"
+                title="รูปก่อนหน้า"
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                onClick={handleNextImage}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 text-[#1B1B1C] border-2 border-[#1B1B1C] shadow-md flex items-center justify-center hover:bg-amber-400 active:scale-95 transition-all cursor-pointer z-10"
+                title="รูปถัดไป"
+              >
+                ▶
+              </button>
+
+              {/* Thumbnails indicator */}
+              <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-2 z-10">
+                {imagesList.map((imgItem, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImageIndex(idx);
+                    }}
+                    className={`w-3 h-3 rounded-full transition-all border border-[#1B1B1C] cursor-pointer ${
+                      activeImageIndex === idx ? "bg-amber-400 scale-125" : "bg-white/80 hover:bg-white"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Content Area */}
-        <div className="p-8 flex flex-col gap-5">
+        {/* Content Area matching item detail.png */}
+        <div className="p-6 flex flex-col gap-4 text-left">
           {/* Badges */}
-          <div className="flex items-center gap-2">
-            {promotion && (
-              <span className="bg-[#F9C338] text-black text-[10px] font-black px-3 py-1.5 rounded-full border border-[#1B1B1C] tracking-wider uppercase">
-                🏷️ PROMO
-              </span>
-            )}
-            {status && (
-              <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border ${
-                isOutOfStock
-                  ? "bg-red-50 text-red-600 border-red-200"
-                  : status === "In Stock"
-                    ? "bg-[#E0F2F1]/60 text-[#00796B] border-[#80CBC4]/40"
-                    : "bg-[#FFF3E0] text-[#E65100] border-[#FFE0B2]"
-              }`}>
-                {isOutOfStock ? "สินค้าหมด" : status === "In Stock" ? "พร้อมส่ง" : status}
-              </span>
-            )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
+              isOutOfStock
+                ? "bg-red-50 text-[#FF5252]"
+                : "bg-[#E0F2F1] text-[#00796B]"
+            }`}>
+              {isOutOfStock ? "Out of stock" : "Ready"}
+            </span>
             {(product.purchaseLimit || product.purchase_limit) && (
-              <span className="bg-red-50 text-red-600 text-[10px] font-black px-3 py-1.5 rounded-full border border-red-200 tracking-wider">
+              <span className="bg-red-50 text-red-600 text-[10px] font-black px-3 py-1 rounded-full border border-red-200 tracking-wider">
                 จำกัดไม่เกิน {product.purchaseLimit || product.purchase_limit} ชิ้น
               </span>
             )}
           </div>
 
           {/* Title and Price */}
-          <div className="flex flex-col gap-1.5 text-left">
+          <div className="flex flex-col gap-1">
             <h2 className="text-2xl font-black text-black leading-tight">
               {name}
             </h2>
-            <div className="text-3xl font-black text-[#D99A1C] mt-1">
-              ฿{price.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="text-3xl font-black text-[#F9C338]">
+              ฿{Number(price || 0).toFixed(0)}
             </div>
           </div>
 
-          <hr className="border-gray-200" />
+          <hr className="border-gray-200 my-1" />
 
-          {/* Description */}
-          <div className="flex flex-col gap-1.5 text-left">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-              รายละเอียดสินค้า
+          {/* Detail Label and Text */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold text-gray-400">
+              Detail
             </span>
             <p className="text-gray-600 text-sm leading-relaxed font-semibold">
-              {description}
+              {description || "Product detail description."}
             </p>
             {product.status === "Pre-Order" && (product.preorderReleaseDate || product.preorder_release_date) && (
               <div className="mt-2 text-xs font-bold text-[#E65100] bg-[#FFF3E0] px-3.5 py-2 rounded-xl border border-[#FFE0B2]/50 w-fit">
@@ -158,7 +206,7 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
             )}
           </div>
 
-          {/* Add to Cart Button */}
+          {/* Add to Cart Button matching item detail.png */}
           <button
             disabled={isOutOfStock}
             onClick={() => {
@@ -167,15 +215,15 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
                 onClose();
               }
             }}
-            className={`mt-4 h-14 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-[#1B1B1C]
-                       transition-all duration-150 font-black text-sm uppercase cursor-pointer ${
+            className={`mt-3 h-14 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-black
+                       transition-all duration-150 font-extrabold text-base uppercase cursor-pointer select-none ${
                          isOutOfStock
-                           ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
-                           : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
+                           ? "bg-[#E5E5E7] text-[#8E8E93] border-[#D1D1D6] cursor-not-allowed"
+                           : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98] shadow-sm"
                        }`}
           >
             <ShoppingCartIcon className="w-5 h-5" />
-            <span>{isOutOfStock ? "สินค้าหมด" : "ใส่ตะกร้าสินค้า"}</span>
+            <span>{isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}</span>
           </button>
         </div>
       </div>

@@ -1,5 +1,7 @@
 // backend/src/services/emailService.js
 import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
 
 const formatThaiDate = (dateVal) => {
   if (!dateVal) return "";
@@ -81,7 +83,7 @@ class EmailService {
 
     // Collect unique pickup locations for in-stock items
     const pickupLocations = [...new Set(inStockItems.map(item => item.product?.pickup_location || item.product?.pickupLocation).filter(Boolean))];
-    const pickupLocationsStr = pickupLocations.length > 0 ? pickupLocations.join(", ") : "ตู้จำหน่ายสินค้าของสถาบัน DIIC";
+    const pickupLocationsStr = pickupLocations.length > 0 ? pickupLocations.join(", ") : "ตู้จำหน่ายสินค้าของสถาบัน DITC";
 
     let fulfillmentMethodStr = "";
     if (order.deliveryOption === "delivery") {
@@ -90,8 +92,9 @@ class EmailService {
       fulfillmentMethodStr = "รับสินค้าหน้าร้าน (Store Pickup)";
     }
 
-    // Find the latest preorder release date
+    // Build formatted preorder items date list & find latest preorder date
     let latestPreorderDateStr = "";
+    let preorderItemsDateListHtml = "";
     if (hasPreOrder) {
       const dates = preOrderItems
         .map(item => item.product?.preorder_release_date || item.product?.preorderReleaseDate)
@@ -104,36 +107,58 @@ class EmailService {
           latestPreorderDateStr = formatThaiDate(latestDate);
         }
       }
+
+      preorderItemsDateListHtml = preOrderItems.map(item => {
+        const pName = item.product?.name || "สินค้า Pre-Order";
+        const pDate = item.product?.preorder_release_date || item.product?.preorderReleaseDate;
+        const pDateFormatted = pDate ? formatThaiDate(pDate) : "จะแจ้งให้ทราบภายหลัง";
+        return `<div style="margin-top: 3px; color: #FFA800; font-weight: bold;">• ${pName}: พร้อมรับ/จัดส่งตั้งแต่วันที่ ${pDateFormatted}</div>`;
+      }).join("");
     }
     const latestPreorderDateText = latestPreorderDateStr || "จะแจ้งให้ทราบภายหลัง";
 
-    const getCategoryEmoji = (category) => {
+    const getCategoryEmoji = (categoryKey) => {
+      const key = (categoryKey || "").toLowerCase();
       const map = {
         drinks: "🥤",
         snacks: "🍿",
         instant: "🍜",
-        stationery: "✏️"
+        stationery: "✏️",
+        souvenirs: "🎁",
+        toy: "🧸",
+        sweet: "🍬"
       };
-      return map[category] || "📦";
+      return map[key] || "📦";
     };
 
-    const getCategoryName = (category) => {
+    const getCategoryName = (item) => {
+      const explicitName = item.product?.category_name || item.product?.categoryName;
+      if (explicitName && explicitName.trim() !== "") {
+        return explicitName.trim();
+      }
+
+      const catKey = (item.product?.category || item.product?.category_id || "").toLowerCase();
       const map = {
         drinks: "เครื่องดื่ม (Drinks)",
         snacks: "ขนมขบเคี้ยว (Snacks)",
         instant: "อาหารกึ่งสำเร็จรูป",
-        stationery: "เครื่องเขียน"
+        stationery: "เครื่องเขียน",
+        souvenirs: "ของที่ระลึก",
+        toy: "ของเล่น",
+        sweet: "ขนมหวาน"
       };
-      return map[category] || "สินค้าทั่วไป";
+      return map[catKey] || catKey || "สินค้าทั่วไป";
     };
 
-    const itemsHtml = (order.items || []).map(item => {
+    const attachments = [];
+
+    const itemsHtml = (order.items || []).map((item, index) => {
       const name = item.product?.name || "สินค้าไม่ระบุชื่อ";
       const quantity = item.quantity || 1;
       const price = parseFloat(item.product?.price || 0);
-      const category = item.product?.category || "drinks";
-      const emoji = getCategoryEmoji(category);
-      const categoryName = getCategoryName(category);
+      const categoryKey = item.product?.category || item.product?.category_id || "drinks";
+      const emoji = getCategoryEmoji(categoryKey);
+      const categoryName = getCategoryName(item);
 
       const isPreOrder = item.product?.status === "Pre-Order";
       const badgeHtml = isPreOrder
@@ -141,21 +166,53 @@ class EmailService {
         : "";
 
       const releaseDateVal = item.product?.preorder_release_date || item.product?.preorderReleaseDate;
-      const releaseDateHtml = isPreOrder && releaseDateVal
+      const releaseDateHtml = isPreOrder
         ? `<div style="margin: 4px 0 6px 0; font-size: 11.5px; color: #FFA800; font-weight: bold; text-align: left;">
-             📅 เริ่มจัดส่ง/พร้อมรับสินค้า: ${formatThaiDate(releaseDateVal)}
+             📅 เริ่มจัดส่ง/พร้อมรับสินค้า: ${releaseDateVal ? formatThaiDate(releaseDateVal) : "จะแจ้งให้ทราบภายหลัง"}
            </div>`
         : "";
+
+      const rawImage = item.product?.image || item.product?.imageUrl || item.product?.image_url;
+      let thumbnailHtml = "";
+      if (rawImage && typeof rawImage === "string" && rawImage.trim() !== "") {
+        let imageUrl = rawImage;
+        const filename = rawImage.replace(/^\/?(uploads\/products\/|uploads\/)/, "");
+        const localFilePath = path.join(process.cwd(), "uploads", "products", filename);
+
+        if (fs.existsSync(localFilePath)) {
+          const cid = `prod_img_${item.product?.id || index}_${index}`;
+          attachments.push({
+            filename: filename,
+            path: localFilePath,
+            cid: cid
+          });
+          imageUrl = `cid:${cid}`;
+        } else if (!rawImage.startsWith("http://") && !rawImage.startsWith("https://") && !rawImage.startsWith("data:")) {
+          const backendUrl = process.env.BACKEND_URL || "http://localhost:5001";
+          const cleanImgPath = rawImage.startsWith("/") ? rawImage : `/uploads/products/${rawImage}`;
+          imageUrl = `${backendUrl}${cleanImgPath}`;
+        }
+
+        thumbnailHtml = `
+          <div style="width: 48px; height: 48px; background-color: #2C2E30; border-radius: 8px; overflow: hidden; border: 1px solid #3A3D40;">
+            <img src="${imageUrl}" alt="${name}" width="48" height="48" style="width: 48px; height: 48px; object-fit: cover; display: block; border-radius: 8px;" />
+          </div>
+        `;
+      } else {
+        thumbnailHtml = `
+          <div style="width: 48px; height: 48px; background-color: #2C2E30; border-radius: 8px; text-align: center; line-height: 48px; font-size: 22px;">
+            ${emoji}
+          </div>
+        `;
+      }
 
       return `
         <!-- Product Item Row -->
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 16px; border-bottom: 1px solid #2C2E30; padding-bottom: 16px;">
           <tr>
-            <!-- Left: Icon box styled as thumbnail -->
+            <!-- Left: Thumbnail image or Emoji fallback -->
             <td width="55" style="vertical-align: top;">
-              <div style="width: 48px; height: 48px; background-color: #2C2E30; border-radius: 8px; text-align: center; line-height: 48px; font-size: 22px;">
-                ${emoji}
-              </div>
+              ${thumbnailHtml}
             </td>
             <!-- Right: Product Information -->
             <td style="vertical-align: top; padding-left: 12px; text-align: left;">
@@ -231,32 +288,60 @@ class EmailService {
         `;
       }
     } else {
-      let pickupMessage = "";
       if (hasInStock && hasPreOrder) {
-        pickupMessage = `รับสินค้าพร้อมส่งได้ทันที ณ <strong>${pickupLocationsStr}</strong> ส่วนสินค้าพรีออเดอร์ (Pre-Order) พร้อมรับตั้งแต่วันที่: <strong>${latestPreorderDateText}</strong>`;
+        pickupDeliveryBoxHtml = `
+              <!-- Store Pickup Box (In-Stock + Pre-Order) -->
+              <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
+                <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
+                  🏪 รับสินค้าหน้าร้าน (Store Pickup)
+                </span>
+                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.6; display: block; margin-bottom: 6px;">
+                  <strong>1. สินค้าพร้อมส่ง (In Stock):</strong> รับสินค้าได้ทันที ณ <strong>${pickupLocationsStr}</strong>
+                </span>
+                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.6; display: block;">
+                  <strong>2. สินค้าพรีออเดอร์ (Pre-Order):</strong>
+                  ${preorderItemsDateListHtml || `<div style="margin-top: 3px; color: #FFA800; font-weight: bold;">คาดว่าพร้อมรับตั้งแต่วันที่: ${latestPreorderDateText}</div>`}
+                </span>
+                <span style="font-size: 11px; color: #888888; display: block; margin-top: 8px;">
+                  *กรุณานำหมายเลขคำสั่งซื้อนี้ไปติดต่อรับสินค้ากับทางพนักงาน ณ จุดให้บริการ
+                </span>
+              </div>
+        `;
       } else if (hasPreOrder) {
-        pickupMessage = `สินค้าพรีออเดอร์ (Pre-Order) พร้อมรับตั้งแต่วันที่: <strong>${latestPreorderDateText}</strong> ณ ตู้จำหน่ายสินค้าของสถาบัน DIIC`;
+        pickupDeliveryBoxHtml = `
+              <!-- Store Pickup Box (Pre-Order Only) -->
+              <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
+                <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
+                  🏪 รับสินค้าหน้าร้าน (Store Pickup)
+                </span>
+                <span style="font-size: 12px; color: #CCCCCC; line-height: 1.6; display: block;">
+                  <strong>กำหนดการรับสินค้า Pre-Order:</strong>
+                  ${preorderItemsDateListHtml || `<div style="margin-top: 3px; color: #FFA800; font-weight: bold;">คาดว่าพร้อมรับตั้งแต่วันที่: ${latestPreorderDateText}</div>`}
+                </span>
+                <span style="font-size: 11px; color: #888888; display: block; margin-top: 8px;">
+                  *กรุณานำหมายเลขคำสั่งซื้อนี้ไปติดต่อรับสินค้ากับทางพนักงาน ณ จุดให้บริการ
+                </span>
+              </div>
+        `;
       } else {
-        pickupMessage = `รับสินค้าพร้อมส่งได้ทันที ณ <strong>${pickupLocationsStr}</strong>`;
-      }
-
-      pickupDeliveryBoxHtml = `
-              <!-- Store Pickup Box -->
+        pickupDeliveryBoxHtml = `
+              <!-- Store Pickup Box (In-Stock Only) -->
               <div style="background-color: #1A1B1C; border-radius: 8px; border: 1px solid #2C2E30; padding: 14px 16px; margin-top: 8px;">
                 <span style="font-size: 11px; font-weight: bold; color: #FFA800; text-transform: uppercase; display: block; margin-bottom: 6px;">
                   🏪 รับสินค้าหน้าร้าน (Store Pickup)
                 </span>
                 <span style="font-size: 12px; color: #CCCCCC; line-height: 1.5; display: block;">
-                  <strong>ข้อมูลการรับสินค้า:</strong> ${pickupMessage}
+                  <strong>ข้อมูลการรับสินค้า:</strong> รับสินค้าพร้อมส่งได้ทันที ณ <strong>${pickupLocationsStr}</strong>
                 </span>
                 <span style="font-size: 11px; color: #888888; display: block; margin-top: 6px;">
                   *กรุณานำหมายเลขคำสั่งซื้อนี้ไปติดต่อรับสินค้ากับทางพนักงาน ณ จุดให้บริการ
                 </span>
               </div>
-      `;
+        `;
+      }
     }
 
-    return `
+    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -277,7 +362,7 @@ class EmailService {
           <tr>
             <td style="background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%); border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 24px; text-align: center; border-bottom: 2px solid #FF6B00;">
               <h2 style="margin: 0; font-size: 22px; font-weight: 900; color: #FFFFFF; letter-spacing: 1px; text-transform: uppercase;">
-                DIIC SHOP
+                DITC SHOP
               </h2>
               <p style="margin: 3px 0 0 0; font-size: 10px; color: #FFFFFF; font-weight: 500; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">
                 CAMT KIOSK E-COMMERCE
@@ -298,7 +383,7 @@ class EmailService {
                 ยืนยันคำสั่งซื้อเรียบร้อยแล้ว สินค้าที่พร้อมรับสามารถเข้ารับสินค้าได้ตามสถานที่ที่แจ้งและสินค้า Pre-Order จะจัดส่งตามไปในภายหลัง ขอบคุณครับ/ค่ะ
               </p>
               <p style="margin: 0; font-size: 12.5px; font-weight: bold; color: #FFA800;">
-                ทีมงาน DIIC Shop Kiosk
+                ทีมงาน DITC Shop Kiosk
               </p>
             </td>
           </tr>
@@ -379,7 +464,7 @@ class EmailService {
                 อีเมลนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ กรุณาอย่าตอบกลับอีเมลนี้
               </p>
               <p style="margin: 0; font-size: 11px; color: #555555;">
-                &copy; ${new Date().getFullYear()} DIIC CAMT. All rights reserved.
+                &copy; ${new Date().getFullYear()} DITC CAMT. All rights reserved.
               </p>
             </td>
           </tr>
@@ -391,6 +476,8 @@ class EmailService {
 </body>
 </html>
     `;
+
+    return { htmlContent, attachments };
   }
 
   /**
@@ -407,14 +494,15 @@ class EmailService {
       return;
     }
 
-    const htmlContent = this.generateReceiptHtml(order);
+    const { htmlContent, attachments } = this.generateReceiptHtml(order);
 
     if (this.transporter) {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || '"DIIC Shop Kiosk" <no-reply@diic-kiosk.com>',
+        from: process.env.EMAIL_FROM || '"DITC Shop Kiosk" <no-reply@ditc-kiosk.com>',
         to: customerEmail.trim(),
-        subject: `[DIIC Shop Kiosk] ใบเสร็จรับเงินสำหรับคำสั่งซื้อ #${order.id}`,
+        subject: `[DITC Shop Kiosk] ใบเสร็จรับเงินสำหรับคำสั่งซื้อ #${order.id}`,
         html: htmlContent,
+        attachments: attachments || []
       };
 
       try {
@@ -428,7 +516,7 @@ class EmailService {
       console.log("\n========================================================");
       console.log("             [EmailService] [MOCK SENDING]");
       console.log(`To:      ${customerEmail}`);
-      console.log(`Subject: [DIIC Shop Kiosk] ใบเสร็จสำหรับคำสั่งซื้อ #${order.id}`);
+      console.log(`Subject: [DITC Shop Kiosk] ใบเสร็จสำหรับคำสั่งซื้อ #${order.id}`);
       console.log(`Order:   ${order.id}`);
       console.log(`Total:   ฿${order.totalPrice}`);
       console.log(`Items:`);
@@ -445,8 +533,9 @@ class EmailService {
    * Send shipment tracking email notification to the customer.
    * Runs asynchronously as non-blocking.
    * @param {object} order 
+   * @param {object} [details]
    */
-  async sendShipmentNotification(order) {
+  async sendShipmentNotification(order, details = {}) {
     this.initTransporter();
 
     const customerEmail = order.customerEmail;
@@ -455,22 +544,44 @@ class EmailService {
       return;
     }
 
+    const courierCode = details.courier || order.courier || order.courier1 || order.courier2 || "";
+    const trackingNo = details.trackingNumber || order.trackingNumber || order.trackingNumber1 || order.trackingNumber2 || "N/A";
+    const shipmentType = details.type || (order.fulfillmentStatusInstock === 'fulfilled' && order.fulfillmentStatusPreorder !== 'fulfilled' ? "instock" : "preorder");
+
     const courierMap = {
       thailandpost: "ไปรษณีย์ไทย (EMS)",
       flash: "Flash Express",
-      kerry: "Kerry Express",
-      jt: "J&T Express"
+      kerry: "Kerry Express (KEX)",
+      jt: "J&T Express",
+      ninja: "Ninja Van"
     };
-    const courierName = courierMap[order.courier] || order.courier || "บริการจัดส่งทั่วไป";
-    const trackingNo = order.trackingNumber || "N/A";
+    const courierName = courierMap[courierCode] || courierCode || "บริการจัดส่งทั่วไป";
     
-    // Create tracking links dynamically
+    // Create tracking links dynamically (main tracking portal without parameters)
     let trackingLink = "#";
-    const cleanTracking = trackingNo.trim();
-    if (order.courier === "thailandpost") trackingLink = `https://track.thailandpost.co.th/?trackNumber=${cleanTracking}`;
-    else if (order.courier === "flash") trackingLink = `https://www.flashexpress.co.th/tracking/?k=${cleanTracking}`;
-    else if (order.courier === "kerry") trackingLink = `https://th.kerryexpress.com/th/track/?track=${cleanTracking}`;
-    else if (order.courier === "jt") trackingLink = `https://www.jtexpress.co.th/index/query/route.html?billcode=${cleanTracking}`;
+    if (courierCode === "thailandpost") trackingLink = "https://track.thailandpost.co.th/";
+    else if (courierCode === "flash") trackingLink = "https://www.flashexpress.co.th/tracking/";
+    else if (courierCode === "kerry") trackingLink = "https://th.kex-express.com/th/track/";
+    else if (courierCode === "jt") trackingLink = "https://www.jtexpress.co.th/index/query/route.html";
+    else if (courierCode === "ninja") trackingLink = "https://www.ninjavan.co/th-th/tracking";
+
+    let titleText = "แจ้งจัดส่งพัสดุสินค้า";
+    let headingText = "พัสดุสินค้าของคุณถูกจัดส่งแล้ว!";
+    let bodyText = `เราขอแจ้งให้ทราบว่า รายการสินค้าในคำสั่งซื้อหมายเลข <strong>#${order.id}</strong> ได้รับการแพ็กและส่งมอบให้กับทางบริษัทขนส่งเรียบร้อยแล้ว!`;
+
+    if (shipmentType === "combined" || order.shippingOption === "combined") {
+      titleText = "แจ้งจัดส่งพัสดุแบบรวมส่ง (Combined Shipping)";
+      headingText = "พัสดุจัดส่งรวมของคุณถูกจัดส่งแล้ว!";
+      bodyText = `เราขอแจ้งให้ทราบว่า รายการสินค้าทั้งหมดในคำสั่งซื้อแบบรวมส่ง (Combined Shipping) หมายเลข <strong>#${order.id}</strong> ได้รับการแพ็กและส่งมอบให้กับทางบริษัทขนส่งเรียบร้อยแล้ว!`;
+    } else if (shipmentType === "instock") {
+      titleText = "แจ้งจัดส่งสินค้าพร้อมส่ง (In Stock)";
+      headingText = "สินค้าพร้อมส่งถูกจัดส่งแล้ว!";
+      bodyText = `เราขอแจ้งให้ทราบว่า รายการสินค้าพร้อมส่ง (In Stock) ในคำสั่งซื้อหมายเลข <strong>#${order.id}</strong> ได้รับการแพ็กและส่งมอบให้กับทางบริษัทขนส่งเรียบร้อยแล้ว!`;
+    } else if (shipmentType === "preorder") {
+      titleText = "แจ้งจัดส่งสินค้าสั่งซื้อล่วงหน้า (Pre-Order)";
+      headingText = "สินค้าสั่งซื้อล่วงหน้าถูกจัดส่งแล้ว!";
+      bodyText = `เราขอแจ้งให้ทราบว่า รายการสินค้าสั่งซื้อล่วงหน้า (Pre-Order) ในคำสั่งซื้อหมายเลข <strong>#${order.id}</strong> ได้รับการแพ็กและส่งมอบให้กับทางบริษัทขนส่งเรียบร้อยแล้ว!`;
+    }
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -478,7 +589,7 @@ class EmailService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>แจ้งจัดส่งสินค้าสั่งซื้อล่วงหน้า (Pre-Order)</title>
+  <title>${titleText}</title>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;700;850;900&display=swap" rel="stylesheet">
 </head>
 <body style="margin: 0; padding: 0; background-color: #161819; font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased;">
@@ -493,7 +604,7 @@ class EmailService {
           <tr>
             <td style="background: linear-gradient(135deg, #FF6B00 0%, #FFA800 100%); border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 24px; text-align: center; border-bottom: 2px solid #FF6B00;">
               <h2 style="margin: 0; font-size: 22px; font-weight: 900; color: #FFFFFF; letter-spacing: 1px; text-transform: uppercase;">
-                DIIC SHOP
+                DITC SHOP
               </h2>
               <p style="margin: 3px 0 0 0; font-size: 10px; color: #FFFFFF; font-weight: 500; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">
                 CAMT KIOSK E-COMMERCE
@@ -505,16 +616,16 @@ class EmailService {
           <tr>
             <td style="background-color: #212325; border-bottom: 1px solid #161819; padding: 28px 24px; text-align: left;">
               <h1 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 850; color: #FFFFFF; line-height: 1.3;">
-                สินค้าสั่งซื้อล่วงหน้าถูกจัดส่งแล้ว!
+                ${headingText}
               </h1>
               <p style="margin: 0 0 8px 0; font-size: 13.5px; color: #E5E5E5; font-weight: 500;">
                 สวัสดี คุณ ${order.customerName || "ลูกค้าผู้มีอุปการคุณ"}!
               </p>
               <p style="margin: 0 0 16px 0; font-size: 13px; color: #CCCCCC; line-height: 1.6;">
-                เราขอแจ้งให้ทราบว่า รายการสินค้าสั่งซื้อล่วงหน้า (Pre-Order) ในคำสั่งซื้อหมายเลข <strong>#${order.id}</strong> ได้รับการแพ็กและส่งมอบให้กับทางบริษัทขนส่งเรียบร้อยแล้ว!
+                ${bodyText}
               </p>
               <p style="margin: 0; font-size: 12.5px; font-weight: bold; color: #FFA800;">
-                ทีมงาน DIIC Shop Kiosk
+                ทีมงาน DITC Shop Kiosk
               </p>
             </td>
           </tr>
@@ -559,7 +670,7 @@ class EmailService {
                   ที่อยู่จัดส่งสินค้า
                 </span>
                 <span style="font-size: 12.5px; color: #CCCCCC; line-height: 1.5; display: block;">
-                  <strong>ผู้รับ:</strong> ${order.customerName}<br>
+                  <strong>ผู้รับ:</strong> ${order.customerName || "ไม่ระบุ"}<br>
                   <strong>ที่อยู่:</strong> ${order.customerAddress || "ไม่ได้ระบุที่อยู่จัดส่ง"}
                 </span>
               </div>
@@ -573,7 +684,7 @@ class EmailService {
                 อีเมลนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ กรุณาอย่าตอบกลับอีเมลนี้
               </p>
               <p style="margin: 0; font-size: 11px; color: #555555;">
-                &copy; ${new Date().getFullYear()} DIIC CAMT. All rights reserved.
+                &copy; ${new Date().getFullYear()} DITC CAMT. All rights reserved.
               </p>
             </td>
           </tr>
@@ -588,9 +699,9 @@ class EmailService {
 
     if (this.transporter) {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || '"DIIC Shop Kiosk" <no-reply@diic-kiosk.com>',
+        from: process.env.EMAIL_FROM || '"DITC Shop Kiosk" <no-reply@ditc-kiosk.com>',
         to: customerEmail.trim(),
-        subject: `[DIIC Shop Kiosk] แจ้งจัดส่งสินค้าสำหรับคำสั่งซื้อ #${order.id}`,
+        subject: `[DITC Shop Kiosk] ${titleText} สำหรับคำสั่งซื้อ #${order.id}`,
         html: htmlContent,
       };
 
@@ -605,7 +716,7 @@ class EmailService {
       console.log("\n========================================================");
       console.log("    [EmailService] [MOCK SHIPMENT NOTIFICATION]");
       console.log(`To:      ${customerEmail}`);
-      console.log(`Subject: [DIIC Shop Kiosk] แจ้งจัดส่งสินค้าสำหรับคำสั่งซื้อ #${order.id}`);
+      console.log(`Subject: [DITC Shop Kiosk] ${titleText} สำหรับคำสั่งซื้อ #${order.id}`);
       console.log(`Courier: ${courierName}`);
       console.log(`Tracking: ${trackingNo}`);
       console.log(`Link:    ${trackingLink}`);

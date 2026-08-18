@@ -45,3 +45,4 @@ export default function Header({ cart = { totalPrice: 0, totalItems: 0 }, onCart
     </header>
   );
 }
+

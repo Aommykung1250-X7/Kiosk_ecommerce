@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { XMarkIcon, MinusIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon, ShoppingBagIcon } from "@heroicons/react/24/solid";
+import { notify } from "./notify";
 
 function CategoryPlaceholder({ category }) {
   const getIcon = () => {
@@ -50,17 +51,17 @@ function CategoryPlaceholder({ category }) {
 export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout }) {
   const [deliveryOption, setDeliveryOption] = useState("pickup");
   const [shippingOption, setShippingOption] = useState("combined");
-  const [shippingSettings, setShippingSettings] = useState({ baseShippingFee: 40, additionalSplitShippingFee: 30 });
+  const [shippingSettings, setShippingSettings] = useState({ baseShippingFee: 20, additionalSplitShippingFee: 20 });
 
   useEffect(() => {
     fetch("/api/settings/shipping")
-      .then(res => res.json())
-      .then(data => {
-        if (data.baseShippingFee !== undefined) {
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.baseShippingFee === "number") {
           setShippingSettings(data);
         }
       })
-      .catch(err => console.error("Error loading shipping settings:", err));
+      .catch((err) => console.error("Error loading shipping settings:", err));
   }, []);
 
   if (!isOpen) return null;
@@ -73,7 +74,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
   let shippingFee = 0;
   if (deliveryOption === "delivery") {
     if (isMixed && shippingOption === "split") {
-      shippingFee = shippingSettings.baseShippingFee * 2;
+      shippingFee = shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee);
     } else {
       shippingFee = shippingSettings.baseShippingFee;
     }
@@ -99,6 +100,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
         </div>
 
         <button
+          type="button"
           onClick={onClose}
           className="p-2 rounded-full hover:bg-gray-100 border border-gray-100 transition-colors cursor-pointer"
         >
@@ -107,9 +109,9 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
       </div>
 
       {/* Cart Content Body */}
-      <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+      <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden min-h-0">
         {totalItems === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100 p-8">
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
               <ShoppingBagIcon className="w-10 h-10" />
             </div>
@@ -120,114 +122,106 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
           </div>
         ) : (
           <>
-            {/* Left Column: Cart Items List */}
-            <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2">
-              <div className="flex justify-between items-center px-2">
-                <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">รายการสินค้าในตะกร้า</span>
+            {/* Cart Items List (Scrollable) */}
+            <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
+              <div className="flex justify-between items-center px-1">
+                <span className="text-xs font-bold text-gray-400">รายการสินค้าในตะกร้า</span>
                 <button
+                  type="button"
                   onClick={onClearCart}
-                  className="text-xs text-red-500 hover:text-red-700 font-semibold hover:underline select-none cursor-pointer"
+                  className="text-xs text-[#FF5252] hover:text-red-700 font-bold hover:underline select-none cursor-pointer"
                 >
-                  ล้างสินค้าทั้งหมด
+                  ลบสินค้าทั้งหมด
                 </button>
               </div>
 
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3.5">
                 {items.map((item) => {
                   const { product, quantity } = item;
 
                   return (
                     <div
                       key={product.id}
-                      className="flex gap-6 p-4 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_15px_rgba(0,0,0,0.02)] hover:shadow-md transition-all duration-200"
+                      className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md transition-all duration-200"
                     >
-                      {/* Product Illustration / Image */}
-                      <div className="w-28 h-28 bg-gray-50 flex items-center justify-center p-3 rounded-2xl border border-gray-100 shrink-0">
-                        {product.image && product.image.includes(".") ? (
-                          <img
-                            src={`/uploads/products/${product.image}`}
-                            alt={product.name}
-                            className="max-w-full max-h-full w-auto h-auto object-contain rounded-xl"
-                          />
-                        ) : (
-                          <CategoryPlaceholder category={product.category} />
-                        )}
-                      </div>
+                      <div className="flex items-center gap-4 min-w-0">
+                        {/* Product Image */}
+                        <div className="w-20 h-20 bg-[#F6F6F6] flex items-center justify-center p-2 rounded-2xl shrink-0 overflow-hidden">
+                          {product.image && product.image.includes(".") ? (
+                            <img
+                              src={`/uploads/products/${product.image}`}
+                              alt={product.name}
+                              className="max-w-full max-h-full w-auto h-auto object-contain rounded-xl"
+                            />
+                          ) : (
+                            <CategoryPlaceholder category={product.category} />
+                          )}
+                        </div>
 
-                      {/* Product Detail Text */}
-                      <div className="flex-1 flex flex-col justify-between min-w-0 py-1">
-                        <div>
-                          <h4 className="text-base font-extrabold text-[#2B2B2B] leading-tight truncate">
+                        {/* Product Details */}
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <h4 className="text-base font-black text-black leading-tight truncate">
                             {product.name}
                           </h4>
-                          <div className="flex items-center gap-2 mt-2">
+                          <div>
                             {product.status === "Pre-Order" ? (
-                              <span className="text-[10px] text-[#E65100] bg-[#FFF3E0] px-2.5 py-0.5 rounded-full font-bold">
-                                Pre-Order (15-20 วัน)
+                              <span className="bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2] text-[10px] font-black px-2.5 py-0.5 rounded-full inline-block">
+                                Pre-Order
                               </span>
                             ) : (
-                              <span className="text-[10px] text-[#2E7D32] bg-[#E8F5E9] px-2.5 py-0.5 rounded-full font-bold">
-                                พร้อมส่งหน้าร้าน
-                              </span>
-                            )}
-                            {(product.purchaseLimit || product.purchase_limit) && (
-                              <span className="text-[10px] text-red-500 bg-red-50 px-2.5 py-0.5 rounded-full font-bold">
-                                จำกัดไม่เกิน {product.purchaseLimit || product.purchase_limit} ชิ้น
-                              </span>
-                            )}
-                            {product.pickup_location && (
-                              <span className="text-[10px] text-gray-400 font-medium font-mono">
-                                {product.pickup_location}
+                              <span className="bg-[#E0F2F1] text-[#00796B] text-[10px] font-black px-2.5 py-0.5 rounded-full inline-block">
+                                {product.status || "In Stock"}
                               </span>
                             )}
                           </div>
-                        </div>
-
-                        {/* Calculated Unit Price */}
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xl font-black text-[#E53935]">
-                            ฿{(product.price * quantity).toLocaleString('th-TH')}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            (฿{product.price.toLocaleString('th-TH')}/ชิ้น)
-                          </span>
+                          <div className="flex items-baseline gap-1.5 mt-0.5">
+                            <span className="text-lg font-black text-[#E53935]">
+                              ฿{(product.price * quantity).toFixed(0)}
+                            </span>
+                            <span className="text-[11px] font-semibold text-gray-400">
+                              (฿{product.price}/piece)
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Quantity & Delete Controls */}
-                      <div className="flex flex-col items-end justify-between py-1 shrink-0">
-                        {/* Delete Button */}
+                      {/* Controls on right */}
+                      <div className="flex flex-col items-end justify-between h-20 shrink-0">
+                        {/* Trash Delete Button */}
                         <button
+                          type="button"
                           onClick={() => onRemoveItem(product.id)}
-                          className="p-2 hover:bg-red-50 active:bg-red-100 text-red-500 hover:text-red-700 rounded-xl transition-colors cursor-pointer"
-                          title="ลบออกจากตะกร้า"
+                          className="p-1 hover:bg-red-50 text-[#FF5252] rounded-lg transition-colors cursor-pointer"
+                          title="Remove item"
                         >
                           <TrashIcon className="w-5 h-5" />
                         </button>
 
-                        {/* Quantity Selector controls */}
-                        <div className="flex items-center border border-gray-200 rounded-2xl bg-gray-50 h-10 px-1.5 shadow-inner">
+                        {/* Quantity Selector */}
+                        <div className="flex items-center bg-[#F4F4F6] border border-gray-200 rounded-full h-9 px-2 shadow-inner gap-2">
                           <button
+                            type="button"
                             onClick={() => onUpdateQuantity(product.id, quantity - 1)}
-                            className="p-1.5 hover:bg-gray-200 rounded-xl text-gray-500 transition-colors cursor-pointer active:scale-90"
+                            className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-black font-bold text-base cursor-pointer active:scale-90"
                           >
-                            <MinusIcon className="w-4 h-4" />
+                            -
                           </button>
-                          <span className="w-8 text-center text-sm font-black text-[#2B2B2B]">
+                          <span className="w-5 text-center text-sm font-black text-black">
                             {quantity}
                           </span>
                           <button
+                            type="button"
                             onClick={() => {
                               const limit = product.purchaseLimit || product.purchase_limit;
                               if (limit && quantity >= limit) {
-                                alert(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+                                notify.warning(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
                                 return;
                               }
                               onUpdateQuantity(product.id, quantity + 1);
                             }}
-                            className={`p-1.5 rounded-xl text-gray-500 transition-colors cursor-pointer active:scale-90 ${(product.purchaseLimit || product.purchase_limit) && quantity >= (product.purchaseLimit || product.purchase_limit) ? "opacity-30 cursor-not-allowed" : "hover:bg-gray-200"}`}
+                            className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-black font-bold text-base cursor-pointer active:scale-90"
                           >
-                            <PlusIcon className="w-4 h-4" />
+                            +
                           </button>
                         </div>
                       </div>
@@ -237,9 +231,9 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
               </div>
             </div>
 
-            {/* Order Summary Section */}
-            <div className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between shrink-0 gap-3 animate-in slide-in-from-bottom duration-300">
-              <div className="flex flex-col gap-2.5">
+            {/* Unified Single Order Summary Section */}
+            <div className="w-full bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between shrink-0 gap-4 animate-in slide-in-from-bottom duration-300">
+              <div className="flex flex-col gap-3">
                 <h3 className="text-base font-black text-[#2B2B2B] border-b border-gray-50 pb-2">สรุปยอดชำระเงิน</h3>
 
                 {/* รูปแบบการรับสินค้า (Delivery Method Selection) */}
@@ -247,6 +241,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">รูปแบบการรับสินค้า</span>
                   <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
                     <button
+                      type="button"
                       onClick={() => setDeliveryOption("pickup")}
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         deliveryOption === "pickup"
@@ -257,6 +252,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                       🏪 รับสินค้าเองที่นี่
                     </button>
                     <button
+                      type="button"
                       onClick={() => setDeliveryOption("delivery")}
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         deliveryOption === "delivery"
@@ -272,7 +268,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 {/* แยกจัดส่งสำหรับออเดอร์ผสม (Split Shipping Selector) */}
                 {deliveryOption === "delivery" && isMixed && (
                   <div className="flex flex-col gap-2 bg-[#F8C032]/5 p-4 rounded-2xl border border-[#F8C032]/10 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <span className="text-xs font-bold text-[#A24B2C] uppercase tracking-wide">ตัวเลือกจัดส่งสินค้าผสม</span>
+                    <span className="text-xs font-bold text-[#A24B2C] uppercase tracking-wide">ตัวเลือกจัดส่งสินค้าผสม (มีสินค้า PRE-ORDER)</span>
                     <div className="flex flex-col gap-2 mt-1">
                       <label className="flex items-start gap-2.5 cursor-pointer select-none">
                         <input
@@ -287,7 +283,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                           <span className="text-[10px] text-gray-400">รอส่งรอบเดียวเมื่อสินค้า Pre-Order ครบ (ค่าส่งปกติ ฿{shippingSettings.baseShippingFee.toLocaleString('th-TH')})</span>
                         </div>
                       </label>
-                      
+
                       <label className="flex items-start gap-2.5 cursor-pointer select-none border-t border-gray-100 pt-2 mt-1">
                         <input
                           type="radio"
@@ -298,7 +294,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                         />
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-[#2B2B2B]">แยกจัดส่งสินค้า (บวกค่าส่งเพิ่ม)</span>
-                          <span className="text-[10px] text-gray-400">ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{(shippingSettings.baseShippingFee * 2).toLocaleString('th-TH')})</span>
+                          <span className="text-[10px] text-gray-400">ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{(shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee)).toLocaleString('th-TH')})</span>
                         </div>
                       </label>
                     </div>
@@ -306,30 +302,32 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 )}
 
                 {/* Cost Breakdown Rows */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex justify-between items-center text-sm text-gray-400">
+                <div className="flex flex-col gap-2.5 text-sm">
+                  <div className="flex justify-between items-center text-gray-400 font-semibold">
                     <span>จำนวนรายการทั้งหมด</span>
                     <span className="font-bold text-[#2B2B2B]">{totalItems} ชิ้น</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm text-gray-400">
+                  <div className="flex justify-between items-center text-gray-400 font-semibold">
                     <span>วิธีกระจายสินค้า</span>
                     <span className="font-bold text-[#2B2B2B]">
-                      {deliveryOption === "pickup" ? "🏪 รับที่ตู้ Kiosk" : "🚚 จัดส่งพัสดุ"}
+                      {deliveryOption === "pickup" ? "🏪 รับสินค้าเองที่นี่" : (shippingOption === "split" && isMixed ? "🚚 จัดส่งพัสดุ (แยกส่ง)" : "🚚 จัดส่งพัสดุ")}
                     </span>
                   </div>
-                  {deliveryOption === "delivery" && (
-                    <div className="flex justify-between items-center text-sm text-gray-400">
-                      <span>ค่าบริการจัดส่ง</span>
+                  <div className="flex justify-between items-center text-gray-400 font-semibold">
+                    <span>ค่าบริการจัดส่ง</span>
+                    {shippingFee > 0 ? (
                       <span className="font-bold text-[#E53935]">฿{shippingFee}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center text-sm text-gray-400">
+                    ) : (
+                      <span className="font-bold text-[#00796B]">ฟรี (฿0)</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center text-gray-400 font-semibold">
                     <span>การชำระเงิน</span>
                     <span className="font-medium text-[#2B2B2B]">PromptPay Dynamic QR</span>
                   </div>
                 </div>
 
-                <hr className="border-gray-100 my-2" />
+                <hr className="border-gray-100 my-1" />
 
                 {/* Grand Total display */}
                 <div className="flex justify-between items-end">
@@ -341,19 +339,21 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
               </div>
 
               {/* Checkout / Clear Action buttons */}
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 mt-1">
                 <button
+                  type="button"
                   onClick={() => {
-                    onCheckout(deliveryOption, shippingOption);
+                    onCheckout(shippingFee, deliveryOption, shippingOption);
                     onClose();
                   }}
                   className="h-14 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95
-                             flex items-center justify-center gap-2.5 transition-all duration-150 shadow-md hover:shadow-lg font-bold text-base text-[#2B2B2B] cursor-pointer"
+                             flex items-center justify-center gap-2.5 transition-all duration-150 shadow-md hover:shadow-lg font-bold text-base text-[#2B2B2B] cursor-pointer border-2 border-black"
                 >
                   <ShoppingCartIcon className="w-5 h-5 shrink-0" />
                   <span>ดำเนินการชำระเงิน</span>
                 </button>
                 <button
+                  type="button"
                   onClick={onClose}
                   className="h-12 w-full rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-500 font-bold text-sm transition-all active:scale-95 border border-gray-100/50 cursor-pointer flex items-center justify-center"
                 >
@@ -367,3 +367,5 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
     </div>
   );
 }
+
+

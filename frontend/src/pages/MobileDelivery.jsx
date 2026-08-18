@@ -9,25 +9,24 @@ import {
   EnvelopeIcon, 
   PhoneIcon,
   SparklesIcon,
-  ChatBubbleLeftRightIcon,
-  ArrowLeftIcon,
-  ChevronRightIcon,
-  InformationCircleIcon
+  PlusIcon,
+  TrashIcon,
+  CheckIcon,
+  BuildingOffice2Icon,
+  PencilSquareIcon
 } from "@heroicons/react/24/outline";
+import { notify, confirmDialog } from "../components/notify";
 
 export default function MobileDelivery() {
   const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState(null);
-  const [lineProfile, setLineProfile] = useState(null);
 
-  // Environment Configs
-  const ENABLE_LINE_LOGIN = import.meta.env.VITE_ENABLE_LINE_LOGIN !== "false";
-  const USE_LINE_MOCK = import.meta.env.VITE_USE_LINE_MOCK === "true";
-  const LIFF_ID = import.meta.env.VITE_LINE_LIFF_ID || "2006371728-YxXgEPL0";
-
-  // Method selection state: null (selection screen) | "line" | "email" | "guest"
-  const [selectedMethod, setSelectedMethod] = useState(null);
+  // Multi-address States (Max 3 addresses)
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState(null);
 
   // Form states
   const [name, setName] = useState("");
@@ -42,13 +41,11 @@ export default function MobileDelivery() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-  const [savedAddress, setSavedAddress] = useState("");
+  const [savedAddressText, setSavedAddressText] = useState("");
   const [preorderShippingDate, setPreorderShippingDate] = useState("");
+  const [hasInStock, setHasInStock] = useState(false);
+  const [hasPreOrder, setHasPreOrder] = useState(false);
   const [isMixed, setIsMixed] = useState(false);
-
-  // Auto-fill indicators
-  const [autoFilledFromEmail, setAutoFilledFromEmail] = useState(false);
-  const [autoFilledFromLine, setAutoFilledFromLine] = useState(false);
 
   const parseAndFillAddress = (addrStr) => {
     if (!addrStr) return;
@@ -63,6 +60,34 @@ export default function MobileDelivery() {
       setZipcode(pParts[1] || "");
     } else {
       setAddressStreet(addrStr);
+    }
+  };
+
+  // Helper to load addresses from API response
+  const applyMemberProfile = (member) => {
+    if (!member) {
+      setSavedAddresses([]);
+      setShowAddressForm(true);
+      return;
+    }
+
+    if (member.name) setName(member.name);
+    if (member.phone) setPhone(member.phone);
+    if (member.email) setEmail(member.email);
+
+    const addrList = Array.isArray(member.addresses) ? member.addresses : [];
+    setSavedAddresses(addrList);
+
+    if (addrList.length > 0) {
+      const defaultAddr = addrList.find(a => a.isDefault) || addrList[0];
+      setSelectedAddressId(defaultAddr.id);
+      if (defaultAddr.name) setName(defaultAddr.name);
+      if (defaultAddr.phone) setPhone(defaultAddr.phone);
+      if (defaultAddr.address) parseAndFillAddress(defaultAddr.address);
+      setShowAddressForm(false);
+    } else {
+      if (member.address) parseAndFillAddress(member.address);
+      setShowAddressForm(true);
     }
   };
 
@@ -89,7 +114,7 @@ export default function MobileDelivery() {
           if (currentName) setName(currentName);
           if (currentPhone) setPhone(currentPhone);
           if (currentEmail) setEmail(currentEmail);
-          if (currentAddress) setSavedAddress(currentAddress);
+          if (currentAddress) setSavedAddressText(currentAddress);
 
           if (currentAddress && currentAddress.trim() !== "") {
             setAlreadySubmitted(true);
@@ -97,22 +122,40 @@ export default function MobileDelivery() {
 
           // Check if mixed order and find preorder release dates
           const items = data.items || [];
-          const hasInStock = items.some(item => item.product?.status === "In Stock");
-          const hasPreOrder = items.some(item => item.product?.status === "Pre-Order");
-          setIsMixed(hasInStock && hasPreOrder);
+          const inStockExist = items.some(item => item.product?.status === "In Stock");
+          const preOrderExist = items.some(item => item.product?.status === "Pre-Order");
+          setHasInStock(inStockExist);
+          setHasPreOrder(preOrderExist);
+          setIsMixed(inStockExist && preOrderExist);
 
           if (hasPreOrder) {
-            const preOrderItems = items.filter(item => item.product?.status === "Pre-Order" && item.product?.preorder_release_date);
-            if (preOrderItems.length > 0) {
-              const dates = preOrderItems.map(item => new Date(item.product.preorder_release_date));
-              const latestDate = new Date(Math.max(...dates));
-              if (!isNaN(latestDate.getTime())) {
-                const day = String(latestDate.getDate()).padStart(2, '0');
-                const month = String(latestDate.getMonth() + 1).padStart(2, '0');
-                const year = latestDate.getFullYear();
-                setPreorderShippingDate(`${day}/${month}/${year}`);
-              }
+            const releaseDates = items
+              .filter(item => item.product?.status === "Pre-Order")
+              .map(item => item.product?.preorderReleaseDate || item.product?.preorder_release_date)
+              .filter(Boolean)
+              .map(d => new Date(d));
+
+            if (releaseDates.length > 0) {
+              const maxDate = new Date(Math.max(...releaseDates));
+              setPreorderShippingDate(maxDate.toLocaleDateString("th-TH", {
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+              }));
             }
+          }
+
+          // Auto-fetch saved member addresses by email if available
+          if (currentEmail) {
+            fetch(`/api/members/email/${encodeURIComponent(currentEmail)}`)
+              .then((res) => res.json())
+              .then((member) => applyMemberProfile(member))
+              .catch((err) => {
+                console.error("Member address lookup error:", err);
+                setShowAddressForm(true);
+              });
+          } else {
+            setShowAddressForm(true);
           }
 
           setLoading(false);
@@ -126,116 +169,154 @@ export default function MobileDelivery() {
     }
   }, [orderId]);
 
-  // Load Real LINE LIFF SDK when Enabled & not Mock
-  useEffect(() => {
-    if (!ENABLE_LINE_LOGIN || USE_LINE_MOCK) return;
-
-    const script = document.createElement("script");
-    script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.liff) {
-        window.liff.init({ liffId: LIFF_ID })
-          .then(() => {
-            if (window.liff.isLoggedIn()) {
-              window.liff.getProfile().then((profile) => {
-                setLineProfile(profile);
-              });
-            }
-          })
-          .catch((err) => console.error("LINE LIFF init error:", err));
-      }
-    };
-    document.body.appendChild(script);
-  }, [order, ENABLE_LINE_LOGIN, USE_LINE_MOCK, LIFF_ID]);
-
-  // Method Handlers
-  const handleSelectLine = () => {
-    if (!ENABLE_LINE_LOGIN) return;
-
-    setSelectedMethod("line");
-
-    // MOCK MODE
-    if (USE_LINE_MOCK) {
-      const mockProfile = {
-        userId: "U_MOCK_LINE_USER_12345",
-        displayName: "คุณสมชาย (LINE Mock)",
-        pictureUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=SomchaiLine",
-        isMock: true
-      };
-      setLineProfile(mockProfile);
-
-      fetch(`/api/members/${mockProfile.userId}`)
-        .then((res) => res.json())
-        .then((member) => {
-          if (member) {
-            if (member.name) setName(member.name);
-            if (member.phone) setPhone(member.phone);
-            if (member.email) setEmail(member.email);
-            if (member.address) {
-              parseAndFillAddress(member.address);
-              setAutoFilledFromLine(true);
-            }
-          }
-        })
-        .catch((err) => console.error("Mock LINE profile lookup error:", err));
-      return;
-    }
-
-    // REAL LIFF MODE
-    if (window.liff) {
-      if (!window.liff.isLoggedIn()) {
-        window.liff.login();
-      } else {
-        window.liff.getProfile().then((profile) => {
-          setLineProfile(profile);
-          fetch(`/api/members/${profile.userId}`)
-            .then((res) => res.json())
-            .then((member) => {
-              if (member) {
-                if (member.name) setName(member.name);
-                if (member.phone) setPhone(member.phone);
-                if (member.email) setEmail(member.email);
-                if (member.address) {
-                  parseAndFillAddress(member.address);
-                  setAutoFilledFromLine(true);
-                }
-              }
-            });
-        });
-      }
-    }
+  const handleSelectAddressCard = (addrObj) => {
+    setSelectedAddressId(addrObj.id);
+    if (addrObj.name) setName(addrObj.name);
+    if (addrObj.phone) setPhone(addrObj.phone);
+    if (addrObj.address) parseAndFillAddress(addrObj.address);
   };
 
-  const handleSelectEmail = () => {
-    setSelectedMethod("email");
-    const targetEmail = email || order?.customerEmail;
-    if (targetEmail) {
-      fetch(`/api/members/email/${encodeURIComponent(targetEmail)}`)
-        .then((res) => res.json())
-        .then((member) => {
-          if (member && member.address) {
-            parseAndFillAddress(member.address);
-            if (member.name) setName(member.name);
-            if (member.phone) setPhone(member.phone);
-            setAutoFilledFromEmail(true);
-          }
-        })
-        .catch((err) => console.error("Email lookup error:", err));
-    }
+  const handleEditAddressCard = (item, e) => {
+    e.stopPropagation();
+    setEditingAddressId(item.id);
+    if (item.name) setName(item.name);
+    if (item.phone) setPhone(item.phone);
+    if (item.address) parseAndFillAddress(item.address);
+    setShowAddressForm(true);
   };
 
-  const handleSelectGuest = () => {
-    setSelectedMethod("guest");
+  const handleDeleteAddressCard = async (addrId, e) => {
+    e.stopPropagation();
+    const confirmed = await confirmDialog({
+      title: "ลบที่อยู่จัดส่ง?",
+      message: "คุณต้องการลบที่อยู่นี้ออกจากประวัติใช่หรือไม่?",
+      confirmText: "ลบที่อยู่",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    try {
+      const targetEmail = email || order?.customerEmail;
+      const res = await fetch("/api/members/address", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: targetEmail,
+          addressId: addrId
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.addresses) {
+        setSavedAddresses(data.addresses);
+        if (selectedAddressId === addrId) {
+          if (data.addresses.length > 0) {
+            handleSelectAddressCard(data.addresses[0]);
+          } else {
+            setShowAddressForm(true);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error deleting address:", err);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name || !phone || !email || !addressStreet || !subdistrict || !district || !province || !zipcode) {
-      return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+    
+    // If using address cards view (not editing)
+    if (!showAddressForm && savedAddresses.length > 0) {
+      const activeCard = savedAddresses.find(a => a.id === selectedAddressId) || savedAddresses[0];
+      if (!activeCard || !activeCard.address) {
+        notify.warning("กรุณาเลือกที่อยู่จัดส่ง");
+        return;
+      }
+
+      setSubmitting(true);
+      fetch(`/api/orders/${orderId}/address`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: activeCard.name || name,
+          phone: activeCard.phone || phone,
+          email: email || order?.customerEmail,
+          customerAddressFormatted: activeCard.address
+        })
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || "ไม่สามารถบันทึกที่อยู่จัดส่งได้");
+          }
+          return res.json();
+        })
+        .then(() => {
+          if (activeCard.name) setName(activeCard.name);
+          else if (order?.customerName) setName(order.customerName);
+
+          if (activeCard.phone) setPhone(activeCard.phone);
+          else if (order?.customerPhone) setPhone(order.customerPhone);
+
+          setSavedAddressText(activeCard.address);
+          setSubmitted(true);
+        })
+        .catch((err) => notify.error(err.message))
+        .finally(() => setSubmitting(false));
+      return;
     }
 
+    // If using address form view (New or Edit)
+    if (!name || !phone || !email || !addressStreet || !subdistrict || !district || !province || !zipcode) {
+      notify.warning("กรุณากรอกข้อมูลให้ครบถ้วน");
+      return;
+    }
+
+    const fullAddress = `${addressStreet}, ${subdistrict}, ${district}, ${province} ${zipcode}`;
     setSubmitting(true);
+
+    // Case 2: If EDITING an existing saved address card (editingAddressId !== null)
+    if (editingAddressId) {
+      const updatedAddresses = savedAddresses.map(a => {
+        if (a.id === editingAddressId) {
+          return {
+            ...a,
+            name,
+            phone,
+            address: fullAddress
+          };
+        }
+        return a;
+      });
+
+      // Save/update customer profile in backend
+      fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          address: fullAddress,
+          addresses: updatedAddresses
+        })
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error("ไม่สามารถบันทึกการแก้ไขที่อยู่ได้");
+          return res.json();
+        })
+        .then(() => {
+          setSavedAddresses(updatedAddresses);
+          setSelectedAddressId(editingAddressId);
+          setShowAddressForm(false);
+          setEditingAddressId(null);
+        })
+        .catch((err) => notify.error(err.message))
+        .finally(() => setSubmitting(false));
+      return;
+    }
+
+    // Case 3: Adding a NEW address or submitting as Guest
     fetch(`/api/orders/${orderId}/address`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -247,8 +328,7 @@ export default function MobileDelivery() {
         subdistrict,
         district,
         province,
-        zipcode,
-        lineUserId: lineProfile?.userId || null
+        zipcode
       })
     })
       .then(async (res) => {
@@ -258,433 +338,583 @@ export default function MobileDelivery() {
         }
         return res.json();
       })
-      .then(() => {
-        setSavedAddress(`${addressStreet}, ${subdistrict}, ${district}, ${province} ${zipcode}`);
+      .then(async () => {
+        // Save to customer profile in backend
+        await fetch("/api/members", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            phone,
+            email,
+            address: fullAddress
+          })
+        }).catch((err) => console.error("Error saving member profile:", err));
+
+        setSavedAddressText(fullAddress);
         setSubmitted(true);
       })
-      .catch((err) => alert(err.message))
+      .catch((err) => notify.error(err.message))
       .finally(() => setSubmitting(false));
   };
 
-  const handleCloseLiff = () => {
-    if (window.liff && window.liff.isInClient()) {
-      window.liff.closeWindow();
-    } else {
-      window.close();
-      alert("กรุณาปิดหน้าต่างนี้ด้วยตนเอง");
-    }
+  const handleCloseWindow = () => {
+    window.close();
+    notify.info("หากหน้าต่างไม่ปิดลง กรุณาปิดแท็บนี้ด้วยตนเอง");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center font-['Prompt'] text-[#2B2B2B]">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-['Prompt'] text-[#2B2B2B]">
         <ArrowPathIcon className="w-10 h-10 animate-spin text-[#F8C032] mb-3" />
-        <p className="text-sm font-medium">กำลังโหลดข้อมูลคำสั่งซื้อ...</p>
+        <p className="text-sm font-semibold text-slate-600">กำลังโหลดข้อมูลคำสั่งซื้อ...</p>
       </div>
     );
   }
 
   if (!orderId) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center font-['Prompt'] text-[#2B2B2B] p-6 text-center">
-        <p className="text-red-500 font-bold mb-4">ไม่พบรหัสคำสั่งซื้อ (Order ID)</p>
-        <p className="text-xs text-gray-500">กรุณาเข้าใช้งานผ่านลิงก์ยืนยันในอีเมลใบเสร็จของคุณ</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-['Prompt'] text-[#2B2B2B] p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-4">
+          <TruckIcon className="w-8 h-8" />
+        </div>
+        <p className="text-rose-600 font-extrabold text-base mb-1">ไม่พบรหัสคำสั่งซื้อ (Order ID)</p>
+        <p className="text-xs text-slate-400 max-w-xs">กรุณาเข้าใช้งานผ่านปุ่มลิงก์ยืนยันในอีเมลใบเสร็จของคุณ</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-['Prompt'] text-[#2B2B2B]">
+    <div className="min-h-screen bg-slate-100/70 flex flex-col font-['Prompt'] text-[#2B2B2B]">
       {/* Top Header Banner */}
-      <div className="bg-[#2B2B2B] text-white py-6 px-6 text-center flex flex-col gap-1.5 shadow-md">
-        <div className="flex items-center justify-center gap-2 text-[#F8C032]">
-          <TruckIcon className="w-7 h-7" />
-          <h1 className="text-xl font-black">ที่อยู่สำหรับจัดส่งพัสดุ</h1>
-        </div>
-        <p className="text-xs text-gray-400">Order ID: {orderId}</p>
-      </div>
-
-      <div className="flex-1 flex flex-col max-w-md w-full mx-auto p-4 gap-6">
-        {/* Step 1: Selection Screen */}
-        {!submitted && !alreadySubmitted && selectedMethod === null && (
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col gap-5 animate-in fade-in-50 duration-200">
-            <div className="flex flex-col gap-1 border-b border-gray-50 pb-3">
-              <h2 className="text-base font-black text-[#2B2B2B] flex items-center gap-2">
-                <MapPinIcon className="w-5 h-5 text-[#F8C032]" />
-                <span>เลือกวิธีกรอกที่อยู่จัดส่ง</span>
-              </h2>
-              <p className="text-xs text-gray-400">
-                เลือกช่องทางที่สะดวกเพื่อกรอกหรือดึงประวัติที่อยู่เดิมของคุณ
-              </p>
+      <div className="bg-[#2B2B2B] text-white py-5 px-6 shadow-md border-b border-amber-500/20 sticky top-0 z-20">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-[#F8C032] flex items-center justify-center shrink-0 border border-amber-500/30">
+              <TruckIcon className="w-5 h-5" />
             </div>
-
-            <div className="flex flex-col gap-3">
-              {/* Option A: LINE Login */}
-              {ENABLE_LINE_LOGIN ? (
-                <button
-                  type="button"
-                  onClick={handleSelectLine}
-                  className="w-full text-left p-4 rounded-2xl bg-[#06C755]/10 border border-[#06C755]/30 hover:bg-[#06C755]/20 active:scale-[0.98] transition-all flex items-center justify-between group cursor-pointer"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-[#06C755] text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <ChatBubbleLeftRightIcon className="w-6 h-6" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-extrabold text-[#06C755] flex items-center gap-1.5">
-                        เข้าสู่ระบบด้วย LINE
-                        {USE_LINE_MOCK && (
-                          <span className="bg-amber-100 text-amber-800 text-[9px] px-1.5 py-0.5 rounded-full font-bold">
-                            MOCK
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-[11px] text-gray-500 leading-tight mt-0.5">
-                        ดึงที่อยู่เดิมและซิงค์บัญชี LINE ของคุณ
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRightIcon className="w-5 h-5 text-[#06C755] group-hover:translate-x-1 transition-transform" />
-                </button>
-              ) : (
-                <div className="w-full p-4 rounded-2xl bg-gray-100/70 border border-gray-200 text-gray-400 flex items-center gap-3.5 opacity-60 cursor-not-allowed">
-                  <div className="w-11 h-11 rounded-xl bg-gray-400 text-white flex items-center justify-center shrink-0">
-                    <ChatBubbleLeftRightIcon className="w-6 h-6" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-gray-500">
-                      LINE Login (ปิดใช้งานชั่วคราว)
-                    </span>
-                    <span className="text-[11px] text-gray-400">
-                      สามารถเปิดใช้งานได้ที่ไฟล์ .env (VITE_ENABLE_LINE_LOGIN)
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Option B: Email History */}
-              <button
-                type="button"
-                onClick={handleSelectEmail}
-                className="w-full text-left p-4 rounded-2xl bg-amber-50 border border-amber-200/80 hover:bg-amber-100/60 active:scale-[0.98] transition-all flex items-center justify-between group cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-[#F8C032] text-[#2B2B2B] flex items-center justify-center shrink-0 shadow-sm">
-                    <EnvelopeIcon className="w-6 h-6" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-extrabold text-amber-900">
-                      ใช้ที่อยู่เดิมจาก Email
-                    </span>
-                    <span className="text-[11px] text-amber-800 leading-tight mt-0.5">
-                      {email ? `อีเมล: ${email}` : "ดึงที่อยู่เดิมที่เคยบันทึกไว้ในอีเมลนี้"}
-                    </span>
-                  </div>
-                </div>
-                <ChevronRightIcon className="w-5 h-5 text-amber-700 group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              {/* Option C: Guest Mode */}
-              <button
-                type="button"
-                onClick={handleSelectGuest}
-                className="w-full text-left p-4 rounded-2xl bg-gray-50 border border-gray-200 hover:bg-gray-100 active:scale-[0.98] transition-all flex items-center justify-between group cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-gray-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <UserIcon className="w-6 h-6" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-extrabold text-gray-700">
-                      ไม่เข้าสู่ระบบ (Guest)
-                    </span>
-                    <span className="text-[11px] text-gray-500 leading-tight mt-0.5">
-                      กรอกข้อมูลที่อยู่ใหม่เฉพาะคำสั่งซื้อนี้
-                    </span>
-                  </div>
-                </div>
-                <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-              </button>
+            <div className="flex flex-col">
+              <h1 className="text-base font-black tracking-wide">ระบุที่อยู่จัดส่งพัสดุ</h1>
+              <p className="text-[11px] text-gray-400 font-medium">Order ID: <span className="text-amber-400 font-mono font-bold">{orderId}</span></p>
             </div>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Step 2: Address Form Screen */}
-        {!submitted && !alreadySubmitted && selectedMethod !== null && (
-          <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col gap-5 animate-in fade-in-50 duration-200">
-            <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-              <h2 className="text-base font-extrabold flex items-center gap-2">
-                <MapPinIcon className="w-5 h-5 text-[#F8C032]" />
-                <span>กรอกข้อมูลที่อยู่จัดส่ง</span>
-              </h2>
-              
-              <button
-                type="button"
-                onClick={() => setSelectedMethod(null)}
-                className="text-xs font-bold text-gray-500 hover:text-[#2B2B2B] flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-              >
-                <ArrowLeftIcon className="w-3.5 h-3.5" />
-                <span>เปลี่ยนวิธี</span>
-              </button>
-            </div>
-
-            {/* Smart Email Auto-fill Notification */}
-            {selectedMethod === "email" && autoFilledFromEmail && (
-              <div className="flex items-start gap-3 bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200/80">
-                <SparklesIcon className="w-5 h-5 text-[#F8C032] shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-bold text-amber-900">
-                    ดึงที่อยู่เดิมจากอีเมลของคุณสำเร็จ!
-                  </span>
-                  <span className="text-[11px] text-amber-800 leading-normal">
-                    ระบบนำข้อมูลประวัติที่อยู่เดิมมาเติมให้อัตโนมัติ สามารถตรวจสอบหรือแก้ไขข้อมูลในฟอร์มด้านล่างได้ทันที
-                  </span>
+      <div className="flex-1 flex flex-col max-w-md w-full mx-auto p-4 sm:p-5 gap-5">
+        {/* Step 1 & 2: Form or Address Cards view */}
+        {!submitted && !alreadySubmitted && (
+          <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-md flex flex-col gap-6 animate-in fade-in-50 duration-200">
+            {/* Header with Email display directly underneath */}
+            <div className="flex flex-col gap-2 border-b border-slate-100 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <MapPinIcon className="w-5 h-5 text-[#F8C032]" />
+                  <h2 className="text-base font-black text-slate-800">
+                    {!showAddressForm && savedAddresses.length > 0 
+                      ? "เลือกที่อยู่จัดส่ง" 
+                      : (editingAddressId ? "แก้ไขที่อยู่จัดส่ง" : "กรอกข้อมูลที่อยู่จัดส่ง")}
+                  </h2>
                 </div>
-              </div>
-            )}
-
-            {/* Connected LINE profile status */}
-            {selectedMethod === "line" && (
-              <div className="flex items-center gap-3 bg-emerald-50 p-3 rounded-2xl border border-emerald-100">
-                {lineProfile?.pictureUrl ? (
-                  <img
-                    src={lineProfile.pictureUrl}
-                    alt={lineProfile.displayName}
-                    className="w-10 h-10 rounded-full border border-emerald-300 shadow-sm"
-                  />
-                ) : (
-                  <ChatBubbleLeftRightIcon className="w-8 h-8 text-emerald-600" />
+                {savedAddresses.length > 0 && showAddressForm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddressForm(false);
+                      setEditingAddressId(null);
+                    }}
+                    className="text-xs font-bold text-slate-400 hover:text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                  >
+                    ยกเลิก
+                  </button>
                 )}
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                    เชื่อมต่อบัญชี LINE {lineProfile ? `(${lineProfile.displayName})` : ""}
-                    {lineProfile?.isMock && (
-                      <span className="bg-amber-200 text-amber-900 text-[9px] px-1.5 py-0.2 rounded-full font-bold">
-                        MOCK ACTIVE
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[10px] text-emerald-700">
-                    ระบบจะบันทึกและจำที่อยู่นี้ไว้สำหรับการสั่งซื้อครั้งถัดไป
+              </div>
+
+              {/* Display Email below "เลือกที่อยู่จัดส่ง" heading */}
+              {(email || order?.customerEmail) && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 w-fit font-medium">
+                  <EnvelopeIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>อีเมลบัญชีผู้ซื้อ: <strong className="text-slate-700">{email || order?.customerEmail}</strong></span>
+                </div>
+              )}
+            </div>
+
+            {/* VIEW A: Address Cards List (Spacious & Clean Mobile UI) */}
+            {!showAddressForm && savedAddresses.length > 0 && (
+              <div className="flex flex-col gap-5">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                    ประวัติที่อยู่ของคุณ ({savedAddresses.length}/3)
                   </span>
                 </div>
+
+                <div className="flex flex-col gap-4">
+                  {savedAddresses.map((item) => {
+                    const isSelected = selectedAddressId === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleSelectAddressCard(item)}
+                        className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col gap-3 ${
+                          isSelected
+                            ? "border-[#F8C032] bg-amber-50/40 shadow-md ring-2 ring-[#F8C032]/20"
+                            : "border-slate-100 hover:border-slate-200 bg-white shadow-sm"
+                        }`}
+                      >
+                        {/* Top Info Row */}
+                        <div className="flex items-start justify-between gap-2 border-b border-slate-100/80 pb-2.5">
+                          <div className="flex items-center gap-3">
+                            {/* Large Touch-friendly Radio Button */}
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              isSelected ? "border-[#F8C032] bg-[#F8C032]" : "border-slate-300"
+                            }`}>
+                              {isSelected && <CheckIcon className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                            </div>
+
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-extrabold text-slate-800">
+                                  {item.name || name || "ไม่ระบุชื่อ"}
+                                </span>
+                                {item.isDefault && (
+                                  <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0">
+                                    หลัก
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                                <PhoneIcon className="w-3 h-3 text-slate-400" />
+                                {item.phone || phone || "ไม่ระบุเบอร์"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons (Edit & Delete side-by-side, Icon only) */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Edit Button (Icon Only) */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleEditAddressCard(item, e)}
+                              className="p-1.5 rounded-xl text-amber-600 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                              title="แก้ไขที่อยู่นี้"
+                            >
+                              <PencilSquareIcon className="w-4 h-4 stroke-[2]" />
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteAddressCard(item.id, e)}
+                              className="p-1.5 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="ลบที่อยู่นี้"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Address Text Box */}
+                        <div className="bg-slate-50/90 rounded-xl p-3 border border-slate-100">
+                          <p className="text-xs text-slate-700 leading-relaxed font-normal">
+                            {item.address}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add New Address Option Button */}
+                {savedAddresses.length < 3 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingAddressId(null);
+                      setName("");
+                      setPhone("");
+                      setAddressStreet("");
+                      setSubdistrict("");
+                      setDistrict("");
+                      setProvince("");
+                      setZipcode("");
+                      setShowAddressForm(true);
+                    }}
+                    className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-[#F8C032] text-[#E0A000] hover:bg-amber-50/60 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer mt-1 active:scale-[0.99]"
+                  >
+                    <PlusIcon className="w-4 h-4 stroke-[3]" />
+                    <span>เพิ่มที่อยู่ใหม่ (บันทึกได้สูงสุด 3 ที่อยู่)</span>
+                  </button>
+                ) : (
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-center text-xs text-slate-400 font-medium">
+                    * บันทึกที่อยู่ครบโควตาสูงสุด 3 รายการแล้ว (ลบที่อยู่ออกหากต้องการเพิ่มใหม่)
+                  </div>
+                )}
+
+                {/* Submit button for selected Card */}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-4 rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-[0.98] disabled:opacity-50 text-white font-black text-sm shadow-md shadow-amber-500/20 transition-all cursor-pointer mt-2"
+                >
+                  {submitting ? "กำลังบันทึก..." : "ยืนยันจัดส่งไปยังที่อยู่นี้"}
+                </button>
               </div>
             )}
 
-            {/* Guest Mode Indicator */}
-            {selectedMethod === "guest" && (
-              <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-500 font-medium">
-                <UserIcon className="w-4 h-4 text-gray-400 shrink-0" />
-                <span>โหมดไม่เข้าสู่ระบบ (Guest Mode) - กรอกที่อยู่จัดส่งได้ทันที</span>
+            {/* VIEW B: Full Address Form (Clean & Spacious Mobile Inputs) */}
+            {(showAddressForm || savedAddresses.length === 0) && (
+              <div className="flex flex-col gap-5">
+                {/* Receiver Info Section */}
+                <div className="flex flex-col gap-3.5">
+                  <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
+                    <UserIcon className="w-4 h-4 text-[#F8C032]" /> 1. ข้อมูลผู้รับพัสดุ
+                  </span>
+
+                  {/* Name */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-600">ชื่อ-นามสกุล ผู้รับ</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="เช่น สมชาย ใจดี"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
+                    />
+                  </div>
+
+                  {/* Phone & Email */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-600">เบอร์โทรศัพท์มือถือ</label>
+                      <input
+                        type="tel"
+                        required
+                        maxLength={10}
+                        pattern="[0-9]{10}"
+                        placeholder="เช่น 0812345678"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                        className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-600">อีเมลรับแจ้งสถานะ (ไม่อนุญาตให้แก้ไข)</label>
+                      <input
+                        type="email"
+                        required
+                        readOnly
+                        value={email || order?.customerEmail || ""}
+                        className="h-12 px-4 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 font-semibold text-sm cursor-not-allowed select-none focus:outline-none"
+                        title="อีเมลถูกล็อกตามคำสั่งซื้อนี้"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Details Section */}
+                <div className="flex flex-col gap-3.5 pt-2">
+                  <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
+                    <BuildingOffice2Icon className="w-4 h-4 text-[#F8C032]" /> 2. รายละเอียดที่อยู่
+                  </span>
+
+                  {/* Street / Building address */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-600">บ้านเลขที่, ถนน, ซอย, อาคาร</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="เช่น 123/45 หมู่ 5 ถนนสุขุมวิท"
+                      value={addressStreet}
+                      onChange={(e) => setAddressStreet(e.target.value)}
+                      className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
+                    />
+                  </div>
+
+                  {/* Subdistrict & District */}
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-600">แขวง / ตำบล</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="เช่น ดินแดง"
+                        value={subdistrict}
+                        onChange={(e) => setSubdistrict(e.target.value)}
+                        className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-600">เขต / อำเภอ</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="เช่น ดินแดง"
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Province & Zipcode */}
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-600">จังหวัด</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="เช่น กรุงเทพมหานคร"
+                        value={province}
+                        onChange={(e) => setProvince(e.target.value)}
+                        className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-600">รหัสไปรษณีย์</label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) => setZipcode(e.target.value.replace(/\D/g, ""))}
+                        className="h-12 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-[#F8C032] focus:ring-2 focus:ring-[#F8C032]/20 text-sm font-medium text-slate-800 placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-4 rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-[0.98] disabled:opacity-50 text-white font-black text-sm shadow-md shadow-amber-500/20 transition-all cursor-pointer mt-3"
+                >
+                  {submitting ? "กำลังบันทึก..." : (editingAddressId ? "บันทึกการแก้ไขที่อยู่นี้" : "ยืนยันและบันทึกที่อยู่จัดส่ง")}
+                </button>
               </div>
             )}
-
-            {/* Name */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5 text-gray-400" /> ชื่อ-นามสกุล ผู้รับ
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="เช่น สมชาย ใจดี"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-              />
-            </div>
-
-            {/* Phone & Email */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
-                  <PhoneIcon className="w-3.5 h-3.5 text-gray-400" /> เบอร์โทรศัพท์
-                </label>
-                <input
-                  type="tel"
-                  required
-                  maxLength={10}
-                  pattern="[0-9]{10}"
-                  placeholder="เช่น 0812345678"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
-                  <EnvelopeIcon className="w-3.5 h-3.5 text-gray-400" /> อีเมล
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="name@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Street / Building address */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-gray-500">บ้านเลขที่, ถนน, ซอย, อาคาร</label>
-              <input
-                type="text"
-                required
-                placeholder="เช่น 123/45 หมู่ 5 ถนนสุขุมวิท"
-                value={addressStreet}
-                onChange={(e) => setAddressStreet(e.target.value)}
-                className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-              />
-            </div>
-
-            {/* Subdistrict & District */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-500">แขวง / ตำบล</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="แขวงดินแดง"
-                  value={subdistrict}
-                  onChange={(e) => setSubdistrict(e.target.value)}
-                  className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-500">เขต / อำเภอ</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="เขตดินแดง"
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Province & Zipcode */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-500">จังหวัด</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="กรุงเทพมหานคร"
-                  value={province}
-                  onChange={(e) => setProvince(e.target.value)}
-                  className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-500">รหัสไปรษณีย์</label>
-                <input
-                  type="text"
-                  required
-                  maxLength={5}
-                  pattern="[0-9]{5}"
-                  placeholder="10400"
-                  value={zipcode}
-                  onChange={(e) => setZipcode(e.target.value.replace(/\D/g, ""))}
-                  className="h-11 px-3.5 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`h-12 w-full mt-2 rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-extrabold text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer select-none
-                ${submitting ? "bg-gray-100 text-gray-400 border border-gray-200" : ""}`}
-            >
-              {submitting ? (
-                <>
-                  <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                  <span>กำลังบันทึกที่อยู่...</span>
-                </>
-              ) : (
-                <span>ยืนยันที่อยู่จัดส่ง</span>
-              )}
-            </button>
           </form>
         )}
 
-        {/* Step 3: Success / Already Submitted Screen */}
+        {/* Step 3: Confirmation Screen */}
         {(submitted || alreadySubmitted) && (
-          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-200">
-            <CheckCircleIcon className="w-20 h-20 text-[#2E7D32]" />
+          <div className="bg-white rounded-3xl p-7 sm:p-8 border border-slate-200/80 shadow-md flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-500 flex items-center justify-center shadow-inner">
+              <CheckCircleIcon className="w-10 h-10" />
+            </div>
 
-            <div className="flex flex-col gap-2">
-              <h2 className="text-2xl font-black text-[#2B2B2B]">
-                {alreadySubmitted ? "บันทึกที่อยู่จัดส่งแล้ว" : "สั่งซื้อสำเร็จ!"}
+            <div className="flex flex-col gap-1.5">
+              <h2 className="text-lg font-black text-slate-800">
+                {submitted ? "บันทึกที่อยู่จัดส่งเรียบร้อยแล้ว!" : "คำสั่งซื้อนี้มีข้อมูลจัดส่งแล้ว"}
               </h2>
-              <p className="text-sm font-semibold text-[#2E7D32]">
-                {alreadySubmitted 
-                  ? "คำสั่งซื้อนี้มีข้อมูลที่อยู่จัดส่งในระบบเรียบร้อยแล้ว" 
-                  : "บันทึกที่อยู่จัดส่งเรียบร้อยแล้ว"}
+              <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+                พนักงานจะทำการแพ็กและจัดส่งสินค้าไปยังที่อยู่ของคุณโดยเร็วที่สุด
               </p>
             </div>
 
-            {alreadySubmitted && (
-              <div className="bg-amber-50 border border-amber-200/80 p-3.5 rounded-2xl text-amber-900 text-xs leading-relaxed flex items-start gap-2.5 text-left w-full">
-                <InformationCircleIcon className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <span>
-                  ท่านได้ทำการบันทึกข้อมูลที่อยู่สำหรับคำสั่งซื้อนี้แล้ว ระบบไม่อนุญาตให้กรอกซ้ำหรือแก้ไขผ่านลิงก์นี้ หากต้องการเปลี่ยนแปลงข้อมูล กรุณาติดต่อเจ้าหน้าที่หน้าร้าน
+            {/* Split / Combined Preorder Shipping Info Badge */}
+            {preorderShippingDate && (
+              <div className="w-full p-4 rounded-2xl bg-amber-50 border border-amber-200 text-left flex flex-col gap-1.5 shadow-sm">
+                <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                  <SparklesIcon className="w-4 h-4 text-amber-600" />
+                  <span>
+                    {isMixed && order?.shippingOption === "combined"
+                      ? "🚚 การจัดส่งสินค้าแบบรวมส่ง (Combined Shipping)"
+                      : "📦 กำหนดการจัดส่งสินค้าพรีออเดอร์ (Pre-Order)"}
+                  </span>
                 </span>
+                <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                  {isMixed && order?.shippingOption === "combined" ? (
+                    <>
+                      ออเดอร์นี้มีสินค้า Pre-Order และท่านเลือกจัดส่งแบบรวมส่ง <strong>ทางร้านจะจัดส่งสินค้าทุกรายการพร้อมกันทั้งหมด เมื่อสินค้า Pre-Order ผลิตเสร็จเรียบร้อยแล้ว</strong> (คาดว่าเริ่มจัดส่งตั้งแต่วันที่: <strong className="underline font-bold text-amber-950">{preorderShippingDate}</strong> เป็นต้นไป)
+                    </>
+                  ) : (
+                    <>
+                      คาดว่าจะเริ่มดำเนินการจัดส่งพัสดุสินค้า Pre-Order ตั้งแต่วันที่: <strong className="underline font-bold text-amber-950">{preorderShippingDate}</strong> เป็นต้นไป
+                    </>
+                  )}
+                </p>
+                {isMixed && order?.shippingOption !== "combined" && (
+                  <p className="text-[11px] text-amber-700/90 leading-tight pt-1 border-t border-amber-200/60 mt-1">
+                    *สำหรับสินค้าพร้อมส่ง (In Stock) จะจัดส่งแยกให้ก่อนตามรอบปกติ
+                  </p>
+                )}
               </div>
             )}
 
-            <div className="w-full bg-gray-50 border border-gray-100 p-5 rounded-2xl text-left flex flex-col gap-3">
-              <div className="flex justify-between items-center text-xs text-gray-400">
-                <span>รหัสคำสั่งซื้อ:</span>
-                <span className="font-bold text-[#2B2B2B] font-mono">{orderId}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs text-gray-400">
-                <span>ผู้รับพัสดุ:</span>
-                <span className="font-bold text-[#2B2B2B]">{name || order?.customerName || "-"}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs text-gray-400">
-                <span>เบอร์โทรศัพท์:</span>
-                <span className="font-bold text-[#2B2B2B]">{phone || order?.customerPhone || "-"}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs text-gray-400">
-                <span>อีเมล:</span>
-                <span className="font-bold text-[#2B2B2B]">{email || order?.customerEmail || "-"}</span>
-              </div>
+            {/* Tracking Cards for Packages (Combined vs Split vs Single) */}
+            <div className="w-full flex flex-col gap-3">
+              {isMixed && order?.shippingOption === "combined" ? (
+                /* Combined Package Tracking Box (Only when order is mixed and combined shipping is chosen) */
+                <div className="w-full bg-[#FFF3E0]/70 border border-[#FFE0B2] rounded-2xl p-4 text-left flex flex-col gap-2 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-[#E65100] flex items-center gap-1.5">
+                      <TruckIcon className="w-4 h-4 text-[#E65100]" />
+                      พัสดุรวมส่ง
+                    </span>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                      order?.fulfillmentStatus === "fulfilled" 
+                        ? "bg-emerald-100 text-emerald-700" 
+                        : "bg-amber-100 text-amber-800"
+                    }`}>
+                      {order?.fulfillmentStatus === "fulfilled" ? "จัดส่งแล้ว" : "รอสินค้า Pre-Order ผลิตเสร็จ"}
+                    </span>
+                  </div>
 
-              {savedAddress && (
-                <div className="flex flex-col gap-1 border-t border-gray-200/60 pt-2.5 mt-1">
-                  <span className="text-xs text-gray-400 font-medium">ที่อยู่จัดส่งที่บันทึกไว้:</span>
-                  <span className="text-xs font-bold text-[#2B2B2B] leading-relaxed break-words">{savedAddress}</span>
+                  {preorderShippingDate && (
+                    <p className="text-[11px] text-[#BF360C] font-semibold">
+                      คาดว่าจะจัดส่งสินค้าทั้งหมดพร้อมกันตั้งแต่วันที่: <strong>{preorderShippingDate}</strong>
+                    </p>
+                  )}
+
+                  {(order?.courier2 || order?.trackingNumber2 || order?.courier1 || order?.trackingNumber1) ? (
+                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#FFE0B2] mt-1">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold text-slate-400">ขนส่ง: {order?.courier2 || order?.courier1 || "พัสดุทั่วไป"}</span>
+                        <span className="text-sm font-black text-slate-800 tracking-wide font-mono">{order?.trackingNumber2 || order?.trackingNumber1 || "รอดำเนินการ"}</span>
+                      </div>
+                      {(order?.trackingNumber2 || order?.trackingNumber1) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(order.trackingNumber2 || order.trackingNumber1);
+                            notify.success("คัดลอกเลขติดตามพัสดุเรียบร้อยแล้ว");
+                          }}
+                          className="px-3 py-1.5 bg-[#E65100] text-white text-[11px] font-bold rounded-lg hover:bg-[#D84315] transition-colors"
+                        >
+                          คัดลอกเลข
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 italic pt-1">
+                      * สินค้าทุกรายการจะจัดส่งพร้อมกัน เมื่อสินค้า Pre-Order ผลิตเสร็จเรียบร้อยแล้ว
+                    </p>
+                  )}
                 </div>
-              )}
-              
-              {/* Mixed / Pre-order release delivery details */}
-              {isMixed && preorderShippingDate && (
-                <div className="bg-[#F8C032]/10 border border-[#F8C032]/25 p-3.5 rounded-xl flex flex-col gap-1 mt-2">
-                  <span className="text-[11px] font-extrabold text-[#A24B2C] uppercase tracking-wide">
-                    ⚠️ ข้อมูลจัดส่งคำสั่งซื้อแบบผสม
-                  </span>
-                  <p className="text-xs text-gray-600 leading-normal">
-                    คำสั่งซื้อนี้มีทั้งสินค้าพร้อมส่งและพรีออเดอร์ 
-                    ทางร้านจะเริ่มจัดส่งพัสดุสินค้า Pre-order 
-                    ตั้งแต่วันที่ <strong className="text-[#E53935]">{preorderShippingDate}</strong> เป็นต้นไป
-                  </p>
-                </div>
+              ) : (
+                /* Single or Split Package Tracking Boxes */
+                <>
+                  {/* Package 1: In-Stock Package Tracking */}
+                  {(hasInStock || (!hasPreOrder && (order?.courier1 || order?.trackingNumber1))) && (
+                    <div className="w-full bg-[#E0F2F1]/40 border border-[#80CBC4]/60 rounded-2xl p-4 text-left flex flex-col gap-2 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-[#00796B] flex items-center gap-1.5">
+                          <TruckIcon className="w-4 h-4 text-[#00796B]" />
+                          {isMixed ? "📦 พัสดุ 1: สินค้าพร้อมส่ง" : "📦 พัสดุจัดส่งสินค้า"}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                          order?.fulfillmentStatusInstock === "fulfilled" || order?.fulfillmentStatus === "fulfilled"
+                            ? "bg-emerald-100 text-emerald-700" 
+                            : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {order?.fulfillmentStatusInstock === "fulfilled" || order?.fulfillmentStatus === "fulfilled" ? "จัดส่งแล้ว" : "กำลังเตรียมจัดส่ง"}
+                        </span>
+                      </div>
+                      {(order?.courier1 || order?.trackingNumber1) ? (
+                        <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#80CBC4]/40 mt-1">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold text-slate-400">ขนส่ง: {order?.courier1 || "พัสดุทั่วไป"}</span>
+                            <span className="text-sm font-black text-slate-800 tracking-wide font-mono">{order?.trackingNumber1 || "รอดำเนินการ"}</span>
+                          </div>
+                          {order?.trackingNumber1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(order.trackingNumber1);
+                                notify.success("คัดลอกเลขติดตามพัสดุเรียบร้อยแล้ว");
+                              }}
+                              className="px-3 py-1.5 bg-[#00796B] text-white text-[11px] font-bold rounded-lg hover:bg-[#00695C] transition-colors"
+                            >
+                              คัดลอกเลข
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 italic pt-1">
+                          * พนักงานกำลังจัดเตรียมพัสดุพร้อมส่ง เลขติดตามจะปรากฏเมื่อดำเนินการจัดส่ง
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Package 2: Pre-Order Package Tracking */}
+                  {(hasPreOrder || (!hasInStock && (order?.courier2 || order?.trackingNumber2))) && (
+                    <div className="w-full bg-[#FFF3E0]/60 border border-[#FFE0B2] rounded-2xl p-4 text-left flex flex-col gap-2 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-[#E65100] flex items-center gap-1.5">
+                          <SparklesIcon className="w-4 h-4 text-[#E65100]" />
+                          {isMixed ? "⏳ พัสดุ 2: สินค้าพรีออเดอร์" : "📦 พัสดุสินค้าพรีออเดอร์ (Pre-Order)"}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                          order?.fulfillmentStatusPreorder === "fulfilled" || order?.fulfillmentStatus === "fulfilled"
+                            ? "bg-emerald-100 text-emerald-700" 
+                            : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {order?.fulfillmentStatusPreorder === "fulfilled" || order?.fulfillmentStatus === "fulfilled" ? "จัดส่งแล้ว" : "รอสินค้าพรีออเดอร์"}
+                        </span>
+                      </div>
+                      {preorderShippingDate && (
+                        <p className="text-[11px] text-[#BF360C] font-semibold">
+                          คาดว่าจะจัดส่งตั้งแต่วันที่: <strong>{preorderShippingDate}</strong>
+                        </p>
+                      )}
+                      {(order?.courier2 || order?.trackingNumber2 || order?.courier1 || order?.trackingNumber1) ? (
+                        <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#FFE0B2] mt-1">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold text-[#A34000]">ขนส่ง: {order?.courier2 || order?.courier1 || "พัสดุทั่วไป"}</span>
+                            <span className="text-sm font-black text-slate-800 tracking-wide font-mono">{order?.trackingNumber2 || order?.trackingNumber1 || "รอดำเนินการ"}</span>
+                          </div>
+                          {(order?.trackingNumber2 || order?.trackingNumber1) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(order.trackingNumber2 || order.trackingNumber1);
+                                notify.success("คัดลอกเลขติดตามพัสดุ Pre-Order เรียบร้อยแล้ว");
+                              }}
+                              className="px-3 py-1.5 bg-[#E65100] text-white text-[11px] font-bold rounded-lg hover:bg-[#D84315] transition-colors"
+                            >
+                              คัดลอกเลข
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 italic pt-1">
+                          * สินค้าพรีออเดอร์อยู่ระหว่างรอดำเนินการสั่งผลิต/นำเข้า
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
-            <button
-              onClick={handleCloseLiff}
-              className="h-12 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold text-sm shadow-md transition-transform active:scale-95 cursor-pointer"
-            >
-              ปิดหน้าต่างนี้
-            </button>
+            {/* Address Details Summary Card */}
+            <div className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-left flex flex-col gap-2 shadow-sm">
+              <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                ที่อยู่สำหรับจัดส่งพัสดุ:
+              </span>
+              <p className="text-sm font-semibold text-slate-800 leading-relaxed">
+                {savedAddressText || `${addressStreet}, ${subdistrict}, ${district}, ${province} ${zipcode}`}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 pt-2.5 border-t border-slate-200/60 mt-1">
+                <span>ผู้รับ: <strong className="text-slate-700">{name || order?.customerName || "ไม่ระบุ"}</strong></span>
+                <span>โทร: <strong className="text-slate-700">{phone || order?.customerPhone || "ไม่ระบุ"}</strong></span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="w-full flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleCloseWindow}
+                className="w-full py-4 rounded-2xl bg-[#2B2B2B] hover:bg-black active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all cursor-pointer"
+              >
+                ปิดหน้าต่างนี้
+              </button>
+            </div>
           </div>
         )}
       </div>

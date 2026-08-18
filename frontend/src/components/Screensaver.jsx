@@ -118,6 +118,7 @@ const ILLUSTRATIONS = {
 export default function Screensaver({ onWake }) {
   const [time, setTime] = useState(new Date());
   const [bestSellers, setBestSellers] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [slides, setSlides] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
@@ -129,6 +130,7 @@ export default function Screensaver({ onWake }) {
   }, []);
 
   useEffect(() => {
+    // Fetch Best Sellers
     fetch("/api/products/bestsellers")
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch best sellers");
@@ -151,17 +153,36 @@ export default function Screensaver({ onWake }) {
   }, []);
 
   useEffect(() => {
-    fetch("/api/screensavers/active")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch screensavers");
-        return res.json();
-      })
-      .then((data) => {
-        setSlides(data || []);
-      })
-      .catch((err) => {
-        console.error("Error loading screensavers:", err);
-      });
+    // Fetch active screensavers and config in parallel
+    Promise.all([
+      fetch("/api/screensavers/active").then((res) => res.json()).catch(() => []),
+      fetch("/api/screensavers/config").then((res) => res.json()).catch(() => null)
+    ]).then(([activeAds, config]) => {
+      const ads = activeAds || [];
+      const masterEnabled = config ? config.masterEnabled !== false : true;
+      const masterDuration = config ? config.masterDuration || 10 : 10;
+      if (config && Array.isArray(config.featuredProducts)) {
+        setFeaturedProducts(config.featuredProducts);
+      }
+
+      const masterSlide = {
+        id: "default-master",
+        isMaster: true,
+        title: "หน้าหลักระบบ",
+        duration: masterDuration
+      };
+
+      if (masterEnabled) {
+        // Master screen is enabled: put it as first slide in carousel
+        setSlides([masterSlide, ...ads]);
+      } else if (ads.length > 0) {
+        // Master screen disabled: play only active backend ads
+        setSlides(ads);
+      } else {
+        // Master screen disabled but no ads available: fallback to master slide
+        setSlides([masterSlide]);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -190,6 +211,9 @@ export default function Screensaver({ onWake }) {
   });
 
   const dateString = `วัน${thaiDays[time.getDay()]}ที่ ${time.getDate()} ${thaiMonths[time.getMonth()]} ${time.getFullYear() + 543}`;
+
+  const currentSlide = slides[currentSlideIndex];
+  const isMasterSlide = currentSlide?.isMaster || slides.length === 0;
 
   return (
     <div
