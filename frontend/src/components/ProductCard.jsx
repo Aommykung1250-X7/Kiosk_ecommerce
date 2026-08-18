@@ -80,10 +80,10 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           onSelectProduct(product);
         }
       }}
-      className={`w-full bg-white rounded-[24px] border-2 border-[#1B1B1C] 
-                 shadow-[6px_6px_0px_0px_#1B1B1C] flex flex-col overflow-hidden relative 
-                 transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-[8px_8px_0px_0px_#1B1B1C] font-['Prompt']
-                 ${isOutOfStock ? "opacity-75 cursor-not-allowed" : ""}`}
+      className={`w-full bg-white rounded-[24px] border-2 border-black/90 
+                 shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex flex-col overflow-hidden relative 
+                 transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.1)] font-['Prompt']
+                 ${isOutOfStock ? "opacity-90" : ""}`}
     >
       {/* Hot badge - reduced size */}
       {isMostViewed && !isOutOfStock && (
@@ -100,8 +100,9 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
       )}
 
       {/* Image Area */}
-      <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden`}>
-        <div className={`absolute inset-0 flex items-center justify-center p-6 ${isOutOfStock ? "opacity-35 grayscale" : ""}`}>
+      {/* Image Area */}
+      <div className="w-full aspect-[8/5] bg-white flex items-center justify-center p-3 border-b-2 border-black/90 relative overflow-hidden">
+        <div className={`w-full h-full flex items-center justify-center ${isOutOfStock ? "opacity-40 grayscale" : ""}`}>
           {image && image.includes(".") ? (
             <img
               src={`/uploads/products/${image}`}
@@ -112,13 +113,6 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
             <CategoryPlaceholder category={product.category} />
           )}
         </div>
-        {isOutOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="bg-red-600 text-white text-[12px] font-black px-3.5 py-1.5 rounded-xl shadow-md uppercase tracking-wider transform -rotate-12 border-2 border-white">
-              สินค้าหมด
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Content Area */}
@@ -191,7 +185,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           </div>
         </div>
 
-        {/* Add to Cart Button */}
+        {/* Add to Cart Button matching home.jpg */}
         <button
           disabled={isOutOfStock}
           onClick={(e) => {
@@ -201,8 +195,8 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           className={`h-10 w-full rounded-xl flex items-center justify-center gap-1.5 border-2 border-[#1B1B1C]
                      transition-all duration-150 shrink-0 cursor-pointer font-black text-[11px] uppercase ${
                        isOutOfStock
-                         ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
-                         : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98]"
+                         ? "bg-[#E5E5E7] text-[#8E8E93] border-[#D1D1D6] cursor-not-allowed"
+                         : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98] shadow-xs"
                      }`}
         >
           <ShoppingCartIcon className="w-3.5 h-3.5" />

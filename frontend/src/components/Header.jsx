@@ -74,7 +74,7 @@ export default function Header({
       {/* Right: Total Price & Cart Button */}
       <div className="flex items-center gap-4 sm:gap-6 shrink-0">
         <div className="flex flex-col items-end leading-tight">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+          <span className="text-[10px] font-black text-black/70 uppercase tracking-widest">
             TOTAL
           </span>
           <span className="text-[clamp(16px,2vw,24px)] font-black text-black mt-0.5">
@@ -86,7 +86,7 @@ export default function Header({
           onClick={onCartClick}
           className="flex items-center gap-2 bg-[#1B1B1C] text-white px-4 sm:px-5 py-3 rounded-2xl font-bold cursor-pointer hover:bg-black active:scale-[0.98] transition-all"
         >
-          <div className="relative mr-1">
+          <div className="relative">
             <ShoppingCartIcon className="w-5 h-5 text-white" />
             <span className="absolute -top-2.5 -right-2.5 bg-[#5EBAA8] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#1B1B1C]">
               {cart.totalItems || 0}

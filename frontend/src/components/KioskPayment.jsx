@@ -76,9 +76,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
               sse.close();
             }
           })
-          .catch(() => {
-            // Fail silently on polling network issues
-          });
+          .catch(() => {});
       }, 3000);
 
       // Clean up SSE & polling on unmount
@@ -165,7 +163,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                   placeholder="เช่น 0812345678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  className="h-12 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm font-medium"
+                  className="h-11 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F9C338] text-sm font-semibold"
                 />
               </div>
 
@@ -179,7 +177,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                   placeholder="example@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F8C032] focus:ring-1 focus:ring-[#F8C032] text-sm font-medium"
+                  className="h-11 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F9C338] text-sm font-semibold"
                 />
               </div>
 

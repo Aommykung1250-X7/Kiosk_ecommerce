@@ -7,7 +7,7 @@ export default function Unauthorized() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 font-['Prompt']">
+    <div className="w-full h-full bg-gray-50 flex flex-col items-center justify-center p-6 font-['Prompt'] overflow-y-auto">
       <div className="max-w-md w-full bg-white rounded-3xl border border-gray-100 shadow-[0_15px_30px_rgba(0,0,0,0.05)] p-8 text-center flex flex-col items-center gap-6">
         <ShieldExclamationIcon className="w-20 h-20 text-red-500 animate-pulse" />
         

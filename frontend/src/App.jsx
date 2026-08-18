@@ -12,12 +12,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationDemo from "./pages/NotificationDemo";
 import { NotificationProvider } from "./components/notify";
 
-// ฟังก์ชันดึงออเดอร์เพื่อสลับไปหน้าจ่ายเงินบนมือถือ หรือกลับหน้าหลักของคีออส
 function KioskOrCheckout() {
   const urlParams = new URLSearchParams(window.location.search);
   const kioskParam = urlParams.get("kiosk");
 
-  // หากระบุพารามิเตอร์ kiosk=true ให้เปิดการยืนยันสิทธิ์เครื่องนี้
   if (kioskParam === "true") {
     localStorage.setItem("isKiosk", "true");
   }

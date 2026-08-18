@@ -306,9 +306,9 @@ export default function Screensaver({ onWake }) {
         }
       `}</style>
 
-      {/* Main Kiosk Container maintaining exact portrait ratio */}
+      {/* Main Kiosk Container maintaining exact 681*1209 portrait ratio */}
       <div
-        className="relative aspect-[941/1672] h-full max-h-screen w-auto bg-[#F4EEE8] shadow-2xl overflow-hidden"
+        className="relative aspect-[681/1209] h-full max-h-screen w-auto bg-[#F4EEE8] shadow-2xl overflow-hidden"
         style={{ containerType: "size" }}
       >
         {isMasterSlide ? (
