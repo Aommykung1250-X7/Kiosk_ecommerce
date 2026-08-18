@@ -7,7 +7,10 @@ import Unauthorized from "./pages/Unauthorized";
 import OrderQueue from "./pages/admin/OrderQueue";
 import ProductManagement from "./pages/admin/ProductManagement";
 import ScreensaverManagement from "./pages/admin/ScreensaverManagement";
+import ReportManagement from "./pages/admin/ReportManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
+import NotificationDemo from "./pages/NotificationDemo";
+import { NotificationProvider } from "./components/notify";
 
 // ฟังก์ชันดึงออเดอร์เพื่อสลับไปหน้าจ่ายเงินบนมือถือ หรือกลับหน้าหลักของคีออส
 function KioskOrCheckout() {
@@ -74,7 +77,7 @@ function KioskOrCheckout() {
           color: "#555555",
           marginTop: "40px"
         }}>
-          DIIC CAMT Kiosk e-Commerce
+          DITC CAMT Kiosk e-Commerce
         </span>
       </div>
     );
@@ -85,29 +88,35 @@ function KioskOrCheckout() {
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* หน้าหลักของตู้สินค้า / หน้าจ่ายเงินบนมือถือ */}
-        <Route path="/" element={<KioskOrCheckout />} />
-        
-        {/* หน้ายืนยันตัวตน */}
-        <Route path="/ditc-portal-to-manager" element={<Login />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="/mobile/delivery" element={<MobileDelivery />} />
+    <NotificationProvider>
+      <Router>
+        <Routes>
+          {/* หน้าหลักของตู้สินค้า / หน้าจ่ายเงินบนมือถือ */}
+          <Route path="/" element={<KioskOrCheckout />} />
 
-        {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (Staff & Admin) */}
-        <Route element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}>
-          <Route path="/dashboard/orders" element={<OrderQueue />} />
-        </Route>
+          {/* หน้ายืนยันตัวตน */}
+          <Route path="/ditc-portal-to-manager" element={<Login />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/mobile/delivery" element={<MobileDelivery />} />
 
-        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-          <Route path="/dashboard/products" element={<ProductManagement />} />
-          <Route path="/dashboard/screensavers" element={<ScreensaverManagement />} />
-        </Route>
+          {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (Staff & Admin) */}
+          <Route element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}>
+            <Route path="/dashboard/orders" element={<OrderQueue />} />
+          </Route>
 
-        {/* เส้นทางกรณีไม่พบหน้าจอใดๆ ดีดกลับหน้าแรก */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/dashboard/products" element={<ProductManagement />} />
+            <Route path="/dashboard/screensavers" element={<ScreensaverManagement />} />
+            <Route path="/dashboard/reports" element={<ReportManagement />} />
+          </Route>
+
+          {/* หน้าสาธิตระบบแจ้งเตือน สำหรับนักพัฒนาและงานตรวจรับ UI */}
+          <Route path="/dev/notifications" element={<NotificationDemo />} />
+
+          {/* เส้นทางกรณีไม่พบหน้าจอใดๆ ดีดกลับหน้าแรก */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </NotificationProvider>
   );
 }

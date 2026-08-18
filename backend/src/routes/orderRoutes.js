@@ -24,6 +24,8 @@ router.post("/settings/shipping", authenticateJWT, checkRole(["admin"]), (req, r
 // Order creation & status endpoints (Public Kiosk)
 router.post("/orders", validateCreateOrder, (req, res) => orderController.createOrder(req, res));
 router.get("/orders/:orderId/status", (req, res) => orderController.getOrderStatus(req, res));
+router.post("/orders/:orderId/cancel", (req, res) => orderController.cancelOrder(req, res));
+router.delete("/orders/:orderId", (req, res) => orderController.cancelOrder(req, res));
 router.post("/orders/:orderId/contact-info", (req, res) => orderController.updateContactInfo(req, res));
 router.put("/orders/:orderId/address", (req, res) => orderController.updateOrderAddress(req, res));
 
@@ -50,6 +52,14 @@ router.post("/orders/:orderId/fulfill/instock", authenticateJWT, checkRole(["sta
 
 router.post("/orders/:orderId/fulfill/preorder", authenticateJWT, checkRole(["staff", "admin"]), authorizeOrderMutation, auditSensitiveAction, (req, res) =>
   orderController.fulfillOrderPreOrder(req, res)
+);
+
+router.post("/orders/:orderId/fulfill/combined", authenticateJWT, checkRole(["staff", "admin"]), authorizeOrderMutation, auditSensitiveAction, (req, res) =>
+  orderController.fulfillOrderCombined(req, res)
+);
+
+router.post("/orders/items/:itemId/fulfill", authenticateJWT, checkRole(["staff", "admin"]), auditSensitiveAction, (req, res) =>
+  orderController.fulfillOrderItem(req, res)
 );
 
 export default router;

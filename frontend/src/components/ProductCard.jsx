@@ -170,8 +170,21 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
             {status === "Pre-Order" && (
               <div className="flex flex-col items-end">
                 <span className="text-[8px] font-black text-[#E65100] uppercase tracking-widest leading-none">PRE-ORDER</span>
-                <span className="text-[9px] font-bold text-[#E65100]/80 mt-1">
-                  รอ 15 วัน
+                <span className="text-[9px] font-bold text-[#E65100]/90 mt-1 font-mono">
+                  {(() => {
+                    const dateVal = product.preorderReleaseDate || product.preorder_release_date;
+                    if (!dateVal) return "จะแจ้งภายหลัง";
+                    try {
+                      const d = new Date(dateVal);
+                      if (isNaN(d.getTime())) return "จะแจ้งภายหลัง";
+                      const day = d.getDate();
+                      const month = d.getMonth() + 1;
+                      const yearShort = String(d.getFullYear() + 543).slice(-2);
+                      return `พร้อม ${day}/${month}/${yearShort}`;
+                    } catch (e) {
+                      return "จะแจ้งภายหลัง";
+                    }
+                  })()}
                 </span>
               </div>
             )}

@@ -1,7 +1,8 @@
 // frontend/src/pages/admin/ProductManagement.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlusIcon, PencilIcon, TrashIcon, ArrowRightOnRectangleIcon, ClipboardDocumentListIcon, Squares2X2Icon, TagIcon, ExclamationTriangleIcon, ChevronDownIcon, PhotoIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, PencilIcon, TrashIcon, ArrowRightOnRectangleIcon, ClipboardDocumentListIcon, Squares2X2Icon, TagIcon, ExclamationTriangleIcon, ChevronDownIcon, PhotoIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import { notify, confirmDialog } from "../../components/notify";
 
 // CATEGORIES list is now loaded dynamically in component state
 
@@ -82,25 +83,9 @@ export default function ProductManagement() {
     status: "In Stock"
   });
 
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
   const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
   const [editingCatId, setEditingCatId] = useState(null);
   const [editingCatName, setEditingCatName] = useState("");
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      const resized = await resizeImage(file, 600, 600);
-      setSelectedFile(resized);
-      setPreviewUrl(URL.createObjectURL(resized));
-    } catch (err) {
-      console.error(err);
-      alert("ไม่สามารถปรับขนาดรูปภาพได้: " + err.message);
-    }
-  };
 
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -148,15 +133,24 @@ export default function ProductManagement() {
     }
   };
 
-  const [shippingSettings, setShippingSettings] = useState({ baseShippingFee: 40, additionalSplitShippingFee: 30 });
   const [baseShippingFeeInput, setBaseShippingFeeInput] = useState("40");
+  const [popularTagsInput, setPopularTagsInput] = useState("");
+  const [isSavingTags, setIsSavingTags] = useState(false);
+
+  // Contact settings state
+  const [contactHotlineInput, setContactHotlineInput] = useState("02-123-4567 / 081-234-5678");
+  const [contactLineIdInput, setContactLineIdInput] = useState("@ditcsupport");
+  const [contactLineUrlInput, setContactLineUrlInput] = useState("https://line.me/ti/p/@ditcsupport");
+  const [contactLineQrImageInput, setContactLineQrImageInput] = useState("");
+  const [contactServiceHoursInput, setContactServiceHoursInput] = useState("เปิดบริการ 08:00 - 20:00 น.");
+  const [isSavingContact, setIsSavingContact] = useState(false);
+  const [isUploadingQr, setIsUploadingQr] = useState(false);
 
   const fetchShippingSettings = async () => {
     try {
       const res = await fetch("/api/settings/shipping");
       const data = await res.json();
       if (res.ok) {
-        setShippingSettings(data);
         setBaseShippingFeeInput(data.baseShippingFee.toString());
       }
     } catch (err) {
@@ -164,10 +158,39 @@ export default function ProductManagement() {
     }
   };
 
+  const fetchPopularTags = async () => {
+    try {
+      const res = await fetch("/api/settings/search-tags");
+      const data = await res.json();
+      if (res.ok && data.popularSearchTags && Array.isArray(data.popularSearchTags)) {
+        setPopularTagsInput(data.popularSearchTags.join(", "));
+      }
+    } catch (err) {
+      console.error("Error loading popular search tags:", err);
+    }
+  };
+
+  const fetchContactSettings = async () => {
+    try {
+      const res = await fetch("/api/settings/contact");
+      const data = await res.json();
+      if (res.ok) {
+        if (data.hotline) setContactHotlineInput(data.hotline);
+        if (data.lineId) setContactLineIdInput(data.lineId);
+        if (data.lineUrl) setContactLineUrlInput(data.lineUrl);
+        if (data.lineQrImage !== undefined) setContactLineQrImageInput(data.lineQrImage);
+        if (data.serviceHours) setContactServiceHoursInput(data.serviceHours);
+      }
+    } catch (err) {
+      console.error("Error loading contact settings:", err);
+    }
+  };
+
   const handleSaveShippingSettings = async () => {
     const feeVal = parseFloat(baseShippingFeeInput);
     if (isNaN(feeVal) || feeVal < 0) {
-      return alert("กรุณาระบุค่าจัดส่งที่ถูกต้อง");
+      notify.warning("กรุณาระบุค่าจัดส่งที่ถูกต้อง");
+      return;
     }
 
     try {
@@ -183,12 +206,135 @@ export default function ProductManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการบันทึกค่าจัดส่ง");
 
-      alert("บันทึกค่าจัดส่งระบบสำเร็จ!");
+      notify.success("บันทึกค่าจัดส่งระบบสำเร็จ!");
       fetchShippingSettings();
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
+
+  const handleSavePopularTags = async () => {
+    setIsSavingTags(true);
+    try {
+      const tagArray = popularTagsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+
+      const res = await fetch("/api/settings/search-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ popularSearchTags: tagArray })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "ไม่สามารถบันทึกคำค้นหายอดนิยมได้");
+
+      notify.success("บันทึกคำค้นหายอดนิยมเรียบร้อยแล้ว!");
+      if (data.popularSearchTags && Array.isArray(data.popularSearchTags)) {
+        setPopularTagsInput(data.popularSearchTags.join(", "));
+      }
+    } catch (err) {
+      notify.error(err.message);
+    } finally {
+      setIsSavingTags(false);
+    }
+  };
+
+  const handleSaveContactSettings = async () => {
+    setIsSavingContact(true);
+    try {
+      const res = await fetch("/api/settings/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          hotline: contactHotlineInput,
+          lineId: contactLineIdInput,
+          lineUrl: contactLineUrlInput,
+          lineQrImage: contactLineQrImageInput,
+          serviceHours: contactServiceHoursInput
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "ไม่สามารถบันทึกข้อมูลการติดต่อได้");
+      notify.success("บันทึกข้อมูลการติดต่อเจ้าหน้าที่เรียบร้อยแล้ว!");
+    } catch (err) {
+      notify.error(err.message);
+    } finally {
+      setIsSavingContact(false);
+    }
+  };
+
+  const handleQrImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    setIsUploadingQr(true);
+    try {
+      const res = await fetch("/api/settings/contact/upload-qr", {
+        method: "POST",
+        credentials: "include",
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "ไม่สามารถอัปโหลดรูปภาพได้");
+      setContactLineQrImageInput(data.url);
+      notify.success("อัปโหลดรูปภาพ LINE QR Code สำเร็จ!");
+    } catch (err) {
+      notify.error(err.message);
+    } finally {
+      setIsUploadingQr(false);
+    }
+  };
+
+  // --- TEMPORARY RESET BUTTON HANDLERS ---
+  const handleResetVisitorCount = async () => {
+    const confirmed = await confirmDialog({
+      title: "รีเซ็ตจำนวนผู้เข้าใช้งาน?",
+      message: "คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตจำนวนผู้เข้าใช้งาน (Visitor Count) ทั้งหมดให้เป็น 0?",
+      confirmText: "รีเซ็ตเป็น 0",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+    try {
+      const res = await fetch("/api/settings/reset-visitors", {
+        method: "POST",
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการรีเซ็ตจำนวนผู้เข้าใช้งาน");
+      notify.success("รีเซ็ตจำนวนผู้เข้าใช้งานสำเร็จเรียบร้อยแล้ว (เป็น 0)");
+    } catch (err) {
+      notify.error(err.message);
+    }
+  };
+
+  const handleResetProductViews = async () => {
+    const confirmed = await confirmDialog({
+      title: "รีเซ็ตยอดการเข้าชมสินค้า?",
+      message: "คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตยอดการเข้าชมสินค้า (Product Views) ทุกรายการให้เป็น 0?",
+      confirmText: "รีเซ็ตเป็น 0",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+    try {
+      const res = await fetch("/api/settings/reset-product-views", {
+        method: "POST",
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการรีเซ็ตยอดการเข้าชมสินค้า");
+      notify.success("รีเซ็ตยอดการเข้าชมสินค้าสำเร็จเรียบร้อยแล้ว (เป็น 0)");
+      fetchProducts();
+    } catch (err) {
+      notify.error(err.message);
+    }
+  };
+  // ----------------------------------------
 
   useEffect(() => {
     const userString = localStorage.getItem("user");
@@ -199,6 +345,8 @@ export default function ProductManagement() {
     fetchCategories();
     fetchStats();
     fetchShippingSettings();
+    fetchPopularTags();
+    fetchContactSettings();
   }, []);
 
   // ดึงข้อมูลเมื่อแท็บสมาชิกเปิดทำงาน
@@ -232,7 +380,7 @@ export default function ProductManagement() {
       if (!res.ok) throw new Error(data.error || "ไม่สามารถดึงข้อมูลรายชื่อพนักงานได้");
       setUsers(data);
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     } finally {
       setLoadingUsers(false);
     }
@@ -252,19 +400,23 @@ export default function ProductManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการบันทึกรายชื่อพนักงาน");
 
-      alert("เพิ่มพนักงานสำเร็จ!");
+      notify.success("เพิ่มพนักงานสำเร็จ!");
       setIsUserModalOpen(false);
       setUserForm({ username: "", password: "", role: "staff", name: "" });
       fetchUsers();
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm("คุณต้องการลบบัญชีผู้ใช้งานนี้จริงหรือไม่?")) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: "ลบบัญชีผู้ใช้งาน?",
+      message: "คุณต้องการลบบัญชีผู้ใช้งานนี้จริงหรือไม่?",
+      confirmText: "ลบบัญชี",
+      variant: "danger",
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/auth/users/${id}`, {
         method: "DELETE",
@@ -273,21 +425,23 @@ export default function ProductManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการลบพนักงาน");
 
-      alert("ลบพนักงานสำเร็จ!");
+      notify.success("ลบพนักงานสำเร็จ!");
       fetchUsers();
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
   const handleSaveNewCategoryInline = async () => {
     if (!newCatName.trim() || !newCatId.trim()) {
-      return alert("กรุณากรอกข้อมูลให้ครบถ้วนทั้งชื่อไทยและคีย์ภาษาอังกฤษ");
+      notify.warning("กรุณากรอกข้อมูลให้ครบถ้วนทั้งชื่อไทยและคีย์ภาษาอังกฤษ");
+      return;
     }
     
     const formattedId = newCatId.trim().toLowerCase();
     if (categories.some(c => c.id === formattedId)) {
-      return alert("มีคีย์หมวดหมู่นี้อยู่แล้วในระบบ");
+      notify.warning("มีคีย์หมวดหมู่นี้อยู่แล้วในระบบ");
+      return;
     }
 
     try {
@@ -305,9 +459,9 @@ export default function ProductManagement() {
       setIsAddingCategory(false);
       setNewCatName("");
       setNewCatId("");
-      alert(`เพิ่มหมวดหมู่ "${data.name}" สำเร็จ!`);
+      notify.success(`เพิ่มหมวดหมู่ "${data.name}" สำเร็จ!`);
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
@@ -316,13 +470,17 @@ export default function ProductManagement() {
 
     const isUsed = products.some(p => p.category === catId);
     if (isUsed) {
-      alert(`ไม่สามารถลบหมวดหมู่ "${categoryName}" ได้ เนื่องจากมีสินค้าที่ใช้หมวดหมู่นี้อยู่`);
+      notify.warning(`ไม่สามารถลบหมวดหมู่ "${categoryName}" ได้ เนื่องจากมีสินค้าที่ใช้หมวดหมู่นี้อยู่`);
       return;
     }
 
-    if (!window.confirm(`คุณต้องการลบหมวดหมู่ "${categoryName}" ใช่หรือไม่?`)) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: "ลบหมวดหมู่สินค้า?",
+      message: `คุณต้องการลบหมวดหมู่ "${categoryName}" ใช่หรือไม่?`,
+      confirmText: "ลบหมวดหมู่",
+      variant: "danger",
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/categories/${catId}`, {
@@ -336,16 +494,16 @@ export default function ProductManagement() {
       if (form.category === catId) {
         setForm(prev => ({ ...prev, category: "" }));
       }
-      alert(`ลบหมวดหมู่ "${categoryName}" เรียบร้อยแล้ว`);
+      notify.success(`ลบหมวดหมู่ "${categoryName}" เรียบร้อยแล้ว`);
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
   const handleSaveCategoryNameInline = async (catId) => {
     const trimmed = editingCatName.trim();
     if (!trimmed) {
-      alert("ชื่อหมวดหมู่ไม่สามารถเป็นค่าว่างได้");
+      notify.warning("ชื่อหมวดหมู่ไม่สามารถเป็นค่าว่างได้");
       return;
     }
 
@@ -362,7 +520,7 @@ export default function ProductManagement() {
       await fetchCategories();
       setEditingCatId(null);
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
@@ -371,8 +529,6 @@ export default function ProductManagement() {
     setIsAddingCategory(false);
     setNewCatName("");
     setNewCatId("");
-    setSelectedFile(null);
-    setPreviewUrl("");
     setForm({
       name: "",
       description: "",
@@ -380,6 +536,7 @@ export default function ProductManagement() {
       stock: 0,
       category: "drinks",
       image: "",
+      images: [],
       promotion: false,
       pickupLocation: "",
       status: "In Stock",
@@ -394,15 +551,15 @@ export default function ProductManagement() {
     setIsAddingCategory(false);
     setNewCatName("");
     setNewCatId("");
-    setSelectedFile(null);
-    setPreviewUrl(p.image && p.image.includes(".") ? `/uploads/products/${p.image}` : "");
+    const imgList = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : []);
     setForm({
       name: p.name,
       description: p.description || "",
       price: p.price,
-      stock: p.stock || p.quantity || 0, // รองรับกรณีฟิลด์ทับซ้อน
+      stock: p.stock || p.quantity || 0,
       category: p.category || "drinks",
       image: p.image || "",
+      images: imgList.slice(0, 5),
       promotion: p.promotion || false,
       pickupLocation: p.pickupLocation || "",
       status: p.status || "In Stock",
@@ -418,10 +575,58 @@ export default function ProductManagement() {
     setIsAddingCategory(false);
     setNewCatName("");
     setNewCatId("");
-    setSelectedFile(null);
-    setPreviewUrl("");
     setEditingCatId(null);
     setEditingCatName("");
+  };
+
+  const handleMultipleFilesChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files || files.length === 0) return;
+
+    const currentImages = Array.isArray(form.images) ? [...form.images] : [];
+    const remainingSlots = 5 - currentImages.length;
+
+    if (remainingSlots <= 0) {
+      notify.warning("สามารถเพิ่มรูปภาพได้สูงสุด 5 รูปเท่านั้น");
+      return;
+    }
+
+    const filesToUpload = files.slice(0, remainingSlots);
+    const formData = new FormData();
+    for (const f of filesToUpload) {
+      const resized = await resizeImage(f, 600, 600);
+      formData.append("images", resized);
+    }
+
+    try {
+      const uploadRes = await fetch("/api/products/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error || "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ");
+
+      const newUploaded = uploadData.images || [uploadData.image];
+      const updatedImages = [...currentImages, ...newUploaded].slice(0, 5);
+
+      setForm(prev => ({
+        ...prev,
+        image: updatedImages[0] || "",
+        images: updatedImages
+      }));
+    } catch (err) {
+      notify.error(err.message);
+    }
+  };
+
+  const handleRemoveImage = (indexToRemove) => {
+    const updated = (form.images || []).filter((_, idx) => idx !== indexToRemove);
+    setForm(prev => ({
+      ...prev,
+      image: updated[0] || "",
+      images: updated
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -429,31 +634,16 @@ export default function ProductManagement() {
     const url = editingId ? `/api/products/${editingId}` : "/api/products";
     const method = editingId ? "PUT" : "POST";
 
-    let finalImage = form.image;
-
-    if (selectedFile) {
-      const formData = new FormData();
-      formData.append("image", selectedFile);
-
-      try {
-        const uploadRes = await fetch("/api/products/upload", {
-          method: "POST",
-          body: formData,
-          credentials: "include"
-        });
-        const uploadData = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadData.error || "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ");
-        finalImage = uploadData.image;
-      } catch (err) {
-        alert(err.message);
-        return;
-      }
+    const currentImages = Array.isArray(form.images) ? form.images : (form.image ? [form.image] : []);
+    if (currentImages.length === 0) {
+      notify.warning("กรุณาเพิ่มรูปภาพสินค้าอย่างน้อย 1 รูป");
+      return;
     }
 
-    // ปรับชนิดตัวเลข
     const payload = {
       ...form,
-      image: finalImage,
+      image: currentImages[0],
+      images: currentImages.slice(0, 5),
       price: parseFloat(form.price),
       stock: parseInt(form.stock, 10)
     };
@@ -471,18 +661,22 @@ export default function ProductManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการบันทึกสินค้า");
 
-      alert(editingId ? "แก้ไขสินค้าสำเร็จ!" : "เพิ่มสินค้าใหม่สำเร็จ!");
+      notify.success(editingId ? "แก้ไขสินค้าสำเร็จ!" : "เพิ่มสินค้าใหม่สำเร็จ!");
       setIsModalOpen(false);
       fetchProducts();
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("คุณต้องการลบสินค้าชิ้นนี้จริงหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: "ลบสินค้าชิ้นนี้?",
+      message: "คุณต้องการลบสินค้าชิ้นนี้จริงหรือไม่? ข้อมูลและรูปภาพทั้งหมดจะถูกลบออกจากระบบ",
+      confirmText: "ลบสินค้า",
+      variant: "danger",
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/products/${id}`, {
@@ -493,10 +687,10 @@ export default function ProductManagement() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการลบสินค้า");
 
-      alert("ลบสินค้าสำเร็จ!");
+      notify.success("ลบสินค้าสำเร็จ!");
       fetchProducts();
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
@@ -527,7 +721,15 @@ export default function ProductManagement() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/dashboard/reports")}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
+          >
+            <DocumentChartBarIcon className="w-4.5 h-4.5" />
+            <span>ออกรายงานสรุป</span>
+          </button>
+
           <button
             onClick={() => navigate("/dashboard/screensavers")}
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
@@ -809,44 +1011,216 @@ export default function ProductManagement() {
         )}
 
         {activeTab === "settings" && (
-          <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm max-w-lg flex flex-col gap-6 font-['Prompt'] animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-lg font-black text-gray-800">ตั้งค่าการบริการจัดส่ง</h3>
-              <p className="text-xs text-gray-400 mt-1">กำหนดอัตราค่าจัดส่งพัสดุสำหรับตู้สินค้า Kiosk</p>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">ค่าจัดส่งพัสดุเริ่มต้น (บาท)</label>
-              <input
-                type="number"
-                value={baseShippingFeeInput}
-                onChange={(e) => setBaseShippingFeeInput(e.target.value)}
-                placeholder="40"
-                className="h-12 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-bold text-[#2B2B2B]"
-              />
-            </div>
-
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-150 flex flex-col gap-2">
-              <span className="text-xs font-bold text-gray-500">พรีวิวอัตราค่าจัดส่ง:</span>
-              <div className="flex justify-between items-center text-sm font-medium text-gray-600 border-b border-gray-100/50 pb-2">
-                <span>📦 จัดส่งรอบเดียว (Combined)</span>
-                <span className="font-bold text-[#2B2B2B]">฿{parseFloat(baseShippingFeeInput || 0).toLocaleString('th-TH')}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl animate-in fade-in duration-200">
+            {/* Shipping Settings Card */}
+            <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm flex flex-col gap-6 font-['Prompt']">
+              <div>
+                <h3 className="text-lg font-black text-gray-800">ตั้งค่าการบริการจัดส่ง</h3>
+                <p className="text-xs text-gray-400 mt-1">กำหนดอัตราค่าจัดส่งพัสดุสำหรับตู้สินค้า Kiosk</p>
               </div>
-              <div className="flex justify-between items-center text-sm font-medium text-gray-600 pt-1">
-                <span>🚚 แยกจัดส่งสินค้าพรีออเดอร์ (Split)</span>
-                <div className="flex flex-col items-end">
-                  <span className="font-bold text-[#E53935]">฿{(parseFloat(baseShippingFeeInput || 0) * 2).toLocaleString('th-TH')}</span>
-                  <span className="text-[10px] text-red-500 font-bold">(ค่าส่งคูณ 2)</span>
+              
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">ค่าจัดส่งพัสดุเริ่มต้น (บาท)</label>
+                <input
+                  type="number"
+                  value={baseShippingFeeInput}
+                  onChange={(e) => setBaseShippingFeeInput(e.target.value)}
+                  placeholder="40"
+                  className="h-12 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-bold text-[#2B2B2B]"
+                />
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-150 flex flex-col gap-2">
+                <span className="text-xs font-bold text-gray-500">พรีวิวอัตราค่าจัดส่ง:</span>
+                <div className="flex justify-between items-center text-sm font-medium text-gray-600 border-b border-gray-100/50 pb-2">
+                  <span>📦 จัดส่งรอบเดียว (Combined)</span>
+                  <span className="font-bold text-[#2B2B2B]">฿{parseFloat(baseShippingFeeInput || 0).toLocaleString('th-TH')}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-medium text-gray-600 pt-1">
+                  <span>🚚 แยกจัดส่งสินค้าพรีออเดอร์ (Split)</span>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-[#E53935]">฿{(parseFloat(baseShippingFeeInput || 0) * 2).toLocaleString('th-TH')}</span>
+                    <span className="text-[10px] text-red-500 font-bold">(ค่าส่งคูณ 2)</span>
+                  </div>
                 </div>
               </div>
+
+              <button
+                onClick={handleSaveShippingSettings}
+                className="h-12 w-full rounded-xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95 transition-all text-[#2B2B2B] font-bold text-sm cursor-pointer flex items-center justify-center shadow-sm mt-auto"
+              >
+                บันทึกค่าจัดส่ง
+              </button>
             </div>
 
-            <button
-              onClick={handleSaveShippingSettings}
-              className="h-12 w-full rounded-xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95 transition-all text-[#2B2B2B] font-bold text-sm cursor-pointer flex items-center justify-center shadow-sm"
-            >
-              บันทึกการตั้งค่า
-            </button>
+            {/* Popular Search Tags Settings Card */}
+            <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm flex flex-col gap-6 font-['Prompt']">
+              <div>
+                <h3 className="text-lg font-black text-gray-800">ตั้งค่าคำค้นหายอดนิยม (Popular Search Tags)</h3>
+                <p className="text-xs text-gray-400 mt-1">กำหนดปุ่มทางลัดคำค้นหาด่วนที่จะแสดงผลบนตู้ Kiosk (คั่นด้วยเครื่องหมายจุลภาค ,)</p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">คำค้นหา (คั่นด้วยเครื่องหมายจุลภาค ,)</label>
+                <textarea
+                  value={popularTagsInput}
+                  onChange={(e) => setPopularTagsInput(e.target.value)}
+                  rows={3}
+                  placeholder="เช่น น้ำดื่ม, ชาเขียว, เลย์, KitKat, แก้วน้ำ, เสื้อ"
+                  className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-medium text-sm text-[#2B2B2B] resize-none"
+                />
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-150 flex flex-col gap-2">
+                <span className="text-xs font-bold text-gray-500">พรีวิวปุ่มคำค้นหาบนตู้ Kiosk:</span>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {popularTagsInput.split(',').map(t => t.trim()).filter(Boolean).length > 0 ? (
+                    popularTagsInput.split(',').map(t => t.trim()).filter(Boolean).map((tag, idx) => (
+                      <span key={idx} className="text-xs px-3 py-1 bg-white text-gray-700 font-semibold rounded-full border border-gray-200 shadow-2xs">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">ยังไม่มีคำค้นหา</span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleSavePopularTags}
+                disabled={isSavingTags}
+                className="h-12 w-full rounded-xl bg-[#5EBAA8] hover:bg-[#4ea896] active:scale-95 transition-all text-white font-bold text-sm cursor-pointer flex items-center justify-center shadow-sm disabled:opacity-50 mt-auto"
+              >
+                {isSavingTags ? "กำลังบันทึก..." : "บันทึกคำค้นหายอดนิยม"}
+              </button>
+            </div>
+
+            {/* Staff Contact Settings Card */}
+            <div className="bg-white p-8 rounded-3xl border border-gray-150 shadow-sm flex flex-col gap-6 font-['Prompt']">
+              <div>
+                <h3 className="text-lg font-black text-gray-800">ตั้งค่าข้อมูลติดต่อเจ้าหน้าที่ (Staff Contact)</h3>
+                <p className="text-xs text-gray-400 mt-1">กำหนดเบอร์ Hotline, LINE ID, ลิงก์ และรูปภาพ LINE QR Code ที่แสดงในศูนย์ช่วยเหลือ</p>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">เบอร์โทรศัพท์ Hotline</label>
+                  <input
+                    type="text"
+                    value={contactHotlineInput}
+                    onChange={(e) => setContactHotlineInput(e.target.value)}
+                    placeholder="เช่น 02-123-4567 / 081-234-5678"
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">เวลาทำการ</label>
+                  <input
+                    type="text"
+                    value={contactServiceHoursInput}
+                    onChange={(e) => setContactServiceHoursInput(e.target.value)}
+                    placeholder="เช่น เปิดบริการ 08:00 - 20:00 น."
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">LINE ID</label>
+                  <input
+                    type="text"
+                    value={contactLineIdInput}
+                    onChange={(e) => setContactLineIdInput(e.target.value)}
+                    placeholder="เช่น @ditcsupport"
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">ลิงก์ LINE Official (สร้าง QR Code อัตโนมัติ)</label>
+                  <input
+                    type="text"
+                    value={contactLineUrlInput}
+                    onChange={(e) => setContactLineUrlInput(e.target.value)}
+                    placeholder="เช่น https://line.me/ti/p/@ditcsupport"
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-medium text-xs text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">รูปภาพ LINE QR Code (อัปโหลดกำหนดเอง)</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQrImageUpload}
+                      disabled={isUploadingQr}
+                      className="text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
+                    />
+                    {isUploadingQr && <span className="text-xs text-gray-400 font-bold">กำลังอัปโหลด...</span>}
+                  </div>
+                  {contactLineQrImageInput && (
+                    <div className="flex items-center gap-2 mt-1.5 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                      <img src={contactLineQrImageInput} alt="LINE QR Preview" className="w-10 h-10 object-contain rounded-md bg-white border border-gray-200" />
+                      <div className="flex-1 truncate">
+                        <span className="text-[11px] text-emerald-600 font-bold block">มีรูป QR Code อัปโหลดแล้ว</span>
+                        <span className="text-[10px] text-gray-400 block truncate">{contactLineQrImageInput}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setContactLineQrImageInput("")}
+                        className="text-[11px] text-red-500 hover:underline font-bold px-2"
+                      >
+                        ลบรูป
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleSaveContactSettings}
+                disabled={isSavingContact}
+                className="h-12 w-full rounded-xl bg-[#00C300] hover:bg-[#00B000] active:scale-95 transition-all text-white font-bold text-sm cursor-pointer flex items-center justify-center shadow-sm disabled:opacity-50 mt-auto"
+              >
+                {isSavingContact ? "กำลังบันทึก..." : "บันทึกข้อมูลการติดต่อ"}
+              </button>
+            </div>
+
+            {/* TEMPORARY RESET TOOLS CARD */}
+            <div className="bg-white p-8 rounded-3xl border border-red-200 bg-red-50/20 shadow-sm flex flex-col gap-6 font-['Prompt']">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 text-[10px] font-black bg-red-100 text-red-600 rounded-full uppercase tracking-wider border border-red-200">
+                    เครื่องมือชั่วคราว
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-gray-800 mt-2">รีเซ็ตสถิติระบบ (Reset Statistics)</h3>
+                <p className="text-xs text-gray-400 mt-1">ปุ่มทางลัดสำหรับรีเซ็ตสถิติจำนวนผู้เข้าใช้งาน และยอดการเข้าชมสินค้า ให้เริ่มนับใหม่จาก 0</p>
+              </div>
+
+              <div className="flex flex-col gap-3.5 my-auto">
+                <button
+                  type="button"
+                  onClick={handleResetVisitorCount}
+                  className="h-12 w-full rounded-xl bg-red-500 hover:bg-red-600 active:scale-95 transition-all text-white font-bold text-sm cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <span>🔄 รีเซ็ตจำนวนผู้เข้าใช้งาน (Visitor Count)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetProductViews}
+                  className="h-12 w-full rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 transition-all text-white font-bold text-sm cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <span>👁️ รีเซ็ตยอดการเข้าชมสินค้า (Product Views)</span>
+                </button>
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 font-medium">
+                💡 <span className="font-bold">คำแนะนำ:</span> ปุ่มนี้เป็นเครื่องมือชั่วคราว สามารถลบโค้ดออกได้เมื่อไม่ใช้งานแล้ว
+              </div>
+            </div>
           </div>
         )}
       </main>
@@ -1095,32 +1469,56 @@ export default function ProductManagement() {
                   </div>
                 )}
 
-                <div className="col-span-2 flex flex-col gap-2 bg-gray-50 p-4.5 rounded-2xl border border-gray-150">
-                  <span className="text-xs font-bold text-gray-700">รูปภาพสินค้า (Product Image)</span>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-4">
-                      {previewUrl && (
-                        <div className="w-16 h-16 bg-white border border-gray-250 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
-                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="flex-1 flex flex-col gap-1">
-                        <label className="text-[11px] font-bold text-gray-500">ไฟล์รูปภาพ (JPG, PNG, WEBP)</label>
+                <div className="col-span-2 flex flex-col gap-2.5 bg-gray-50 p-4.5 rounded-2xl border border-gray-150">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700">รูปภาพสินค้า (อัปโหลดได้สูงสุด 5 รูป)</span>
+                    <span className="text-[11px] font-bold text-gray-400">
+                      {(form.images || []).length} / 5 รูป
+                    </span>
+                  </div>
+
+                  {/* Thumbnail gallery list */}
+                  <div className="flex flex-wrap gap-3 my-1">
+                    {(form.images || []).map((imgFilename, idx) => (
+                      <div key={idx} className="relative w-20 h-20 bg-white border border-gray-250 rounded-xl overflow-hidden shadow-sm group">
+                        <img 
+                          src={imgFilename.startsWith("/") || imgFilename.startsWith("http") ? imgFilename : `/uploads/products/${imgFilename}`} 
+                          alt={`Product preview ${idx + 1}`} 
+                          className="w-full h-full object-cover" 
+                        />
+                        {idx === 0 && (
+                          <span className="absolute bottom-1 left-1 right-1 bg-amber-500/90 text-white text-[9px] font-bold py-0.5 text-center rounded">
+                            รูปหลัก
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(idx)}
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow hover:bg-red-600 transition-colors"
+                          title="ลบรูปนี้"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+
+                    {(form.images || []).length < 5 && (
+                      <label className="w-20 h-20 border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all gap-1">
+                        <PlusIcon className="w-6 h-6 text-amber-500" />
+                        <span className="text-[10px] font-bold text-amber-700">เพิ่มรูป</span>
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={handleFileChange}
-                          required={!editingId && !form.image}
-                          className="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#F8C032]/10 file:text-[#F8C032] hover:file:bg-[#F8C032]/20 cursor-pointer"
+                          multiple
+                          onChange={handleMultipleFilesChange}
+                          className="hidden"
                         />
-                      </div>
-                    </div>
-                    {selectedFile && (
-                      <p className="text-[10px] text-emerald-600 font-bold">
-                        ✓ ปรับขนาดรูปภาพเรียบร้อย (ขนาดจริง: {(selectedFile.size / 1024).toFixed(1)} KB)
-                      </p>
+                      </label>
                     )}
                   </div>
+                  <p className="text-[10px] text-gray-400 font-medium">
+                    * รูปแรกในอัลบั้มจะถูกใช้เป็นรูปภาพหลักบนหน้าจอ Kiosk
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">

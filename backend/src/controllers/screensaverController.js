@@ -146,6 +146,88 @@ class ScreensaverController {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  /**
+   * Get Screensaver Config (Master Screen settings & Featured Products)
+   * GET /api/screensavers/config
+   */
+  async getScreensaverConfig(req, res) {
+    try {
+      const enabledRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_master_enabled'");
+      const durationRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_master_duration'");
+      const productsRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_featured_products'");
+
+      const masterEnabled = enabledRes.rows.length > 0 ? enabledRes.rows[0].value === 'true' : true;
+      const masterDuration = durationRes.rows.length > 0 ? parseInt(durationRes.rows[0].value, 10) || 10 : 10;
+      let featuredProductIds = [];
+      if (productsRes.rows.length > 0 && productsRes.rows[0].value) {
+        try {
+          featuredProductIds = JSON.parse(productsRes.rows[0].value);
+        } catch {
+          featuredProductIds = [];
+        }
+      }
+
+      let featuredProducts = [];
+      if (Array.isArray(featuredProductIds) && featuredProductIds.length > 0) {
+        const productQuery = await pool.query(
+          "SELECT id, name, price, image, category_id AS category FROM products WHERE id = ANY($1::int[])",
+          [featuredProductIds]
+        );
+        // Order products according to featuredProductIds order
+        const map = new Map(productQuery.rows.map(p => [Number(p.id), p]));
+        featuredProducts = featuredProductIds
+          .map(id => map.get(Number(id)))
+          .filter(Boolean);
+      }
+
+      return res.json({
+        masterEnabled,
+        masterDuration,
+        featuredProductIds,
+        featuredProducts
+      });
+    } catch (err) {
+      console.error("Error in getScreensaverConfig:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  /**
+   * Update Screensaver Config
+   * PUT /api/screensavers/config
+   */
+  async updateScreensaverConfig(req, res) {
+    try {
+      const { masterEnabled, masterDuration, featuredProductIds } = req.body;
+
+      if (masterEnabled !== undefined) {
+        await pool.query(
+          "INSERT INTO system_settings (key, value) VALUES ('screensaver_master_enabled', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+          [masterEnabled ? 'true' : 'false']
+        );
+      }
+
+      if (masterDuration !== undefined) {
+        await pool.query(
+          "INSERT INTO system_settings (key, value) VALUES ('screensaver_master_duration', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+          [parseInt(masterDuration, 10).toString()]
+        );
+      }
+
+      if (featuredProductIds !== undefined && Array.isArray(featuredProductIds)) {
+        await pool.query(
+          "INSERT INTO system_settings (key, value) VALUES ('screensaver_featured_products', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+          [JSON.stringify(featuredProductIds)]
+        );
+      }
+
+      return res.json({ success: true, message: "Screensaver settings updated successfully." });
+    } catch (err) {
+      console.error("Error in updateScreensaverConfig:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
 }
 
 export default new ScreensaverController();

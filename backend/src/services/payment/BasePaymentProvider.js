@@ -8,4 +8,13 @@ export default class BasePaymentProvider {
   async createCharge(orderId, amount) {
     throw new Error("createCharge not implemented");
   }
+
+  /**
+   * Cancel/reverse a pending charge
+   * @param {string} chargeId 
+   * @returns {Promise<boolean>}
+   */
+  async cancelCharge(chargeId) {
+    return false;
+  }
 }

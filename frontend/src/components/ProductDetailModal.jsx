@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 
@@ -46,10 +47,18 @@ function CategoryPlaceholder({ category }) {
 }
 
 export default function ProductDetailModal({ product, onClose, onAddToCart }) {
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
   if (!product) return null;
 
-  const { name, price, image, promotion, description, status, quantity } = product;
+  const { name, price, image, images, promotion, description, status, quantity } = product;
   const isOutOfStock = status === "In Stock" && quantity <= 0;
+
+  const imagesList = Array.isArray(images) && images.length > 0 
+    ? images 
+    : (image && image.includes(".") ? [image] : []);
+
+  const currentImg = imagesList[activeImageIndex] || image;
 
   const bgColors = {
     water: "bg-[#E9F4FA]",
@@ -61,7 +70,17 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
     pen: "bg-[#F1F0FA]",
     notebook: "bg-[#FBF6EB]",
   };
-  const imgBg = bgColors[image] || "bg-gray-50";
+  const imgBg = bgColors[currentImg] || "bg-gray-50";
+
+  const handlePrevImage = (e) => {
+    e.stopPropagation();
+    setActiveImageIndex(prev => (prev === 0 ? imagesList.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = (e) => {
+    e.stopPropagation();
+    setActiveImageIndex(prev => (prev === imagesList.length - 1 ? 0 : prev + 1));
+  };
 
   return (
     <div 
@@ -81,21 +100,60 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
           <XMarkIcon className="w-5 h-5" />
         </button>
 
-        {/* Product Image Area */}
-        <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden`}>
-          <div className="absolute inset-0 flex items-center justify-center p-12">
+        {/* Product Image Area / Carousel */}
+        <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden group`}>
+          <div className="absolute inset-0 flex items-center justify-center p-10">
             <div className="w-full h-full max-w-[200px] flex items-center justify-center">
-              {image && image.includes(".") ? (
+              {currentImg && currentImg.includes(".") ? (
                 <img
-                  src={`/uploads/products/${image}`}
+                  src={currentImg.startsWith("/") || currentImg.startsWith("http") ? currentImg : `/uploads/products/${currentImg}`}
                   alt={name}
-                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg"
+                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg transition-all duration-300"
                 />
               ) : (
                 <CategoryPlaceholder category={product.category} />
               )}
             </div>
           </div>
+
+          {/* Carousel Navigation Controls */}
+          {imagesList.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrevImage}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 text-[#1B1B1C] border-2 border-[#1B1B1C] shadow-md flex items-center justify-center hover:bg-amber-400 active:scale-95 transition-all cursor-pointer z-10"
+                title="รูปก่อนหน้า"
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                onClick={handleNextImage}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 text-[#1B1B1C] border-2 border-[#1B1B1C] shadow-md flex items-center justify-center hover:bg-amber-400 active:scale-95 transition-all cursor-pointer z-10"
+                title="รูปถัดไป"
+              >
+                ▶
+              </button>
+
+              {/* Thumbnails indicator */}
+              <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-2 z-10">
+                {imagesList.map((imgItem, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImageIndex(idx);
+                    }}
+                    className={`w-3 h-3 rounded-full transition-all border border-[#1B1B1C] cursor-pointer ${
+                      activeImageIndex === idx ? "bg-amber-400 scale-125" : "bg-white/80 hover:bg-white"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Content Area */}

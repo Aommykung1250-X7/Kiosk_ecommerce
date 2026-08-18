@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowPathIcon,
   PlusIcon,
   TrashIcon,
   PencilIcon,
@@ -10,14 +9,19 @@ import {
   Squares2X2Icon,
   PhotoIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  SparklesIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  DocumentChartBarIcon
 } from "@heroicons/react/24/outline";
+import FeaturedProductModal from "../../components/admin/FeaturedProductModal";
+import { notify, confirmDialog } from "../../components/notify";
 
 export default function ScreensaverManagement() {
   const [screensavers, setScreensavers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
   // Modal forms
@@ -34,24 +38,73 @@ export default function ScreensaverManagement() {
   const [mediaUrl, setMediaUrl] = useState("");
   const [uploadProgress, setUploadProgress] = useState(false);
 
+  // Master Screen Config state
+  const [masterEnabled, setMasterEnabled] = useState(true);
+  const [masterDuration, setMasterDuration] = useState(10);
+  const [featuredProductIds, setFeaturedProductIds] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [isFeaturedModalOpen, setIsFeaturedModalOpen] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [configMessage, setConfigMessage] = useState("");
+
   useEffect(() => {
-    // Get currentUser
+    // Check admin role
     const userStr = localStorage.getItem("user");
     if (userStr) {
       try {
         const u = JSON.parse(userStr);
-        setCurrentUser(u);
         if (u.role !== "admin") {
           navigate("/unauthorized");
         }
-      } catch (e) {
+      } catch {
         navigate("/ditc-portal-to-manager");
       }
     } else {
       navigate("/ditc-portal-to-manager");
     }
     fetchScreensavers();
+    fetchConfig();
   }, [navigate]);
+
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch("/api/screensavers/config");
+      if (res.ok) {
+        const data = await res.json();
+        setMasterEnabled(data.masterEnabled ?? true);
+        setMasterDuration(data.masterDuration ?? 10);
+        setFeaturedProductIds(data.featuredProductIds || []);
+        setFeaturedProducts(data.featuredProducts || []);
+      }
+    } catch (err) {
+      console.error("Error fetching screensaver config:", err);
+    }
+  };
+
+  const handleSaveConfig = async (newProductIds = featuredProductIds) => {
+    setSavingConfig(true);
+    setConfigMessage("");
+    try {
+      const res = await fetch("/api/screensavers/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          masterEnabled,
+          masterDuration,
+          featuredProductIds: newProductIds
+        })
+      });
+      if (!res.ok) throw new Error("ไม่สามารถบันทึกการตั้งค่าได้");
+      setConfigMessage("บันทึกการตั้งค่าหน้าหลักระบบเรียบร้อยแล้ว");
+      setTimeout(() => setConfigMessage(""), 3000);
+      fetchConfig();
+    } catch (err) {
+      notify.error(err.message);
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
   const fetchScreensavers = async () => {
     setLoading(true);
@@ -100,7 +153,7 @@ export default function ScreensaverManagement() {
     // Check image extension
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
     if (!allowedTypes.includes(file.type)) {
-      alert("ขออภัย! ระบบอนุญาตเฉพาะไฟล์รูปภาพ (JPEG, PNG, WebP) เท่านั้น");
+      notify.warning("ขออภัย! ระบบอนุญาตเฉพาะไฟล์รูปภาพ (JPEG, PNG, WebP) เท่านั้น");
       e.target.value = null;
       return;
     }
@@ -124,7 +177,7 @@ export default function ScreensaverManagement() {
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ");
       return data.image;
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
       throw err;
     } finally {
       setUploadProgress(false);
@@ -184,7 +237,13 @@ export default function ScreensaverManagement() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("คุณต้องการลบสื่อโฆษณาหน้าจอพักนี้ใช่หรือไม่?")) return;
+    const confirmed = await confirmDialog({
+      title: "ลบสื่อโฆษณาหน้าจอพัก?",
+      message: "คุณต้องการลบสื่อโฆษณาหน้าจอพักนี้ใช่หรือไม่?",
+      confirmText: "ลบสื่อโฆษณา",
+      variant: "danger",
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/screensavers/${id}`, {
@@ -195,7 +254,7 @@ export default function ScreensaverManagement() {
       if (!res.ok) throw new Error(data.error || "ลบไม่สำเร็จ");
       fetchScreensavers();
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
@@ -211,7 +270,7 @@ export default function ScreensaverManagement() {
       if (!res.ok) throw new Error(data.error || "สลับสถานะไม่สำเร็จ");
       fetchScreensavers();
     } catch (err) {
-      alert(err.message);
+      notify.error(err.message);
     }
   };
 
@@ -235,6 +294,14 @@ export default function ScreensaverManagement() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/dashboard/reports")}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
+          >
+            <DocumentChartBarIcon className="w-4.5 h-4.5" />
+            <span>ออกรายงานสรุป</span>
+          </button>
+
           <button
             onClick={() => navigate("/dashboard/orders")}
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
@@ -263,7 +330,147 @@ export default function ScreensaverManagement() {
 
       {/* Main content */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+
+        {/* Section 1: Master Screen Config Card */}
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-orange-500/10 rounded-3xl border border-amber-200/80 p-6 shadow-xs flex flex-col gap-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-200/60 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#F8C032] rounded-2xl flex items-center justify-center text-[#2B2B2B] shadow-sm">
+                <SparklesIcon className="w-7 h-7 stroke-[2]" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[#2B2B2B]">การตั้งค่าหน้าหลักระบบ (Master Screen Settings)</h2>
+                <p className="text-xs text-gray-500">หน้าหลักระบบที่มีสินค้าแนะนำ + Live Clock ที่จะเล่นวนรวมกับสไลด์โฆษณา</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {configMessage && (
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 animate-fade-in">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-500" />
+                  {configMessage}
+                </span>
+              )}
+
+              <button
+                onClick={() => handleSaveConfig()}
+                disabled={savingConfig}
+                className="px-5 py-2 bg-[#2B2B2B] hover:bg-black text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                {savingConfig ? "กำลังบันทึก..." : "บันทึกการตั้งค่าหน้าหลัก"}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Toggle & Duration controls */}
+            <div className="bg-white rounded-2xl border border-amber-100 p-4 flex flex-col justify-between gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-gray-800">เปิดใช้ Master Screen</h3>
+                  <p className="text-[11px] text-gray-400">เล่นหน้าหลักรวมใน Carousel สไลด์</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMasterEnabled(!masterEnabled)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    masterEnabled ? "bg-amber-500" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      masterEnabled ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                <div className="flex items-center gap-1.5">
+                  <ClockIcon className="w-4 h-4 text-amber-600" />
+                  <span className="text-xs font-bold text-gray-700">ระยะเวลาแสดงผล:</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="3"
+                    max="60"
+                    value={masterDuration}
+                    onChange={(e) => setMasterDuration(parseInt(e.target.value, 10) || 10)}
+                    className="w-16 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-center text-gray-800 outline-none focus:border-amber-400"
+                  />
+                  <span className="text-xs text-gray-500">วินาที</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Featured Products Selector Card */}
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-amber-100 p-4 flex flex-col gap-3 justify-between">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    <span>สินค้าแนะนำบน Master Screen</span>
+                    <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {featuredProductIds.length} / 4 รายการ
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-gray-400">เลือกสินค้าเฉพาะมาขึ้นการ์ดพรีวิวบนหน้าพักหน้าจอหลัก</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFeaturedModalOpen(true)}
+                  className="px-3.5 py-1.5 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold rounded-xl text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <SparklesIcon className="w-4 h-4 stroke-[2]" />
+                  <span>จัดการสินค้าแนะนำ</span>
+                </button>
+              </div>
+
+              {/* Featured products preview cards */}
+              <div className="grid grid-cols-4 gap-2">
+                {[0, 1, 2, 3].map((index) => {
+                  const prod = featuredProducts[index];
+                  return (
+                    <div
+                      key={index}
+                      className={`h-16 rounded-xl border p-1.5 flex items-center gap-2 overflow-hidden ${
+                        prod
+                          ? "border-amber-200 bg-amber-50/40"
+                          : "border-dashed border-gray-200 bg-gray-50 justify-center"
+                      }`}
+                    >
+                      {prod ? (
+                        <>
+                          <div className="w-8 h-8 min-w-[2rem] bg-white rounded-lg border border-amber-100 overflow-hidden flex items-center justify-center p-0.5">
+                            {prod.image ? (
+                              <img
+                                src={prod.image.startsWith('/') || prod.image.startsWith('http') ? prod.image : `/uploads/products/${prod.image}`}
+                                alt={prod.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <span className="text-xs">📦</span>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-bold text-gray-800 truncate">{prod.name}</p>
+                            <p className="text-[10px] font-black text-amber-700">฿{parseFloat(prod.price).toLocaleString("th-TH")}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-[10px] font-medium text-gray-400">Best Seller</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2: Ads Management Title & Action Bar */}
+        <div className="flex items-center justify-between mt-2">
           <div>
             <h2 className="text-lg font-bold text-gray-800">รายการสื่อโฆษณาในระบบ Kiosk</h2>
             <p className="text-xs text-gray-400 mt-0.5">เฉพาะสื่อที่เป็นประเภทรูปภาพ (JPEG, PNG, WebP) เท่านั้น</p>
@@ -476,6 +683,17 @@ export default function ScreensaverManagement() {
           </div>
         </div>
       )}
+
+      {/* Featured Products Selection Modal */}
+      <FeaturedProductModal
+        isOpen={isFeaturedModalOpen}
+        onClose={() => setIsFeaturedModalOpen(false)}
+        initialSelectedIds={featuredProductIds}
+        onSave={(newIds) => {
+          setFeaturedProductIds(newIds);
+          handleSaveConfig(newIds);
+        }}
+      />
     </div>
   );
 }

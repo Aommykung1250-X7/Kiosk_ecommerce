@@ -27,7 +27,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
     // อนุญาตให้เรนเดอร์คอมโพเนนต์ย่อยด้านใน
     return <Outlet />;
-  } catch (error) {
+  } catch {
     // ป้องกันกรณีมีข้อมูลขยะใน localStorage
     localStorage.clear();
     return <Navigate to="/ditc-portal-to-manager" replace />;

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { XMarkIcon, MinusIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { ShoppingCartIcon, ShoppingBagIcon } from "@heroicons/react/24/solid";
+import { notify } from "./notify";
 
 function CategoryPlaceholder({ category }) {
   const getIcon = () => {
@@ -73,7 +74,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
   let shippingFee = 0;
   if (deliveryOption === "delivery") {
     if (isMixed && shippingOption === "split") {
-      shippingFee = shippingSettings.baseShippingFee * 2;
+      shippingFee = shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee);
     } else {
       shippingFee = shippingSettings.baseShippingFee;
     }
@@ -220,7 +221,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                             onClick={() => {
                               const limit = product.purchaseLimit || product.purchase_limit;
                               if (limit && quantity >= limit) {
-                                alert(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+                                notify.warning(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
                                 return;
                               }
                               onUpdateQuantity(product.id, quantity + 1);
@@ -298,7 +299,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                         />
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-[#2B2B2B]">แยกจัดส่งสินค้า (บวกค่าส่งเพิ่ม)</span>
-                          <span className="text-[10px] text-gray-400">ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{(shippingSettings.baseShippingFee * 2).toLocaleString('th-TH')})</span>
+                          <span className="text-[10px] text-gray-400">ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{(shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee)).toLocaleString('th-TH')})</span>
                         </div>
                       </label>
                     </div>

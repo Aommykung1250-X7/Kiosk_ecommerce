@@ -24,21 +24,11 @@ class ProductService {
   /**
    * Process product requests based on business rules
    * @param {string} [category]
+   * @param {string} [search]
    * @returns {Promise<Array>}
    */
-  async getProducts(category) {
-    // If no category specified or "all", return everything
-    if (!category || category === "all") {
-      return await productRepository.getAll();
-    }
-
-    // Special category filter for promotion products
-    if (category === "promotion") {
-      return await productRepository.getPromotions();
-    }
-
-    // Otherwise, filter by the specific category
-    return await productRepository.getByCategory(category);
+  async getProducts(category, search) {
+    return await productRepository.getProducts({ category, search });
   }
 
   /**
@@ -96,6 +86,26 @@ class ProductService {
    */
   async getBestSellers() {
     return await productRepository.getBestSellers();
+  }
+
+  /**
+   * Fetch popular search tags
+   * @returns {Promise<Array<string>>}
+   */
+  async getPopularSearchTags() {
+    return await productRepository.getPopularSearchTags();
+  }
+
+  /**
+   * Update popular search tags
+   * @param {Array<string>} tags 
+   */
+  async updatePopularSearchTags(tags) {
+    if (!Array.isArray(tags)) {
+      throw new Error("Tags must be an array of strings.");
+    }
+    const cleanTags = tags.map(t => String(t).trim()).filter(t => t.length > 0);
+    return await productRepository.updatePopularSearchTags(cleanTags);
   }
 }
 

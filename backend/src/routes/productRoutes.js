@@ -38,15 +38,21 @@ const productUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// Route: GET /api/products
+// Route: GET /api/products & Settings
 router.get("/products", (req, res) => productController.getProducts(req, res));
 router.get("/products/bestsellers", (req, res) => productController.getBestSellers(req, res));
+router.get("/settings/search-tags", (req, res) => productController.getPopularSearchTags(req, res));
+router.post("/settings/search-tags", authenticateJWT, checkRole(["admin"]), (req, res) => productController.updatePopularSearchTags(req, res));
 
 // Admin-only CRUD routes
 router.post("/products/upload", authenticateJWT, checkRole(["admin"]), (req, res, next) => {
-  productUpload.single("image")(req, res, (err) => {
+  productUpload.array("images", 5)(req, res, (err) => {
     if (err) {
-      return res.status(400).json({ error: err.message || "Invalid upload." });
+      // Fallback if field name 'image' was used
+      return productUpload.single("image")(req, res, (err2) => {
+        if (err2) return res.status(400).json({ error: err2.message || "Invalid upload." });
+        next();
+      });
     }
     next();
   });

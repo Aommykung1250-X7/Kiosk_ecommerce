@@ -9,15 +9,18 @@ class ProductController {
    */
   async getProducts(req, res) {
     try {
-      const { category } = req.query;
+      const { category, search } = req.query;
 
       // Basic input validation/safety
       if (category !== undefined && typeof category !== "string") {
         return res.status(400).json({ error: "Query parameter 'category' must be a string." });
       }
+      if (search !== undefined && typeof search !== "string") {
+        return res.status(400).json({ error: "Query parameter 'search' must be a string." });
+      }
 
       // Business logic delegation
-      const products = await productService.getProducts(category);
+      const products = await productService.getProducts(category, search);
 
       // Return success response
       return res.json(products);
@@ -109,16 +112,58 @@ class ProductController {
    */
   async uploadProductImage(req, res) {
     try {
+      if (req.files && req.files.length > 0) {
+        const filenames = req.files.map(f => f.filename);
+        const urls = filenames.map(fn => `/uploads/products/${fn}`);
+        return res.status(201).json({
+          success: true,
+          image: filenames[0],
+          images: filenames,
+          url: urls[0],
+          urls: urls
+        });
+      }
       if (!req.file) {
-        return res.status(400).json({ error: "Please upload an image file." });
+        return res.status(400).json({ error: "Please upload image file(s)." });
       }
       return res.status(201).json({
         success: true,
         image: req.file.filename,
-        url: `/uploads/products/${req.file.filename}`
+        images: [req.file.filename],
+        url: `/uploads/products/${req.file.filename}`,
+        urls: [`/uploads/products/${req.file.filename}`]
       });
     } catch (error) {
       console.error("Error in ProductController.uploadProductImage:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+  /**
+   * Handle GET /api/settings/search-tags
+   */
+  async getPopularSearchTags(req, res) {
+    try {
+      const tags = await productService.getPopularSearchTags();
+      return res.json({ popularSearchTags: tags });
+    } catch (error) {
+      console.error("Error in ProductController.getPopularSearchTags:", error);
+      return res.status(500).json({ error: "Internal server error occurred." });
+    }
+  }
+
+  /**
+   * Handle POST /api/settings/search-tags
+   */
+  async updatePopularSearchTags(req, res) {
+    try {
+      const { popularSearchTags } = req.body;
+      if (!Array.isArray(popularSearchTags)) {
+        return res.status(400).json({ error: "popularSearchTags must be an array of strings." });
+      }
+      const updated = await productService.updatePopularSearchTags(popularSearchTags);
+      return res.json({ message: "Popular search tags updated successfully.", popularSearchTags: updated });
+    } catch (error) {
+      console.error("Error in ProductController.updatePopularSearchTags:", error);
       return res.status(500).json({ error: "Internal server error occurred." });
     }
   }

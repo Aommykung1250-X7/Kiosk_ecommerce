@@ -1,18 +1,44 @@
 // src/components/KioskPayment.jsx
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { CheckCircleIcon, ArrowPathIcon, EnvelopeIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, ArrowPathIcon, EnvelopeIcon, PhoneIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { notify } from "./notify";
 
 export default function KioskPayment({ orderId, totalPrice, qrPayload, onPaymentSuccess, onCancel }) {
   const [paymentStatus, setPaymentStatus] = useState("pending");
   const [countdown, setCountdown] = useState(10);
+  const [payTimerSeconds, setPayTimerSeconds] = useState(300); // 5 minutes (300 seconds)
+
+  const formatMMSS = (totalSec) => {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  // 5-minute Payment Countdown Timer
+  useEffect(() => {
+    if (paymentStatus === "pending") {
+      const timer = setInterval(() => {
+        setPayTimerSeconds((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            notify.warning("หมดเวลาชำระเงิน ระบบยกเลิกคำสั่งซื้อเรียบร้อยแล้ว");
+            onCancel();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [paymentStatus, onCancel]);
 
   // Form states for contact info
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [submittingContact, setSubmittingContact] = useState(false);
-  const [simulatingPayment, setSimulatingPayment] = useState(false);
 
   useEffect(() => {
     if (contactSubmitted && paymentStatus === "pending") {
@@ -78,28 +104,15 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
     }
   }, [orderId, paymentStatus, contactSubmitted, onPaymentSuccess]);
 
-  const handleSimulatePayment = () => {
-    setSimulatingPayment(true);
-    fetch("/api/payments/simulate-webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId })
-    })
-      .then((res) => res.json())
-      .then(() => {
-        // SSE will capture this or polling will capture this
-      })
-      .catch((err) => console.error("Error simulating payment:", err))
-      .finally(() => setSimulatingPayment(false));
-  };
-
   const handleContactSubmit = (e) => {
     e.preventDefault();
     if (!phone || !/^\d{10}$/.test(phone)) {
-      return alert("กรุณากรอกเบอร์โทรศัพท์ 10 หลักให้ถูกต้อง");
+      notify.warning("กรุณากรอกเบอร์โทรศัพท์ 10 หลักให้ถูกต้อง");
+      return;
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return alert("กรุณากรอกอีเมลให้ถูกต้อง");
+      notify.warning("กรุณากรอกอีเมลให้ถูกต้อง");
+      return;
     }
 
     setSubmittingContact(true);
@@ -115,7 +128,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
       .then(() => {
         setContactSubmitted(true);
       })
-      .catch((err) => alert(err.message))
+      .catch((err) => notify.error(err.message))
       .finally(() => setSubmittingContact(false));
   };
 
@@ -209,7 +222,11 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
             <div className="flex flex-col items-center justify-center gap-4 py-4 bg-gray-50 rounded-2xl border border-gray-100 relative">
               {qrPayload ? (
                 <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-                  <QRCodeSVG value={qrPayload} size={200} />
+                  {qrPayload.startsWith("http://") || qrPayload.startsWith("https://") ? (
+                    <img src={qrPayload} alt="PromptPay QR Code" className="w-[200px] h-[200px] object-contain" />
+                  ) : (
+                    <QRCodeSVG value={qrPayload} size={200} />
+                  )}
                 </div>
               ) : (
                 <div className="h-[232px] flex flex-col items-center justify-center text-gray-400">
@@ -222,18 +239,22 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
               </span>
             </div>
 
-            {/* Price & Contact summary */}
-            <div className="flex flex-col gap-2 bg-[#F8C032]/10 p-4 rounded-2xl border border-[#F8C032]/20">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500 font-medium">ยอดเงินชำระทั้งหมด</span>
-                <span className="text-xl font-extrabold text-[#E53935]">
-                  ฿{totalPrice.toLocaleString('th-TH')}
-                </span>
-              </div>
-              <div className="text-[11px] text-gray-500 border-t border-gray-200/50 pt-2 flex justify-between font-mono">
-                <span>📱 {phone}</span>
-                <span>✉️ {email}</span>
-              </div>
+            {/* 5-minute Payment Countdown Badge */}
+            <div className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs font-bold transition-all ${
+              payTimerSeconds <= 60
+                ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
+                : "bg-amber-50 border-amber-200 text-amber-800"
+            }`}>
+              <ClockIcon className="w-4.5 h-4.5 text-amber-600 shrink-0" />
+              <span>กรุณาสแกนชำระเงินภายใน: <strong className="font-mono text-sm font-black">{formatMMSS(payTimerSeconds)}</strong> นาที</span>
+            </div>
+
+            {/* Price summary */}
+            <div className="flex flex-col items-center justify-center gap-1 bg-[#F8C032]/10 p-4 rounded-2xl border border-[#F8C032]/20 text-center">
+              <span className="text-xs text-gray-500 font-medium">ยอดเงินชำระทั้งหมด</span>
+              <span className="text-2xl font-extrabold text-[#E53935]">
+                ฿{totalPrice.toLocaleString('th-TH')}
+              </span>
             </div>
 
             {/* Real-time Loader */}
@@ -241,15 +262,6 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
               <ArrowPathIcon className="w-4 h-4 animate-spin shrink-0" />
               <span>ระบบตรวจสอบการชำระเงินเรียลไทม์...</span>
             </div>
-
-            {/* Simulate Payment for Dev */}
-            <button
-              onClick={handleSimulatePayment}
-              disabled={simulatingPayment}
-              className="py-2.5 px-4 rounded-xl bg-[#F8C032]/20 text-[#A24B2C] hover:bg-[#F8C032]/30 active:scale-95 transition-all text-xs font-bold border border-[#F8C032]/30 cursor-pointer"
-            >
-              {simulatingPayment ? "กำลังจำลอง..." : "⚡ จำลองการโอนสำเร็จ (Simulate Webhook)"}
-            </button>
 
             {/* Cancel Order Button */}
             <button

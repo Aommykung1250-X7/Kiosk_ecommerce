@@ -84,7 +84,7 @@ export default class FlashExpressProvider extends BaseShippingProvider {
         // ข้อมูลผู้รับผู้ส่งและพัสดุ
         outTradeNo: `ORDER-${order.id}-${Date.now()}`, // เลขอ้างอิงของร้านค้า
         expressType: "1", // 1 = Standard Delivery
-        srcName: "DIIC Shop Kiosk Store",
+        srcName: "DITC Shop Kiosk Store",
         srcPhone: "020000000",
         srcProvince: "กรุงเทพมหานคร",
         srcCity: "คลองเตย",

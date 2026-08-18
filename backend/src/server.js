@@ -12,6 +12,8 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import memberRoutes from "./routes/memberRoutes.js";
 import screensaverRoutes from "./routes/screensaverRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import settingRoutes from "./routes/settingRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 import { initDb } from "./data/db.js";
 import { getAllowedOrigins } from "./config/security.js";
 
@@ -44,6 +46,8 @@ app.use("/api", paymentRoutes);
 app.use("/api", memberRoutes);
 app.use("/api", screensaverRoutes);
 app.use("/api", categoryRoutes);
+app.use("/api", settingRoutes);
+app.use("/api/admin/reports", reportRoutes);
 
 await initDb();
 

@@ -1,4 +1,151 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* ---------------------------------------------------------------------------
+   Design tokens
+   ---------------------------------------------------------------------------
+   ค่าสีเหล่านี้สกัดมาจากสีที่ใช้งานจริงทั่วทั้งโปรเจกต์ (ดูจำนวนครั้งที่ใช้ในคอมเมนต์)
+   ประกาศไว้ที่นี่เพื่อให้ระบบแจ้งเตือน (notify) เรียกใช้เป็น utility ได้
+   เช่น bg-brand / text-ink / border-danger โดยไม่ต้องเขียน hex ซ้ำ
+--------------------------------------------------------------------------- */
+@theme {
+  --color-brand: #F8C032;         /* สีหลักของแบรนด์ (ใช้ 147 ครั้ง) */
+  --color-brand-hover: #F0B420;   /* สีหลักตอน hover (ใช้ 20 ครั้ง) */
+  --color-ink: #2B2B2B;           /* สีตัวอักษรหลัก (ใช้ 81 ครั้ง) */
+  --color-surface-dark: #1B1B1C;  /* พื้นหลังเข้ม / หัวโมดัล (ใช้ 53 ครั้ง) */
+  --color-danger: #E53935;        /* สีแจ้งเตือนผิดพลาด (ใช้ 15 ครั้ง) */
+  --color-warning: #E65100;       /* สีคำเตือน (ใช้ 10 ครั้ง) */
+  --color-success: #2E7D32;       /* สีสำเร็จ (ใช้ 5 ครั้ง) */
+  --color-info: #5EBAA8;          /* สีข้อมูลทั่วไป (ใช้ 18 ครั้ง) */
+  --color-app-bg: #F8F8F8;        /* พื้นหลังแอป (ใช้ 3 ครั้ง) */
+}
+
+/* ---------------------------------------------------------------------------
+   ระดับ z-index ของโปรเจกต์ (เรียงจากล่างขึ้นบน)
+   10/20/25/30 = เนื้อหาในหน้า, แถบนำทาง, dropdown
+   40          = ปุ่มลอยเหนือเนื้อหา
+   50          = โมดัลและ overlay เดิมทั้งหมด
+   60          = overlay เต็มจอของหน้า Home
+   70          = confirmDialog ของระบบแจ้งเตือน
+   80          = toast (อยู่บนสุดเสมอ เพื่อให้เห็นแม้ขณะเปิดโมดัล)
+--------------------------------------------------------------------------- */
+
+/* แอนิเมชันของระบบแจ้งเตือน */
+@keyframes notify-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes notify-toast-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes notify-toast-in-center {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes notify-toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 220px;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px) scale(0.96);
+    max-height: 0;
+  }
+}
+
+@keyframes notify-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes notify-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes notify-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.notify-toast-enter {
+  animation: notify-toast-in 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.notify-toast-enter-left {
+  animation: notify-toast-in-left 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.notify-toast-enter-center {
+  animation: notify-toast-in-center 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.notify-toast-leave {
+  animation: notify-toast-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  overflow: hidden;
+}
+
+.notify-backdrop-enter {
+  animation: notify-backdrop-in 220ms ease-out forwards;
+}
+
+.notify-dialog-enter {
+  animation: notify-dialog-in 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.notify-progress-bar {
+  transform-origin: left center;
+  animation: notify-progress linear forwards;
+}
+
+/* เคารพการตั้งค่าลดการเคลื่อนไหวของระบบปฏิบัติการผู้ใช้ */
+@media (prefers-reduced-motion: reduce) {
+  .notify-toast-enter,
+  .notify-toast-enter-left,
+  .notify-toast-enter-center,
+  .notify-toast-leave,
+  .notify-backdrop-enter,
+  .notify-dialog-enter {
+    animation-duration: 1ms;
+    animation-timing-function: linear;
+  }
+
+  .notify-progress-bar {
+    animation: none;
+    transform: scaleX(1);
+    opacity: 0.35;
+  }
+}
 
 html,
 body {

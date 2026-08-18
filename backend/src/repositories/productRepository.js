@@ -3,25 +3,99 @@ import pool from "../data/db.js";
 
 class ProductRepository {
   /**
+   * Fetch products with optional category and search filters
+   * @param {object} params
+   * @param {string} [params.category]
+   * @param {string} [params.search]
+   * @returns {Promise<Array>}
+   */
+  /**
+   * Helper to fetch all product images for product IDs
+   */
+  async fetchImagesForProducts(productIds) {
+    if (!productIds || productIds.length === 0) return {};
+    const res = await pool.query(
+      `SELECT product_id, image_url, is_primary, display_order 
+       FROM product_images 
+       WHERE product_id = ANY($1) 
+       ORDER BY is_primary DESC, display_order ASC, id ASC`,
+      [productIds]
+    );
+    const imagesMap = {};
+    res.rows.forEach(row => {
+      if (!imagesMap[row.product_id]) {
+        imagesMap[row.product_id] = [];
+      }
+      imagesMap[row.product_id].push(row.image_url);
+    });
+    return imagesMap;
+  }
+
+  async getProducts({ category, search } = {}) {
+    try {
+      let query = `
+        SELECT DISTINCT p.* 
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+      `;
+      const whereConditions = [];
+      const queryParams = [];
+
+      if (category && category !== "all") {
+        if (category === "promotion") {
+          whereConditions.push(`p.promotion = true`);
+        } else {
+          queryParams.push(category);
+          whereConditions.push(`p.category_id = $${queryParams.length}`);
+        }
+      }
+
+      if (search && search.trim() !== "") {
+        queryParams.push(`%${search.trim()}%`);
+        const paramIdx = queryParams.length;
+        whereConditions.push(
+          `(p.name ILIKE $${paramIdx} OR p.description ILIKE $${paramIdx} OR p.category_id ILIKE $${paramIdx} OR c.name ILIKE $${paramIdx})`
+        );
+      }
+
+      if (whereConditions.length > 0) {
+        query += " WHERE " + whereConditions.join(" AND ");
+      }
+
+      query += " ORDER BY p.id ASC";
+
+      const res = await pool.query(query, queryParams);
+      const productIds = res.rows.map(r => r.id);
+      const imagesMap = await this.fetchImagesForProducts(productIds);
+
+      return res.rows.map(row => {
+        const dbImages = imagesMap[row.id] || [];
+        const fallbackImage = dbImages.length > 0 ? dbImages[0] : row.image;
+        const imagesList = dbImages.length > 0 ? dbImages : (row.image ? [row.image] : []);
+        return {
+          ...row,
+          category: row.category_id,
+          image: fallbackImage,
+          images: imagesList.slice(0, 5),
+          price: parseFloat(row.price),
+          quantity: row.stock,
+          pickupLocation: row.pickup_location,
+          preorderReleaseDate: row.preorder_release_date,
+          purchaseLimit: row.purchase_limit
+        };
+      });
+    } catch (error) {
+      console.error("Error in ProductRepository.getProducts:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Fetch all products from the PostgreSQL database
    * @returns {Promise<Array>}
    */
   async getAll() {
-    try {
-      const res = await pool.query("SELECT * FROM products ORDER BY id ASC");
-      return res.rows.map(row => ({
-        ...row,
-        price: parseFloat(row.price),
-        // แมปชื่อฟิลด์จาก Database (snake_case) เป็นฟิลด์ที่หน้าบ้านใช้ (camelCase)
-        quantity: row.stock,
-        pickupLocation: row.pickup_location,
-        preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit
-      }));
-    } catch (error) {
-      console.error("Error in ProductRepository.getAll:", error);
-      throw error;
-    }
+    return this.getProducts({ category: "all" });
   }
 
   /**
@@ -30,23 +104,7 @@ class ProductRepository {
    * @returns {Promise<Array>}
    */
   async getByCategory(category) {
-    try {
-      const res = await pool.query(
-        "SELECT * FROM products WHERE category = $1 ORDER BY id ASC",
-        [category]
-      );
-      return res.rows.map(row => ({
-        ...row,
-        price: parseFloat(row.price),
-        quantity: row.stock,
-        pickupLocation: row.pickup_location,
-        preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit
-      }));
-    } catch (error) {
-      console.error("Error in ProductRepository.getByCategory:", error);
-      throw error;
-    }
+    return this.getProducts({ category });
   }
 
   /**
@@ -54,22 +112,7 @@ class ProductRepository {
    * @returns {Promise<Array>}
    */
   async getPromotions() {
-    try {
-      const res = await pool.query(
-        "SELECT * FROM products WHERE promotion = true ORDER BY id ASC"
-      );
-      return res.rows.map(row => ({
-        ...row,
-        price: parseFloat(row.price),
-        quantity: row.stock,
-        pickupLocation: row.pickup_location,
-        preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit
-      }));
-    } catch (error) {
-      console.error("Error in ProductRepository.getPromotions:", error);
-      throw error;
-    }
+    return this.getProducts({ category: "promotion" });
   }
 
   /**
@@ -77,15 +120,39 @@ class ProductRepository {
    * @param {object} p - Product details
    */
   async create(p) {
+    const rawImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.slice(0, 5) : (p.image ? [p.image] : []);
+    const primaryImg = rawImages.length > 0 ? rawImages[0] : (p.image || null);
+
     const query = `
-      INSERT INTO products (name, description, price, stock, category, image, promotion, pickup_location, status, preorder_release_date, purchase_limit)
+      INSERT INTO products (name, description, price, stock, category_id, image, promotion, pickup_location, status, preorder_release_date, purchase_limit)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock || 0, p.category, p.image, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null];
+    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null];
     try {
       const res = await pool.query(query, values);
-      return res.rows[0];
+      const newProduct = res.rows[0];
+
+      // Save up to 5 images into product_images
+      if (rawImages.length > 0) {
+        await pool.query("DELETE FROM product_images WHERE product_id = $1", [newProduct.id]);
+        for (let i = 0; i < rawImages.length; i++) {
+          const imgUrl = rawImages[i];
+          if (imgUrl && imgUrl.trim() !== '') {
+            await pool.query(
+              `INSERT INTO product_images (product_id, image_url, display_order, is_primary)
+               VALUES ($1, $2, $3, $4)`,
+              [newProduct.id, imgUrl.trim(), i, i === 0]
+            );
+          }
+        }
+      }
+
+      return {
+        ...newProduct,
+        image: primaryImg,
+        images: rawImages
+      };
     } catch (error) {
       console.error("Error in ProductRepository.create:", error);
       throw error;
@@ -98,17 +165,40 @@ class ProductRepository {
    * @param {object} p - Product details
    */
   async update(id, p) {
+    const rawImages = Array.isArray(p.images) && p.images.length > 0 ? p.images.slice(0, 5) : (p.image ? [p.image] : []);
+    const primaryImg = rawImages.length > 0 ? rawImages[0] : (p.image || null);
+
     const query = `
       UPDATE products 
-      SET name = $1, description = $2, price = $3, stock = $4, category = $5, image = $6, promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11
+      SET name = $1, description = $2, price = $3, stock = $4, category_id = $5, image = COALESCE($6, image), promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11
       WHERE id = $12
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock, p.category, p.image, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, id];
+    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, id];
     try {
       const res = await pool.query(query, values);
       if (res.rows.length === 0) return null;
-      return res.rows[0];
+      const updatedProduct = res.rows[0];
+
+      if (Array.isArray(p.images)) {
+        await pool.query("DELETE FROM product_images WHERE product_id = $1", [id]);
+        for (let i = 0; i < rawImages.length; i++) {
+          const imgUrl = rawImages[i];
+          if (imgUrl && imgUrl.trim() !== '') {
+            await pool.query(
+              `INSERT INTO product_images (product_id, image_url, display_order, is_primary)
+               VALUES ($1, $2, $3, $4)`,
+              [id, imgUrl.trim(), i, i === 0]
+            );
+          }
+        }
+      }
+
+      return {
+        ...updatedProduct,
+        image: primaryImg || updatedProduct.image,
+        images: rawImages.length > 0 ? rawImages : [updatedProduct.image]
+      };
     } catch (error) {
       console.error("Error in ProductRepository.update:", error);
       throw error;
@@ -181,11 +271,11 @@ class ProductRepository {
           p.*,
           COALESCE(
             (
-              SELECT SUM((item->>'quantity')::int)
-              FROM orders o,
-                   jsonb_array_elements(o.items) AS item
+              SELECT SUM(oi.quantity)::int
+              FROM order_items oi
+              JOIN orders o ON o.id = oi.order_id
               WHERE o.payment_status = 'paid' 
-                AND (item->'product'->>'id')::int = p.id
+                AND oi.product_id = p.id
             ), 0
           ) AS sold_count
         FROM products p
@@ -227,6 +317,40 @@ class ProductRepository {
       };
     } catch (error) {
       console.error("Error in ProductRepository.getById:", error);
+      throw error;
+    }
+  }
+  /**
+   * Fetch popular search tags from system_settings
+   * @returns {Promise<Array<string>>}
+   */
+  async getPopularSearchTags() {
+    try {
+      const res = await pool.query("SELECT value FROM system_settings WHERE key = 'popular_search_tags'");
+      if (res.rows.length > 0 && res.rows[0].value) {
+        return JSON.parse(res.rows[0].value);
+      }
+      return ["น้ำดื่ม", "ชาเขียว", "เลย์", "KitKat", "แก้วน้ำ", "เสื้อ"];
+    } catch (error) {
+      console.error("Error in ProductRepository.getPopularSearchTags:", error);
+      return ["น้ำดื่ม", "ชาเขียว", "เลย์", "KitKat", "แก้วน้ำ", "เสื้อ"];
+    }
+  }
+
+  /**
+   * Update popular search tags in system_settings
+   * @param {Array<string>} tags 
+   */
+  async updatePopularSearchTags(tags) {
+    try {
+      const tagsJson = JSON.stringify(tags);
+      await pool.query(
+        "INSERT INTO system_settings (key, value) VALUES ('popular_search_tags', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+        [tagsJson]
+      );
+      return tags;
+    } catch (error) {
+      console.error("Error in ProductRepository.updatePopularSearchTags:", error);
       throw error;
     }
   }

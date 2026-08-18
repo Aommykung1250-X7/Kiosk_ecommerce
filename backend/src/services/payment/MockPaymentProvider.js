@@ -37,4 +37,9 @@ export default class MockPaymentProvider extends BasePaymentProvider {
 
     return payload;
   }
+
+  async cancelCharge(chargeId) {
+    console.log(`[MockPaymentProvider] Charge ${chargeId} cancelled.`);
+    return true;
+  }
 }

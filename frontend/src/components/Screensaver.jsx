@@ -119,6 +119,7 @@ const ILLUSTRATIONS = {
 export default function Screensaver({ onWake }) {
   const [time, setTime] = useState(new Date());
   const [bestSellers, setBestSellers] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [slides, setSlides] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
@@ -130,6 +131,7 @@ export default function Screensaver({ onWake }) {
   }, []);
 
   useEffect(() => {
+    // Fetch Best Sellers
     fetch("/api/products/bestsellers")
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch best sellers");
@@ -144,17 +146,36 @@ export default function Screensaver({ onWake }) {
   }, []);
 
   useEffect(() => {
-    fetch("/api/screensavers/active")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch screensavers");
-        return res.json();
-      })
-      .then((data) => {
-        setSlides(data || []);
-      })
-      .catch((err) => {
-        console.error("Error loading screensavers:", err);
-      });
+    // Fetch active screensavers and config in parallel
+    Promise.all([
+      fetch("/api/screensavers/active").then((res) => res.json()).catch(() => []),
+      fetch("/api/screensavers/config").then((res) => res.json()).catch(() => null)
+    ]).then(([activeAds, config]) => {
+      const ads = activeAds || [];
+      const masterEnabled = config ? config.masterEnabled !== false : true;
+      const masterDuration = config ? config.masterDuration || 10 : 10;
+      if (config && Array.isArray(config.featuredProducts)) {
+        setFeaturedProducts(config.featuredProducts);
+      }
+
+      const masterSlide = {
+        id: "default-master",
+        isMaster: true,
+        title: "หน้าหลักระบบ",
+        duration: masterDuration
+      };
+
+      if (masterEnabled) {
+        // Master screen is enabled: put it as first slide in carousel
+        setSlides([masterSlide, ...ads]);
+      } else if (ads.length > 0) {
+        // Master screen disabled: play only active backend ads
+        setSlides(ads);
+      } else {
+        // Master screen disabled but no ads available: fallback to master slide
+        setSlides([masterSlide]);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -189,8 +210,22 @@ export default function Screensaver({ onWake }) {
 
   const dateString = getThaiDateString(time);
 
+  // Combine featured products + best sellers for the 4 card slots on Master Screen
+  const getDisplayProducts = () => {
+    const combined = [...featuredProducts];
+    for (const bs of bestSellers) {
+      if (combined.length >= 4) break;
+      if (!combined.some((p) => Number(p.id) === Number(bs.id))) {
+        combined.push(bs);
+      }
+    }
+    return combined.slice(0, 4);
+  };
+
+  const displayProducts = getDisplayProducts();
+
   const renderCard = (index) => {
-    const product = bestSellers[index];
+    const product = displayProducts[index];
     const leftPositions = [
       "left-[6.37cqw]",
       "left-[29.75cqw]",
@@ -211,6 +246,9 @@ export default function Screensaver({ onWake }) {
     const { name, price, image } = product;
     const Illustration = ILLUSTRATIONS[image] || WaterDrop;
     const isCustomImage = image && (image.startsWith("http") || image.startsWith("/") || image.includes("."));
+    const imageSrc = isCustomImage
+      ? (image.startsWith("http") || image.startsWith("/") ? image : `/uploads/products/${image}`)
+      : null;
 
     return (
       <div
@@ -218,11 +256,14 @@ export default function Screensaver({ onWake }) {
         className={`absolute ${leftPositions[index]} top-[67.58cqh] w-[21.78cqw] h-[17.94cqh] bg-[#FAF3EB] rounded-[1.8cqw] border border-[#E1D2C1] p-[1.2cqw] flex flex-col items-center justify-between shadow-[0_2px_6px_rgba(61,46,36,0.05)] hover:scale-105 transition-transform duration-300`}
       >
         <div className="w-full flex-1 flex items-center justify-center p-[0.2cqw] overflow-hidden">
-          {isCustomImage ? (
+          {imageSrc ? (
             <img
-              src={image}
+              src={imageSrc}
               alt={name}
               className="w-auto h-full max-h-[8.5cqh] object-contain"
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
             />
           ) : (
             <div className="w-auto h-full max-h-[8.5cqh] flex items-center justify-center">
@@ -241,6 +282,9 @@ export default function Screensaver({ onWake }) {
       </div>
     );
   };
+
+  const currentSlide = slides[currentSlideIndex];
+  const isMasterSlide = currentSlide?.isMaster || slides.length === 0;
 
   return (
     <div
@@ -267,47 +311,50 @@ export default function Screensaver({ onWake }) {
         className="relative aspect-[941/1672] h-full max-h-screen w-auto bg-[#F4EEE8] shadow-2xl overflow-hidden"
         style={{ containerType: "size" }}
       >
-        {slides.length > 0 ? (
-          /* Render Active Slide Carousel */
-          <div className="w-full h-full relative">
-            <img
-              src={slides[currentSlideIndex].mediaUrl.startsWith("http") || slides[currentSlideIndex].mediaUrl.startsWith("blob")
-                ? slides[currentSlideIndex].mediaUrl
-                : `/uploads/screensavers/${slides[currentSlideIndex].mediaUrl}`
-              }
-              alt={slides[currentSlideIndex].title}
-              className="w-full h-full object-cover animate-fade-in transition-all duration-500"
-            />
-            {/* Slide Indicator Bar / Dots */}
-            <div className="absolute bottom-[4cqh] left-0 right-0 flex justify-center gap-[1.5cqw] z-10">
-              {slides.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`h-[1cqh] rounded-full transition-all duration-300 ${
-                    idx === currentSlideIndex ? "bg-[#F8C032] w-[6cqw]" : "bg-white/50 w-[2.5cqw]"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* Fallback Kiosk wait screen image background */
+        {isMasterSlide ? (
+          /* Render Master Screen (Default Wait Screen + 4 Dynamic Cards) */
           <>
             <img
               src="/wait_screen.png"
               alt="Lanna Souvenir Kiosk background"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover animate-fade-in transition-all duration-500"
             />
-            {/* Dynamic Product Cards Overlays - exactly covering static cards */}
-            { [0, 1, 2, 3].map(index => renderCard(index)) }
+            {/* Dynamic Product Cards Overlays */}
+            {[0, 1, 2, 3].map((index) => renderCard(index))}
           </>
+        ) : (
+          /* Render Backend Ad Media */
+          <div className="w-full h-full relative">
+            <img
+              src={
+                currentSlide.mediaUrl.startsWith("http") || currentSlide.mediaUrl.startsWith("blob")
+                  ? currentSlide.mediaUrl
+                  : `/uploads/screensavers/${currentSlide.mediaUrl}`
+              }
+              alt={currentSlide.title || "Kiosk Ad"}
+              className="w-full h-full object-cover animate-fade-in transition-all duration-500"
+            />
+          </div>
+        )}
+
+        {/* Slide Indicator Dots (when more than 1 slide exists) */}
+        {slides.length > 1 && (
+          <div className="absolute bottom-[4cqh] left-0 right-0 flex justify-center gap-[1.5cqw] z-30">
+            {slides.map((_, idx) => (
+              <div
+                key={idx}
+                className={`h-[1cqh] rounded-full transition-all duration-300 ${
+                  idx === currentSlideIndex ? "bg-[#F8C032] w-[6cqw]" : "bg-white/60 w-[2.5cqw]"
+                }`}
+              />
+            ))}
+          </div>
         )}
 
         {/* Live Clock Overlay - exactly covering static clock */}
         <div
-          className="absolute left-[78.4cqw] top-[1.2cqh] w-[19.8cqw] h-[7.17cqh] bg-[#E7DCCE] rounded-[1.6cqw] flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(61,46,36,0.08)] z-20"
+          className="absolute left-[78.4cqw] top-[1.2cqh] w-[19.8cqw] h-[7.17cqh] bg-[#E7DCCE] rounded-[1.6cqw] flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(61,46,36,0.08)] z-30"
           onClick={(e) => {
-            // Wake up on click
             onWake();
             e.stopPropagation();
           }}
