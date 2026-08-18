@@ -47,9 +47,11 @@ class AuthController {
         { expiresIn: "24h" }
       );
 
+      const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
+
       res.cookie("authToken", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: isSecure,
         sameSite: "lax",
         maxAge: 24 * 60 * 60 * 1000
       });
