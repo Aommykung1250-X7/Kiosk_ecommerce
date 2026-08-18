@@ -1,8 +1,8 @@
 // src/components/Screensaver.jsx
 import React, { useState, useEffect } from "react";
-import { ClockIcon } from "@heroicons/react/24/outline";
+import { ClockIcon, SparklesIcon, CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 
-// SVG Illustrations copied from ProductCard.jsx for self-containment
+// SVG Illustrations as fallbacks
 function WaterDrop() {
   return (
     <svg viewBox="0 0 100 100" className="w-full h-full">
@@ -49,7 +49,6 @@ function ChipsBag() {
   );
 }
 
-// src/components/Screensaver.jsx
 function WaferBag() {
   return (
     <svg viewBox="0 0 100 120" className="w-auto h-full">
@@ -136,7 +135,15 @@ export default function Screensaver({ onWake }) {
         return res.json();
       })
       .then((data) => {
-        setBestSellers(data.slice(0, 4));
+        if (Array.isArray(data) && data.length > 0) {
+          setBestSellers(data.slice(0, 4));
+        } else {
+          // Fallback to fetch normal products if bestsellers empty
+          fetch("/api/products")
+            .then((r) => r.json())
+            .then((pData) => setBestSellers((pData || []).slice(0, 4)))
+            .catch(() => {});
+        }
       })
       .catch((err) => {
         console.error("Error loading best sellers on screensaver:", err);
@@ -170,16 +177,11 @@ export default function Screensaver({ onWake }) {
     return () => clearTimeout(slideTimer);
   }, [slides, currentSlideIndex]);
 
-  const getThaiDateString = (date) => {
-    const months = [
-      "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-      "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-    ];
-    const day = date.getDate();
-    const month = months[date.getMonth()];
-    const yearBE = date.getFullYear() + 543;
-    return `${day} ${month} ${yearBE}`;
-  };
+  const thaiMonths = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  const thaiDays = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
   const timeString = time.toLocaleTimeString("th-TH", {
     hour: "2-digit",
@@ -187,139 +189,172 @@ export default function Screensaver({ onWake }) {
     hour12: false,
   });
 
-  const dateString = getThaiDateString(time);
-
-  const renderCard = (index) => {
-    const product = bestSellers[index];
-    const leftPositions = [
-      "left-[6.37cqw]",
-      "left-[29.75cqw]",
-      "left-[53.13cqw]",
-      "left-[76.51cqw]"
-    ];
-
-    if (!product) {
-      // Render a blank cover to hide the static cards in wait_screen.png
-      return (
-        <div
-          key={`blank-${index}`}
-          className={`absolute ${leftPositions[index]} top-[67.58cqh] w-[21.78cqw] h-[17.94cqh] bg-[#F2ECE4] rounded-[1.8cqw] border border-transparent`}
-        />
-      );
-    }
-
-    const { name, price, image } = product;
-    const Illustration = ILLUSTRATIONS[image] || WaterDrop;
-    const isCustomImage = image && (image.startsWith("http") || image.startsWith("/") || image.includes("."));
-
-    return (
-      <div
-        key={product.id || index}
-        className={`absolute ${leftPositions[index]} top-[67.58cqh] w-[21.78cqw] h-[17.94cqh] bg-[#FAF3EB] rounded-[1.8cqw] border border-[#E1D2C1] p-[1.2cqw] flex flex-col items-center justify-between shadow-[0_2px_6px_rgba(61,46,36,0.05)] hover:scale-105 transition-transform duration-300`}
-      >
-        <div className="w-full flex-1 flex items-center justify-center p-[0.2cqw] overflow-hidden">
-          {isCustomImage ? (
-            <img
-              src={image}
-              alt={name}
-              className="w-auto h-full max-h-[8.5cqh] object-contain"
-            />
-          ) : (
-            <div className="w-auto h-full max-h-[8.5cqh] flex items-center justify-center">
-              <Illustration />
-            </div>
-          )}
-        </div>
-        <div className="text-center w-full mt-[0.5cqw]">
-          <h4 className="text-[1.8cqw] font-bold text-[#3D2E24] line-clamp-1 px-[0.2cqw]">
-            {name}
-          </h4>
-          <p className="text-[1.9cqw] font-black text-[#A24B2C] mt-[0.1cqw]">
-            ฿ {parseFloat(price).toLocaleString('th-TH')}
-          </p>
-        </div>
-      </div>
-    );
-  };
+  const dateString = `วัน${thaiDays[time.getDay()]}ที่ ${time.getDate()} ${thaiMonths[time.getMonth()]} ${time.getFullYear() + 543}`;
 
   return (
     <div
       onClick={onWake}
-      className="absolute inset-0 z-50 bg-[#121214] flex items-center justify-center select-none cursor-pointer overflow-hidden font-['Prompt']"
+      className="fixed inset-0 z-50 bg-[#121214] flex items-center justify-center select-none cursor-pointer overflow-hidden font-['Prompt']"
     >
-      {/* Inject custom CSS keyframes for animations */}
       <style>{`
-        @keyframes wiggle-scale {
-          0%, 100% {
-            transform: rotate(-2.5deg) scale(0.97);
-          }
-          50% {
-            transform: rotate(2.5deg) scale(1.03);
-          }
+        @keyframes subtle-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.03); opacity: 0.95; }
         }
-        .animate-wiggle-scale {
-          animation: wiggle-scale 2.5s infinite ease-in-out;
+        @keyframes float-glow {
+          0%, 100% { box-shadow: 0 10px 30px rgba(162, 75, 44, 0.35); }
+          50% { box-shadow: 0 18px 45px rgba(248, 192, 50, 0.5); }
+        }
+        .animate-subtle-pulse {
+          animation: subtle-pulse 3s infinite ease-in-out;
+        }
+        .animate-float-glow {
+          animation: float-glow 2.5s infinite ease-in-out;
         }
       `}</style>
 
-      {/* Main Kiosk Container maintaining exact portrait ratio */}
-      <div
-        className="relative aspect-[941/1672] h-full max-h-screen w-auto bg-[#F4EEE8] shadow-2xl overflow-hidden"
-        style={{ containerType: "size" }}
-      >
-        {slides.length > 0 ? (
-          /* Render Active Slide Carousel */
-          <div className="w-full h-full relative">
-            <img
-              src={slides[currentSlideIndex].mediaUrl.startsWith("http") || slides[currentSlideIndex].mediaUrl.startsWith("blob")
-                ? slides[currentSlideIndex].mediaUrl
-                : `/uploads/screensavers/${slides[currentSlideIndex].mediaUrl}`
-              }
-              alt={slides[currentSlideIndex].title}
-              className="w-full h-full object-cover animate-fade-in transition-all duration-500"
-            />
-            {/* Slide Indicator Bar / Dots */}
-            <div className="absolute bottom-[4cqh] left-0 right-0 flex justify-center gap-[1.5cqw] z-10">
-              {slides.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`h-[1cqh] rounded-full transition-all duration-300 ${
-                    idx === currentSlideIndex ? "bg-[#F8C032] w-[6cqw]" : "bg-white/50 w-[2.5cqw]"
-                  }`}
-                />
-              ))}
+      {/* Main Kiosk Portrait Frame (9:16) */}
+      <div className="relative aspect-[9/16] h-full max-h-screen w-auto bg-gradient-to-b from-[#FAF3EB] via-[#F5ECE2] to-[#EFE4D6] shadow-2xl flex flex-col justify-between p-6 sm:p-8 overflow-hidden">
+        
+        {/* Lanna Pattern Texture Subtle Overlay */}
+        <div className="absolute inset-0 opacity-[0.035] pointer-events-none bg-[radial-gradient(#A24B2C_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
+
+        {/* 1. TOP HEADER: BRAND + CLOCK & DATE */}
+        <header className="relative z-10 flex justify-between items-center bg-white/80 backdrop-blur-md px-5 py-3.5 rounded-2xl sm:rounded-3xl border border-[#E8DCCF] shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#A24B2C] to-[#F8C032] flex items-center justify-center shadow-md shadow-[#A24B2C]/20 text-white font-black text-lg">
+              D
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-[#A24B2C] tracking-tight leading-none">
+                DIIC SHOP
+              </h1>
+              <p className="text-[10px] sm:text-xs font-semibold text-[#8C7A6B] uppercase tracking-widest mt-0.5">
+                Lanna Souvenir Kiosk
+              </p>
             </div>
           </div>
-        ) : (
-          /* Fallback Kiosk wait screen image background */
-          <>
-            <img
-              src="/wait_screen.png"
-              alt="Lanna Souvenir Kiosk background"
-              className="w-full h-full object-cover"
-            />
-            {/* Dynamic Product Cards Overlays - exactly covering static cards */}
-            { [0, 1, 2, 3].map(index => renderCard(index)) }
-          </>
-        )}
 
-        {/* Live Clock Overlay - exactly covering static clock */}
-        <div
-          className="absolute left-[78.4cqw] top-[1.2cqh] w-[19.8cqw] h-[7.17cqh] bg-[#E7DCCE] rounded-[1.6cqw] flex flex-col items-center justify-center shadow-[0_2px_8px_rgba(61,46,36,0.08)] z-20"
-          onClick={(e) => {
-            // Wake up on click
-            onWake();
-            e.stopPropagation();
-          }}
-        >
-          <div className="flex items-center gap-[0.5cqw] text-[#3D2E24]">
-            <ClockIcon className="w-[2.2cqw] h-[2.2cqw] stroke-[2.5]" />
-            <span className="text-[2.6cqw] font-bold leading-none">{timeString}</span>
+          <div className="flex items-center gap-2.5 sm:gap-3 text-right">
+            <div className="flex flex-col">
+              <span className="text-xl sm:text-2xl font-black text-[#3D2E24] leading-none">
+                {timeString}
+              </span>
+              <span className="text-[10px] sm:text-xs font-medium text-[#7D6B5C] mt-1">
+                {dateString}
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-[#F8C032]/20 flex items-center justify-center text-[#A24B2C]">
+              <ClockIcon className="w-5 h-5 stroke-[2.2]" />
+            </div>
           </div>
-          <div className="text-[1.25cqw] font-medium text-[#3D2E24]/80 mt-[0.3cqw] leading-none text-center">
-            {dateString}
+        </header>
+
+        {/* 2. CENTER HERO AREA (Slideshow or Attract Presentation) */}
+        <main className="relative z-10 flex-1 flex flex-col items-center justify-center my-4 sm:my-6 text-center">
+          {slides.length > 0 ? (
+            /* Custom Slide Media */
+            <div className="w-full max-h-[38vh] rounded-3xl overflow-hidden shadow-xl border border-white/70 mb-5 relative bg-black/5">
+              <img
+                src={
+                  slides[currentSlideIndex].mediaUrl.startsWith("http") ||
+                  slides[currentSlideIndex].mediaUrl.startsWith("blob")
+                    ? slides[currentSlideIndex].mediaUrl
+                    : `/uploads/screensavers/${slides[currentSlideIndex].mediaUrl}`
+                }
+                alt={slides[currentSlideIndex].title || "Screensaver Banner"}
+                className="w-full h-full object-cover transition-all duration-700"
+              />
+              {slides.length > 1 && (
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
+                  {slides.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        idx === currentSlideIndex ? "bg-[#F8C032] w-6" : "bg-white/60 w-2"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Default Brand Attract Content */
+            <div className="flex flex-col items-center mb-6 animate-subtle-pulse">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-[#A24B2C] via-[#C85E38] to-[#F8C032] flex items-center justify-center shadow-xl shadow-[#A24B2C]/25 mb-4 sm:mb-6">
+                <SparklesIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black text-[#3D2E24] leading-tight">
+                ยินดีต้อนรับสู่ <br />
+                <span className="bg-gradient-to-r from-[#A24B2C] to-[#E37400] bg-clip-text text-transparent">
+                  DIIC Shop
+                </span> ของฝากล้านนา
+              </h2>
+              <p className="text-xs sm:text-sm text-[#6E5D4F] mt-2 sm:mt-3 max-w-xs leading-relaxed">
+                คัดสรรของฝากและงานหัตถกรรมคุณภาพ ชำระเงินง่ายผ่านพร้อมเพย์ รับสินค้าได้ทันที
+              </p>
+            </div>
+          )}
+
+          {/* 3. INTERACTIVE TOUCH TO START BUTTON */}
+          <button
+            onClick={onWake}
+            className="group relative px-8 sm:px-10 py-4 sm:py-4.5 rounded-full bg-gradient-to-r from-[#A24B2C] to-[#C85E38] text-white font-bold text-lg sm:text-xl animate-float-glow flex items-center gap-3 border border-white/40 transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer shadow-lg"
+          >
+            <CursorArrowRaysIcon className="w-6 h-6 text-[#F8C032] animate-bounce" />
+            <span>แตะหน้าจอเพื่อเริ่มสั่งซื้อ</span>
+            <span className="text-[10px] sm:text-xs bg-black/25 py-0.5 px-2.5 rounded-full text-white/95 font-medium">
+              Touch to Start
+            </span>
+          </button>
+        </main>
+
+        {/* 4. BOTTOM BEST SELLERS SHOWCASE */}
+        <footer className="relative z-10 bg-white/75 backdrop-blur-md p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#E8DCCF]">
+          <div className="flex justify-between items-center mb-3 px-1">
+            <span className="text-[11px] sm:text-xs font-bold text-[#A24B2C] uppercase tracking-wider flex items-center gap-1.5">
+              <SparklesIcon className="w-4 h-4 text-[#F8C032]" /> สินค้ายอดนิยม
+            </span>
+            <span className="text-[10px] sm:text-[11px] text-[#8C7A6B]">
+              สัมผัสเพื่อเลือกดูทั้งหมด
+            </span>
           </div>
-        </div>
+
+          <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
+            {(bestSellers.length > 0 ? bestSellers : [1, 2, 3, 4]).map((item, idx) => {
+              const isObj = typeof item === "object";
+              const name = isObj ? item.name : `สินค้าแนะนำ ${idx + 1}`;
+              const price = isObj ? parseFloat(item.price).toLocaleString("th-TH") : "20";
+              const imgKey = isObj ? item.image : "water";
+              const Illustration = ILLUSTRATIONS[imgKey] || WaterDrop;
+              const isCustomImage = isObj && item.image && (item.image.startsWith("http") || item.image.startsWith("/") || item.image.includes("."));
+
+              return (
+                <div
+                  key={isObj ? item.id : idx}
+                  className="bg-[#FAF3EB] rounded-xl sm:rounded-2xl p-2 sm:p-2.5 border border-[#E1D2C1] flex flex-col items-center text-center shadow-sm hover:scale-105 transition-transform duration-200"
+                >
+                  <div className="w-full h-14 sm:h-16 rounded-lg bg-white/60 flex items-center justify-center p-1 overflow-hidden mb-1.5">
+                    {isCustomImage ? (
+                      <img src={item.image} alt={name} className="h-full object-contain" />
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <Illustration />
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="text-[10px] sm:text-xs font-bold text-[#3D2E24] line-clamp-1 w-full">
+                    {name}
+                  </h4>
+                  <p className="text-[10px] sm:text-xs font-black text-[#A24B2C] mt-0.5">
+                    ฿{price}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </footer>
+
       </div>
     </div>
   );

@@ -1,7 +1,137 @@
 // frontend/src/pages/admin/OrderQueue.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowPathIcon, CheckIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon, XMarkIcon, Squares2X2Icon, PhotoIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowPathIcon,
+  CheckIcon,
+  ArrowRightOnRectangleIcon,
+  MagnifyingGlassIcon,
+  ClipboardDocumentListIcon,
+  XMarkIcon,
+  Squares2X2Icon,
+  PhotoIcon,
+  TruckIcon,
+  BuildingStorefrontIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  MapPinIcon,
+  BanknotesIcon,
+  ShoppingBagIcon,
+  TagIcon,
+  FunnelIcon
+} from "@heroicons/react/24/outline";
+
+export const getOrderStatusInfo = (order) => {
+  if (!order) {
+    return {
+      key: "pending",
+      label: "รอดำเนินการ",
+      badgeClass: "bg-gray-100 text-gray-700 border-gray-200",
+      dotColor: "bg-gray-400",
+      emoji: "⏳"
+    };
+  }
+
+  // 1. จัดการครบถ้วนแล้ว
+  if (
+    order.fulfillmentStatus === "fulfilled" ||
+    (order.fulfillmentStatusInstock === "fulfilled" &&
+      (order.fulfillmentStatusPreorder === "fulfilled" || order.fulfillmentStatusPreorder === "none"))
+  ) {
+    return {
+      key: "fulfilled",
+      label: order.deliveryOption === "delivery" ? "จัดส่งแล้ว" : "จ่ายของครบแล้ว",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      dotColor: "bg-emerald-500",
+      emoji: "✅"
+    };
+  }
+
+  // 2. รับหน้าร้าน (Pickup)
+  if (order.deliveryOption === "pickup") {
+    if (order.fulfillmentStatusInstock === "pending") {
+      return {
+        key: "waiting_pickup",
+        label: "รอลูกค้ามารับ",
+        badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+        dotColor: "bg-blue-500",
+        emoji: "🏪"
+      };
+    }
+    if (order.fulfillmentStatusPreorder === "pending") {
+      return {
+        key: "waiting_preorder",
+        label: "รอสินค้าพรีออเดอร์",
+        badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+        dotColor: "bg-purple-500",
+        emoji: "📦"
+      };
+    }
+  }
+
+  // 3. จัดส่งพัสดุ (Delivery)
+  if (order.deliveryOption === "delivery") {
+    // ยังไม่ได้ระบุที่อยู่
+    if (!order.customerAddress || order.customerAddress.trim() === "") {
+      return {
+        key: "waiting_address",
+        label: "รอลูกค้าระบุที่อยู่",
+        badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
+        dotColor: "bg-rose-500",
+        emoji: "📍"
+      };
+    }
+
+    // แยกจัดส่ง (Split)
+    if (order.shippingOption === "split") {
+      if (order.fulfillmentStatusInstock === "pending") {
+        return {
+          key: "ready_to_ship",
+          label: "รอการจัดส่ง (รอบ 1 In Stock)",
+          badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+          dotColor: "bg-amber-500",
+          emoji: "🚚"
+        };
+      }
+      if (order.fulfillmentStatusPreorder === "pending") {
+        return {
+          key: "partially_shipped",
+          label: "จัดส่งแล้วบางส่วน (รอส่งรอบ 2)",
+          badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200",
+          dotColor: "bg-indigo-500",
+          emoji: "🔄"
+        };
+      }
+    } else {
+      // ส่งรวม (Combined)
+      const hasPreorder = order.items?.some(i => i.product && i.product.status === "Pre-Order");
+      if (hasPreorder && order.fulfillmentStatusPreorder === "pending") {
+        return {
+          key: "waiting_preorder",
+          label: "รอสินค้าพรีออเดอร์ (ส่งรวม)",
+          badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+          dotColor: "bg-purple-500",
+          emoji: "📦"
+        };
+      }
+      return {
+        key: "ready_to_ship",
+        label: "รอการจัดส่ง",
+        badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+        dotColor: "bg-amber-500",
+        emoji: "🚚"
+      };
+    }
+  }
+
+  return {
+    key: "pending",
+    label: "รอดำเนินการ",
+    badgeClass: "bg-gray-100 text-gray-700 border-gray-200",
+    dotColor: "bg-gray-400",
+    emoji: "⏳"
+  };
+};
 
 const getLocalDateString = (dateStr) => {
   if (!dateStr) return "";
@@ -36,8 +166,9 @@ export default function OrderQueue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("all"); // "all", "instock", "preorder", "history"
+  const [activeTab, setActiveTab] = useState("all"); // "all", "pickup", "delivery", "history"
   const [selectedDate, setSelectedDate] = useState(getTodayDateString()); // Defaults to today's date string
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pickup", "ready_to_ship", "waiting_preorder", "partially_shipped", "waiting_address", "fulfilled"
   const [toasts, setToasts] = useState([]);
   const prevOrderIdsRef = useRef(new Set());
   const navigate = useNavigate();
@@ -462,8 +593,12 @@ export default function OrderQueue() {
   const matchesSearch = (order) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    return order.id.toLowerCase().includes(query) ||
-      (order.customerName && order.customerName.toLowerCase().includes(query));
+    return (
+      order.id.toLowerCase().includes(query) ||
+      (order.customerName && order.customerName.toLowerCase().includes(query)) ||
+      (order.customerPhone && order.customerPhone.toLowerCase().includes(query)) ||
+      (order.customerEmail && order.customerEmail.toLowerCase().includes(query))
+    );
   };
 
   // Date filter
@@ -472,10 +607,10 @@ export default function OrderQueue() {
     return getLocalDateString(order.createdAt) === selectedDate;
   };
 
-  // Compute lists for each section
+  // Base lists for each tab (filtered by search and date)
   const allOrdersList = queueOrders.filter(matchesSearch).filter(matchesDate);
   const pickupOrdersList = queueOrders
-    .filter(order => order.deliveryOption === "pickup" && order.fulfillmentStatusInstock === "pending")
+    .filter(order => order.deliveryOption === "pickup" && (order.fulfillmentStatusInstock === "pending" || order.fulfillmentStatusPreorder === "pending"))
     .filter(matchesSearch)
     .filter(matchesDate);
   const deliveryOrdersList = queueOrders
@@ -484,23 +619,44 @@ export default function OrderQueue() {
     .filter(matchesDate);
   const historyOrdersList = historyOrders.filter(matchesSearch).filter(matchesDate);
 
-  // Get active list to display
-  const getDisplayOrders = () => {
+  // Get active tab base list
+  const getTabBaseOrders = () => {
     switch (activeTab) {
-      case "all":
-        return allOrdersList;
       case "pickup":
         return pickupOrdersList;
       case "delivery":
         return deliveryOrdersList;
       case "history":
         return historyOrdersList;
+      case "all":
       default:
         return allOrdersList;
     }
   };
 
-  const currentDisplayOrders = getDisplayOrders();
+  const currentTabBaseOrders = getTabBaseOrders();
+
+  // Status counts for current tab
+  const statusCounts = {
+    all: currentTabBaseOrders.length,
+    waiting_pickup: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "waiting_pickup").length,
+    ready_to_ship: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "ready_to_ship").length,
+    waiting_preorder: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "waiting_preorder").length,
+    partially_shipped: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "partially_shipped").length,
+    waiting_address: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "waiting_address").length,
+    fulfilled: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "fulfilled").length
+  };
+
+  // Apply status filter
+  const currentDisplayOrders = currentTabBaseOrders.filter(order => {
+    if (statusFilter === "all") return true;
+    return getOrderStatusInfo(order).key === statusFilter;
+  });
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setStatusFilter("all");
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 font-['Prompt'] flex flex-col">
@@ -638,12 +794,53 @@ export default function OrderQueue() {
               </div>
             </div>
           </div>
+
+          {/* Quick Status Filter Row */}
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
+              <FunnelIcon className="w-3.5 h-3.5" />
+              กรองสถานะ:
+            </span>
+            
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { key: "all", label: "ทั้งหมด", count: statusCounts.all },
+                { key: "waiting_pickup", label: "🏪 รอลูกค้ามารับ", count: statusCounts.waiting_pickup },
+                { key: "ready_to_ship", label: "🚚 รอการจัดส่ง", count: statusCounts.ready_to_ship },
+                { key: "waiting_preorder", label: "📦 รอสินค้าพรีออเดอร์", count: statusCounts.waiting_preorder },
+                { key: "partially_shipped", label: "🔄 จัดส่งแล้วบางส่วน", count: statusCounts.partially_shipped },
+                { key: "waiting_address", label: "📍 รอลูกค้าระบุที่อยู่", count: statusCounts.waiting_address },
+                { key: "fulfilled", label: "✅ จ่ายของครบ/ส่งแล้ว", count: statusCounts.fulfilled }
+              ]
+                .filter(chip => chip.key === "all" || chip.count > 0 || activeTab === "all")
+                .map(chip => (
+                  <button
+                    key={chip.key}
+                    onClick={() => setStatusFilter(chip.key)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusFilter === chip.key
+                        ? "bg-[#2B2B2B] text-white shadow-xs"
+                        : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
+                    }`}
+                  >
+                    <span>{chip.label}</span>
+                    <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-extrabold ${
+                      statusFilter === chip.key
+                        ? "bg-[#F8C032] text-[#2B2B2B]"
+                        : "bg-gray-200/80 text-gray-600"
+                    }`}>
+                      {chip.count}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </div>
         </div>
 
         {/* 4-Tab Navigation System with Real-Time Counts */}
         <div className="flex border-b border-gray-200 gap-6 overflow-x-auto whitespace-nowrap scrollbar-none">
           <button
-            onClick={() => setActiveTab("all")}
+            onClick={() => handleTabChange("all")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "all" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -654,7 +851,7 @@ export default function OrderQueue() {
           </button>
 
           <button
-            onClick={() => setActiveTab("pickup")}
+            onClick={() => handleTabChange("pickup")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "pickup" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -665,7 +862,7 @@ export default function OrderQueue() {
           </button>
 
           <button
-            onClick={() => setActiveTab("delivery")}
+            onClick={() => handleTabChange("delivery")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "delivery" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -676,7 +873,7 @@ export default function OrderQueue() {
           </button>
 
           <button
-            onClick={() => setActiveTab("history")}
+            onClick={() => handleTabChange("history")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "history" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -705,16 +902,20 @@ export default function OrderQueue() {
             </div>
             <div className="flex flex-col gap-1">
               <h3 className="text-lg font-bold text-gray-700">
-                {activeTab === "all" && "ไม่มีรายการคำสั่งซื้อค้างส่ง"}
-                {activeTab === "pickup" && "ไม่มีคิวรับหน้าร้านค้างจ่าย"}
-                {activeTab === "delivery" && "ไม่มีคิวจัดส่งสินค้าค้างจัดส่ง"}
-                {activeTab === "history" && "ไม่มีประวัติการจ่ายสินค้าสำเร็จ"}
+                {statusFilter !== "all" 
+                  ? "ไม่มีออเดอร์ในสถานะที่เลือก"
+                  : activeTab === "all" && "ไม่มีรายการคำสั่งซื้อค้างส่ง"}
+                {statusFilter === "all" && activeTab === "pickup" && "ไม่มีคิวรับหน้าร้านค้างจ่าย"}
+                {statusFilter === "all" && activeTab === "delivery" && "ไม่มีคิวจัดส่งสินค้าค้างจัดส่ง"}
+                {statusFilter === "all" && activeTab === "history" && "ไม่มีประวัติการจ่ายสินค้าสำเร็จ"}
               </h3>
               <p className="text-sm text-gray-400 px-6">
-                {activeTab === "all" && "ออเดอร์ที่จ่ายเงินสำเร็จแต่มีสถานะค้างจ่ายจะแสดงที่นี่"}
-                {activeTab === "pickup" && "ออเดอร์ที่เลือกรับสินค้าหน้าร้านจะแสดงที่นี่"}
-                {activeTab === "delivery" && "ออเดอร์ที่จัดส่งพัสดุจะแสดงที่นี่"}
-                {activeTab === "history" && "ประวัติคำสั่งซื้อทั้งหมดที่ดำเนินการจัดส่งเรียบร้อยแล้ว"}
+                {statusFilter !== "all" 
+                  ? "ลองเปลี่ยนตัวกรองสถานะ หรือล้างตัวกรองเพื่อดูรายการทั้งหมด"
+                  : activeTab === "all" && "ออเดอร์ที่จ่ายเงินสำเร็จแต่มีสถานะค้างจ่ายจะแสดงที่นี่"}
+                {statusFilter === "all" && activeTab === "pickup" && "ออเดอร์ที่เลือกรับสินค้าหน้าร้านจะแสดงที่นี่"}
+                {statusFilter === "all" && activeTab === "delivery" && "ออเดอร์ที่จัดส่งพัสดุจะแสดงที่นี่"}
+                {statusFilter === "all" && activeTab === "history" && "ประวัติคำสั่งซื้อทั้งหมดที่ดำเนินการจัดส่งเรียบร้อยแล้ว"}
               </p>
             </div>
           </div>
@@ -722,6 +923,8 @@ export default function OrderQueue() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentDisplayOrders.map((order) => {
               const displayItems = order.items || [];
+              const statusInfo = getOrderStatusInfo(order);
+              const totalItemsQty = displayItems.reduce((acc, it) => acc + (it.quantity || 1), 0);
 
               return (
                 <div
@@ -729,49 +932,76 @@ export default function OrderQueue() {
                   className="bg-white rounded-2xl border border-gray-150 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-all duration-200"
                 >
                   {/* Card Header */}
-                  <div className="bg-gray-50/50 p-5 border-b border-gray-100 flex flex-col gap-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-gray-400 font-mono select-all">
-                        REF: {order.id.slice(-4)}
-                      </span>
-                      {order.fulfillmentStatus === "fulfilled" ? (
-                        <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-150 rounded-full">
-                          จ่ายของครบแล้ว
+                  <div className="bg-gray-50/70 p-5 border-b border-gray-100 flex flex-col gap-2.5">
+                    {/* Top Row: REF, Delivery Option Tag & Dynamic Status Badge */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-gray-500 font-mono bg-gray-200/70 px-2 py-0.5 rounded-md select-all">
+                          REF: {order.id.slice(-4)}
                         </span>
-                      ) : (
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md ${
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                           order.deliveryOption === "delivery"
-                            ? (order.shippingOption === "split" ? "bg-orange-50 text-orange-655 border border-orange-200" : "bg-blue-50 text-blue-655 border border-blue-200")
-                            : "bg-green-50 text-green-700 border border-green-200"
+                            ? (order.shippingOption === "split" ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-blue-50 text-blue-700 border-blue-200")
+                            : "bg-green-50 text-green-700 border-green-200"
                         }`}>
                           {order.deliveryOption === "delivery"
                             ? (order.shippingOption === "split" ? "🚚 จัดส่งพัสดุ (แยกส่ง)" : "🚚 จัดส่งพัสดุ (รวมส่ง)")
                             : "🏪 รับที่ตู้ Kiosk"}
                         </span>
-                      )}
+                      </div>
+
+                      {/* Status Badge */}
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border shadow-2xs ${statusInfo.badgeClass}`}>
+                        <span className={`w-2 h-2 rounded-full ${statusInfo.dotColor} ${statusInfo.key !== "fulfilled" ? "animate-pulse" : ""}`} />
+                        <span>{statusInfo.label}</span>
+                      </span>
                     </div>
-                    <span className="text-sm font-bold text-gray-700 font-mono mt-1 select-all">{order.id}</span>
-                    <span className="text-xs text-gray-400">
-                      เวลาสั่งซื้อ: {new Date(order.createdAt).toLocaleTimeString("th-TH")} น.
-                    </span>
+
+                    {/* Bottom Row: Order ID, Time & Total Price Highlight */}
+                    <div className="flex items-end justify-between gap-2 pt-1 border-t border-gray-200/50">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-gray-700 font-mono mt-0.5 select-all truncate" title={order.id}>
+                          {order.id}
+                        </span>
+                        <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                          <ClockIcon className="w-3.5 h-3.5" />
+                          เวลาสั่งซื้อ: {new Date(order.createdAt).toLocaleTimeString("th-TH")} น.
+                        </span>
+                      </div>
+
+                      {/* Total Price Badge */}
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          ยอดรวม
+                        </span>
+                        <span className="text-sm font-extrabold text-[#2B2B2B] bg-[#F8C032]/25 px-2.5 py-0.5 rounded-lg border border-[#F8C032]/50 shadow-2xs font-mono">
+                          ฿{Number(order.totalPrice || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Items details */}
-                  <div className="p-5 flex-1 flex flex-col gap-4">
+                  <div className="p-5 flex-1 flex flex-col gap-3">
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        รายการสินค้าทั้งหมด
-                      </span>
-                      <ul className="flex flex-col gap-2 h-[195px] overflow-y-auto pr-1 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          รายการสินค้า ({displayItems.length} รายการ)
+                        </span>
+                        <span className="text-xs font-bold text-gray-500">
+                          รวม {totalItemsQty} ชิ้น
+                        </span>
+                      </div>
+                      <ul className="flex flex-col gap-2 h-[180px] overflow-y-auto pr-1 rounded-xl">
                         {displayItems.map((item, index) => (
                           <li key={index} className="flex justify-between items-center text-sm bg-gray-50/60 p-2.5 rounded-xl border border-gray-100 shrink-0">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-gray-700">{item.product?.name || "สินค้า"}</span>
+                            <div className="flex flex-col min-w-0 pr-2">
+                              <span className="font-semibold text-gray-700 truncate">{item.product?.name || "สินค้า"}</span>
                               <span className={`text-[10px] font-bold ${item.product?.status === 'In Stock' ? 'text-green-600' : 'text-orange-500'}`}>
                                 ({item.product?.status === 'In Stock' ? 'In Stock' : 'Pre-Order'})
                               </span>
                             </div>
-                            <span className="font-bold text-[#E53935] px-2.5 py-0.5 bg-red-50 border border-red-150 rounded-lg text-xs shrink-0">
+                            <span className="font-bold text-[#E53935] px-2.5 py-0.5 bg-red-50 border border-red-150 rounded-lg text-xs shrink-0 font-mono">
                               x{item.quantity}
                             </span>
                           </li>
@@ -781,15 +1011,14 @@ export default function OrderQueue() {
 
                     {/* Customer & Delivery Address details */}
                     {order.customerName && (
-                      <div className="border-t border-gray-100 pt-3 flex flex-col gap-1 text-xs text-gray-500">
-                        <p><span className="font-semibold">ผู้สั่งซื้อ:</span> {order.customerName}</p>
-                        <p><span className="font-semibold">เบอร์โทร:</span> {order.customerPhone}</p>
+                      <div className="border-t border-gray-100 pt-2.5 flex flex-col gap-1 text-xs text-gray-500">
+                        <p><span className="font-semibold text-gray-700">ผู้สั่งซื้อ:</span> {order.customerName}</p>
+                        <p><span className="font-semibold text-gray-700">เบอร์โทร:</span> {order.customerPhone}</p>
                         {order.deliveryOption === "delivery" && (
                           <p className="mt-1 bg-amber-50/40 p-2 rounded-lg border border-amber-100/60 text-gray-600">
                             <span className="font-semibold text-[#2B2B2B]">ที่อยู่จัดส่ง:</span> {order.customerAddress || "รอลูกค้ากรอกที่อยู่ผ่านมือถือ..."}
                           </p>
                         )}
-
                       </div>
                     )}
                   </div>
@@ -1053,7 +1282,7 @@ export default function OrderQueue() {
                 REF: {t.order.id.slice(-4)} ({t.order.id})
               </p>
               <p className="text-xs text-gray-600 font-semibold mt-1">
-                ยอดรวม: ฿{t.order.totalPrice || t.order.totalAmount || 0}
+                ยอดรวม: ฿{Number(t.order.totalPrice || t.order.totalAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <button
