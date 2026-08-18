@@ -1,29 +1,16 @@
-// frontend/src/pages/admin/OrderQueue.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   ArrowPathIcon,
   CheckIcon,
-  ArrowRightOnRectangleIcon,
   MagnifyingGlassIcon,
   ClipboardDocumentListIcon,
   XMarkIcon,
-  Squares2X2Icon,
-  PhotoIcon,
-  TruckIcon,
-  BuildingStorefrontIcon,
   ClockIcon,
-  CheckCircleIcon,
-  MapPinIcon,
-  BanknotesIcon,
-  ShoppingBagIcon,
-  TagIcon,
   FunnelIcon,
-  DocumentChartBarIcon,
-  LockClosedIcon,
   LockOpenIcon
 } from "@heroicons/react/24/outline";
 import { notify, confirmDialog } from "../../components/notify";
+import AdminNavbar from "../../components/admin/AdminNavbar";
 
 export const getOrderStatusInfo = (order) => {
   if (!order) {
@@ -181,7 +168,6 @@ const COURIER_OPTIONS = [
 ];
 
 export default function OrderQueue() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all"); // "all", "pickup", "delivery", "history"
   const [queueOrders, setQueueOrders] = useState([]);
   const [historyOrders, setHistoryOrders] = useState([]);
@@ -189,8 +175,7 @@ export default function OrderQueue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
-const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pickup", "ready_to_ship", "waiting_preorder", "partially_shipped", "waiting_address", "fulfilled"
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pickup", "ready_to_ship", "waiting_preorder", "partially_shipped", "waiting_address", "fulfilled"
   const [toasts, setToasts] = useState([]);
   const prevOrderIdsRef = useRef(new Set());
 
@@ -331,11 +316,6 @@ const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pick
   };
 
   useEffect(() => {
-    const userString = localStorage.getItem("user");
-    if (userString) {
-      setCurrentUser(JSON.parse(userString));
-    }
-
     fetchData();
 
     // Auto refresh every 5 seconds
@@ -508,11 +488,6 @@ const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pick
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/ditc-portal-to-manager");
-  };
-
   // Search filter
   const matchesSearch = (order) => {
     if (!searchQuery) return true;
@@ -585,59 +560,11 @@ const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pick
   return (
     <div className="min-h-screen bg-gray-50 font-['Prompt'] flex flex-col">
       {/* Top Navigation Navbar */}
-      <nav className="bg-white border-b border-gray-150 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F8C032]/10 rounded-xl flex items-center justify-center text-[#F8C032]">
-            <ClipboardDocumentListIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#2B2B2B]">ระบบคิวรับสินค้าหน้าร้าน</h1>
-            <p className="text-xs text-gray-400">พนักงานร้านค้า CAMT คัดแยกของ</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-gray-700">{currentUser?.name}</p>
-            <p className="text-xs text-gray-400 font-medium capitalize">สิทธิ์: {currentUser?.role}</p>
-          </div>
-          {currentUser?.role === "admin" && (
-            <>
-              <button
-                onClick={() => navigate("/dashboard/reports")}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-              >
-                <DocumentChartBarIcon className="w-4.5 h-4.5" />
-                <span>ออกรายงานสรุป</span>
-              </button>
-
-              <button
-                onClick={() => navigate("/dashboard/products")}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-              >
-                <Squares2X2Icon className="w-4.5 h-4.5" />
-                <span>ไปหน้าจัดการสินค้า</span>
-              </button>
-
-              <button
-                onClick={() => navigate("/dashboard/screensavers")}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-              >
-                <PhotoIcon className="w-4.5 h-4.5" />
-                <span>จัดการโฆษณา</span>
-              </button>
-            </>
-          )}
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all"
-          >
-            <ArrowRightOnRectangleIcon className="w-4.5 h-4.5" />
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      </nav>
+      <AdminNavbar
+        title="ระบบคิวรับสินค้าหน้าร้าน"
+        subtitle="พนักงานร้านค้า CAMT คัดแยกของ"
+        icon={ClipboardDocumentListIcon}
+      />
 
       {/* Main Container */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
@@ -869,7 +796,7 @@ const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pick
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-bold text-gray-500 font-mono bg-gray-200/70 px-2 py-0.5 rounded-md select-all">
-                          REF: {order.id.slice(-4)}
+                          REF: {String(order.id || "").slice(-4)}
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                           order.deliveryOption === "delivery"
@@ -1327,7 +1254,7 @@ const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pick
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-bold text-gray-800">มีออเดอร์ใหม่เข้ามา!</h4>
               <p className="text-xs text-gray-500 font-mono mt-0.5 truncate">
-                REF: {t.order.id.slice(-4)} ({t.order.id})
+                REF: {String(t.order?.id || "").slice(-4)} ({t.order?.id})
               </p>
               <p className="text-xs text-gray-600 font-semibold mt-1">
                 ยอดรวม: ฿{Number(t.order.totalPrice || t.order.totalAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

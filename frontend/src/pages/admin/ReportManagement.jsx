@@ -2,10 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   DocumentChartBarIcon,
-  ArrowRightOnRectangleIcon,
-  ClipboardDocumentListIcon,
   Squares2X2Icon,
-  PhotoIcon,
   CalendarIcon,
   ArrowDownTrayIcon,
   BanknotesIcon,
@@ -15,6 +12,7 @@ import {
   TvIcon,
   TagIcon
 } from "@heroicons/react/24/outline";
+import AdminNavbar from "../../components/admin/AdminNavbar";
 
 export default function ReportManagement() {
   const navigate = useNavigate();
@@ -124,60 +122,14 @@ export default function ReportManagement() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/ditc-portal-to-manager");
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 font-['Prompt'] flex flex-col">
       {/* Top Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-xs sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#5EBAA8]/10 rounded-xl flex items-center justify-center text-[#5EBAA8]">
-            <DocumentChartBarIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#1B1B1C]">รายงานสรุปและการวิเคราะห์ข้อมูล</h1>
-            <p className="text-xs text-gray-400">ระบบส่งออกรายงานสรุปสำหรับหน่วยงานและผู้บริหาร</p>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/dashboard/orders")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#1B1B1C] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <ClipboardDocumentListIcon className="w-4.5 h-4.5" />
-            <span>จัดการคิวคำสั่งซื้อ</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/dashboard/products")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#1B1B1C] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <Squares2X2Icon className="w-4.5 h-4.5" />
-            <span>คลังสินค้า</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/dashboard/screensavers")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#1B1B1C] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <PhotoIcon className="w-4.5 h-4.5" />
-            <span>จัดการโฆษณา</span>
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all cursor-pointer ml-2"
-          >
-            <ArrowRightOnRectangleIcon className="w-4.5 h-4.5" />
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      </nav>
+      <AdminNavbar
+        title="รายงานสรุปและการวิเคราะห์ข้อมูล"
+        subtitle="ระบบส่งออกรายงานสรุปสำหรับหน่วยงานและผู้บริหาร"
+        icon={DocumentChartBarIcon}
+      />
 
       {/* Main Container */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
