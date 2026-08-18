@@ -6,11 +6,11 @@ services:
     container_name: kiosk-postgres
     restart: always
     environment:
-      POSTGRES_USER: aommykung
-      POSTGRES_PASSWORD: 1250Za
+      POSTGRES_USER: ditc_kiosk
+      POSTGRES_PASSWORD: 12345Za
       POSTGRES_DB: kiosk_db
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
