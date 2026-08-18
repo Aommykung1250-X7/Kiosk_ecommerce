@@ -49,7 +49,20 @@ function CategoryPlaceholder({ category }) {
 }
 
 export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout }) {
-  const [deliveryMethod, setDeliveryMethod] = useState("pickup"); // "pickup" (รับที่นี่ - ฿0) or "home" (ส่งไปบ้าน - ฿20)
+  const [deliveryOption, setDeliveryOption] = useState("pickup"); // "pickup" or "delivery"
+  const [shippingOption, setShippingOption] = useState("combined"); // "combined" or "split"
+  const [shippingSettings, setShippingSettings] = useState({ baseShippingFee: 20, additionalSplitShippingFee: 20 });
+
+  useEffect(() => {
+    fetch("/api/settings/shipping")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.baseShippingFee === "number") {
+          setShippingSettings(data);
+        }
+      })
+      .catch((err) => console.error("Error loading shipping settings:", err));
+  }, []);
 
   if (!isOpen) return null;
 
@@ -87,6 +100,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
         </div>
 
         <button
+          type="button"
           onClick={onClose}
           className="p-2 rounded-full hover:bg-gray-100 border border-gray-100 transition-colors cursor-pointer"
         >
@@ -95,19 +109,20 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
       </div>
 
       {/* Cart Content Body */}
-      <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+      <div className="flex-1 flex flex-col p-4 gap-4 overflow-y-auto">
         {totalItems === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100 p-8">
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
               <ShoppingBagIcon className="w-10 h-10" />
             </div>
-            <div className="flex flex-col gap-2 max-w-sm">
+            <div className="flex flex-col gap-2 max-w-sm text-center">
               <p className="text-xl font-black text-black">Shopping cart is empty</p>
               <p className="text-sm font-semibold text-gray-400 leading-relaxed">
                 Add products from the catalog to proceed with payment.
               </p>
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="px-8 py-3.5 bg-[#F9C338] hover:bg-[#F2BD2B] active:scale-95 text-black font-extrabold rounded-2xl transition-all shadow-sm select-none cursor-pointer border-2 border-black"
             >
@@ -116,11 +131,12 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
           </div>
         ) : (
           <>
-            {/* Cart Items List matching cart.png */}
+            {/* Cart Items List */}
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center px-1">
                 <span className="text-xs font-bold text-gray-400">Items in the shopping cart</span>
                 <button
+                  type="button"
                   onClick={onClearCart}
                   className="text-xs text-[#FF5252] hover:text-red-700 font-bold hover:underline select-none cursor-pointer"
                 >
@@ -172,10 +188,11 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                         </div>
                       </div>
 
-                      {/* Controls on right matching cart.png */}
+                      {/* Controls on right */}
                       <div className="flex flex-col items-end justify-between h-20 shrink-0">
                         {/* Trash Delete Button */}
                         <button
+                          type="button"
                           onClick={() => onRemoveItem(product.id)}
                           className="p-1 hover:bg-red-50 text-[#FF5252] rounded-lg transition-colors cursor-pointer"
                           title="Remove item"
@@ -183,9 +200,10 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                           <TrashIcon className="w-5 h-5" />
                         </button>
 
-                        {/* Quantity Selector matching cart.png */}
+                        {/* Quantity Selector */}
                         <div className="flex items-center bg-[#F4F4F6] border border-gray-200 rounded-full h-9 px-2 shadow-inner gap-2">
                           <button
+                            type="button"
                             onClick={() => onUpdateQuantity(product.id, quantity - 1)}
                             className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-black font-bold text-base cursor-pointer active:scale-90"
                           >
@@ -195,6 +213,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                             {quantity}
                           </span>
                           <button
+                            type="button"
                             onClick={() => {
                               const limit = product.purchaseLimit || product.purchase_limit;
                               if (limit && quantity >= limit) {
@@ -225,6 +244,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">รูปแบบการรับสินค้า</span>
                   <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
                     <button
+                      type="button"
                       onClick={() => setDeliveryOption("pickup")}
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         deliveryOption === "pickup"
@@ -232,9 +252,10 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                           : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
-                      🏪 รับสินค้าเองที่นี่
+                      🏪 รับสินค้าเองที่นี่ (฿0)
                     </button>
                     <button
+                      type="button"
                       onClick={() => setDeliveryOption("delivery")}
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         deliveryOption === "delivery"
@@ -242,7 +263,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                           : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
-                      🚚 จัดส่งพัสดุ
+                      🚚 จัดส่งพัสดุ (฿{shippingSettings.baseShippingFee})
                     </button>
                   </div>
                 </div>
@@ -250,7 +271,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 {/* แยกจัดส่งสำหรับออเดอร์ผสม (Split Shipping Selector) */}
                 {deliveryOption === "delivery" && isMixed && (
                   <div className="flex flex-col gap-2 bg-[#F8C032]/5 p-4 rounded-2xl border border-[#F8C032]/10 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <span className="text-xs font-bold text-[#A24B2C] uppercase tracking-wide">ตัวเลือกจัดส่งสินค้าผสม</span>
+                    <span className="text-xs font-bold text-[#A24B2C] uppercase tracking-wide">ตัวเลือกจัดส่งสินค้าผสม (มีสินค้า Pre-Order)</span>
                     <div className="flex flex-col gap-2 mt-1">
                       <label className="flex items-start gap-2.5 cursor-pointer select-none">
                         <input
@@ -265,7 +286,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                           <span className="text-[10px] text-gray-400">รอส่งรอบเดียวเมื่อสินค้า Pre-Order ครบ (ค่าส่งปกติ ฿{shippingSettings.baseShippingFee.toLocaleString('th-TH')})</span>
                         </div>
                       </label>
-                      
+
                       <label className="flex items-start gap-2.5 cursor-pointer select-none border-t border-gray-100 pt-2 mt-1">
                         <input
                           type="radio"
@@ -281,36 +302,11 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                       </label>
                     </div>
                   </div>
-                  <span className="text-[10px] font-black text-[#00796B] bg-[#E0F2F1] px-2 py-0.5 rounded-full">
-                    FREE
-                  </span>
-                </button>
-
-                {/* Delivery to home option */}
-                <button
-                  type="button"
-                  onClick={() => setDeliveryMethod("home")}
-                  className={`p-3.5 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer select-none ${
-                    deliveryMethod === "home"
-                      ? "border-black bg-[#F9C338]/20 text-black font-black shadow-xs"
-                      : "border-gray-200 bg-[#F4F4F6] text-gray-600 font-bold hover:border-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🏠</span>
-                    <div className="flex flex-col text-left leading-tight">
-                      <span className="text-xs font-black">ส่งไปบ้าน</span>
-                      <span className="text-[10px] text-gray-500 font-semibold">Home</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black text-[#E53935] bg-red-50 px-2 py-0.5 rounded-full">
-                    ฿20
-                  </span>
-                </button>
+                )}
               </div>
             </div>
 
-            {/* Summary of Payments Card matching cart.png */}
+            {/* Summary of Payments Card */}
             <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-md flex flex-col gap-4 mt-auto">
               <h3 className="text-2xl font-black text-black">Summary of Payments</h3>
 
@@ -322,9 +318,9 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 <div className="flex justify-between items-center text-gray-400">
                   <span>Shipping cost</span>
                   {shippingFee > 0 ? (
-                    <span className="font-bold text-[#E53935]">฿{shippingFee} (ส่งไปบ้าน)</span>
+                    <span className="font-bold text-[#E53935]">฿{shippingFee} ({shippingOption === "split" && isMixed ? "แยกจัดส่ง" : "จัดส่งพัสดุ"})</span>
                   ) : (
-                    <span className="font-bold text-[#00796B]">Free (รับที่นี่)</span>
+                    <span className="font-bold text-[#00796B]">Free (รับสินค้าเองที่นี่)</span>
                   )}
                 </div>
               </div>
@@ -336,11 +332,12 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 </span>
               </div>
 
-              {/* Action Buttons matching cart.png */}
+              {/* Action Buttons */}
               <div className="flex flex-col gap-3 mt-2">
                 <button
+                  type="button"
                   onClick={() => {
-                    onCheckout(shippingFee, deliveryMethod);
+                    onCheckout(shippingFee, deliveryOption, shippingOption);
                     onClose();
                   }}
                   className="h-14 w-full rounded-2xl bg-[#F9C338] hover:bg-[#F2BD2B] active:scale-[0.98]
@@ -350,6 +347,7 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                   <span>Proceed with payment</span>
                 </button>
                 <button
+                  type="button"
                   onClick={onClose}
                   className="h-14 w-full rounded-2xl bg-[#F4F4F6] hover:bg-gray-200 text-gray-700 font-extrabold text-base transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center"
                 >
@@ -363,3 +361,4 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
     </div>
   );
 }
+

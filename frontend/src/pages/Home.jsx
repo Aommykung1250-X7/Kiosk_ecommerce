@@ -242,31 +242,20 @@ export default function Home() {
     setIsCartOpen(true);
   };
 
-  const handleCheckout = (param1, param2) => {
+  const handleCheckout = (param1, param2, param3) => {
     if (cart.items.length === 0) return;
 
-    fetch("/api/settings/shipping")
-      .then((res) => res.json())
-      .then((shippingSettings) => {
-        const hasInStock = cart.items.some(item => item.product && item.product.status === "In Stock");
-        const hasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-        const isMixed = hasInStock && hasPreOrder;
-
-        let shippingFee = 0;
-        if (deliveryOption === "delivery") {
-          if (isMixed && shippingOption === "split") {
-            shippingFee = shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee);
-          } else {
-            shippingFee = shippingSettings.baseShippingFee;
-          }
-        }
+    let shippingFee = 0;
+    let deliveryOption = "pickup";
+    let shippingOption = "combined";
 
     if (typeof param1 === "number") {
       shippingFee = param1;
-      deliveryMethod = param2 || "pickup";
-    } else if (param1 === "delivery" || param1 === "home") {
-      shippingFee = 20;
-      deliveryMethod = "home";
+      deliveryOption = param2 || "pickup";
+      shippingOption = param3 || "combined";
+    } else if (typeof param1 === "string") {
+      deliveryOption = param1;
+      shippingFee = (param1 === "delivery" || param1 === "home") ? 20 : 0;
     }
 
     const grandTotal = cart.totalPrice + shippingFee;
@@ -277,8 +266,8 @@ export default function Home() {
       body: JSON.stringify({
         items: cart.items,
         totalPrice: grandTotal,
-        deliveryMethod,
-        shippingFee
+        deliveryOption,
+        shippingOption
       })
     })
       .then((res) => {

@@ -1,9 +1,9 @@
 // backend/src/server.js
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
@@ -16,8 +16,6 @@ import settingRoutes from "./routes/settingRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import { initDb } from "./data/db.js";
 import { getAllowedOrigins } from "./config/security.js";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
