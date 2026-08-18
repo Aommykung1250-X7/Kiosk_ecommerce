@@ -120,10 +120,6 @@ export const getSalesReport = async (startDate, endDate) => {
             customer_phone,
             customer_email,
             customer_address,
-            courier_1,
-            tracking_number_1,
-            courier_2,
-            tracking_number_2,
             paid_at,
             created_at
         FROM orders
@@ -152,7 +148,7 @@ export const getProductReport = async (startDate, endDate) => {
         SELECT 
             p.id,
             p.name,
-            COALESCE(p.category, 'ทั่วไป') AS category,
+            COALESCE(c.name, 'ทั่วไป') AS category,
             p.price,
             p.stock,
             p.views,
@@ -161,9 +157,10 @@ export const getProductReport = async (startDate, endDate) => {
             COALESCE(SUM(CASE WHEN o.payment_status = 'paid' ${orderDateFilter} THEN oi.quantity ELSE 0 END), 0) AS units_sold,
             COALESCE(SUM(CASE WHEN o.payment_status = 'paid' ${orderDateFilter} THEN (oi.quantity * oi.unit_price) ELSE 0 END), 0) AS total_revenue
         FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN order_items oi ON p.id = oi.product_id
         LEFT JOIN orders o ON oi.order_id = o.id
-        GROUP BY p.id, p.name, p.category, p.price, p.stock, p.views, p.status, p.pickup_location
+        GROUP BY p.id, p.name, c.name, p.price, p.stock, p.views, p.status, p.pickup_location
         ORDER BY views DESC, p.id ASC
     `;
 
