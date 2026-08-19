@@ -572,10 +572,12 @@ export default function ScreensaverManagement() {
                 <span className="text-[10px] text-gray-400 font-medium">รองรับเฉพาะ JPEG, PNG และ WebP เท่านั้น (ไม่รวม MP4/วิดีโอ)</span>
               </div>
 
-              {/* Side-by-side Duration & Order inputs */}
+              {/* Side-by-side Duration & Order inputs with aligned labels */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-gray-400 uppercase">ระยะเวลาแสดงผล (วินาที)</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase h-5 flex items-center">
+                    ระยะเวลาแสดงผล (วินาที)
+                  </label>
                   <input
                     type="number"
                     required
@@ -583,19 +585,21 @@ export default function ScreensaverManagement() {
                     max={60}
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
-                    className="w-full h-11 bg-gray-50 border border-gray-150 rounded-xl px-4 text-sm outline-none focus:border-[#F8C032] font-semibold text-gray-700 transition-all"
+                    className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm outline-none focus:border-[#FABE2C] font-semibold text-gray-700 transition-all"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-gray-400 uppercase">ลำดับการแสดงผล (Display Order)</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase h-5 flex items-center">
+                    ลำดับการแสดงผล
+                  </label>
                   <input
                     type="number"
                     required
                     min={0}
                     value={displayOrder}
                     onChange={(e) => setDisplayOrder(e.target.value)}
-                    className="w-full h-11 bg-gray-50 border border-gray-150 rounded-xl px-4 text-sm outline-none focus:border-[#F8C032] font-semibold text-gray-700 transition-all"
+                    className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm outline-none focus:border-[#FABE2C] font-semibold text-gray-700 transition-all"
                   />
                 </div>
               </div>

@@ -1,301 +1,228 @@
 // src/components/Screensaver.jsx
 import React, { useState, useEffect } from "react";
-import { ClockIcon, SparklesIcon, CursorArrowRaysIcon } from "@heroicons/react/24/outline";
-
-// SVG Illustrations as fallbacks
-function WaterDrop() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      <defs>
-        <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#80D0FF" />
-          <stop offset="50%" stopColor="#41A5EE" />
-          <stop offset="100%" stopColor="#2568D9" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M50 15 C50 15 78 48 78 65 C78 80 65 90 50 90 C35 90 22 80 22 65 C22 48 50 15 50 15 Z"
-        fill="url(#waterGrad)"
-      />
-      <ellipse cx="44" cy="55" rx="4" ry="10" fill="#FFFFFF" opacity="0.35" transform="rotate(-20 44 55)" />
-      <ellipse cx="40" cy="45" rx="2" ry="5" fill="#FFFFFF" opacity="0.4" transform="rotate(-20 40 45)" />
-    </svg>
-  );
-}
-
-function SodaCup() {
-  return (
-    <svg viewBox="0 0 120 160" className="w-auto h-full">
-      <path d="M35 50 L85 50 L77 140 L43 140 Z" fill="#EAEAEA" />
-      <path d="M48 50 L54 50 L57 140 L51 140 Z" fill="#EC4E63" />
-      <path d="M66 50 L72 50 L69 140 L63 140 Z" fill="#EC4E63" />
-      <ellipse cx="60" cy="50" rx="27" ry="8" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      <rect x="52" y="42" width="16" height="6" rx="2" fill="#FFFFFF" stroke="#D1D1D6" strokeWidth="1" />
-      <path d="M57 42 L57 20 L75 20" stroke="#EC4E63" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M57 42 L57 20 L75 20" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.3" />
-    </svg>
-  );
-}
-
-function ChipsBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-auto h-full">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#F4B400" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#DBA000" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#DBA000" />
-      <circle cx="50" cy="62" r="16" fill="#FFFFFF" />
-      <ellipse cx="50" cy="62" rx="10" ry="7" fill="#E37400" />
-    </svg>
-  );
-}
-
-function WaferBag() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-auto h-full">
-      <path d="M20 20 L80 20 L90 105 L10 105 Z" fill="#4285F4" />
-      <path d="M20 20 L28 10 L72 10 L80 20 Z" fill="#2A6CD6" />
-      <path d="M10 105 L20 115 L80 115 L90 105 Z" fill="#2A6CD6" />
-      <rect x="30" y="50" width="40" height="30" rx="3" fill="#FFD600" />
-    </svg>
-  );
-}
-
-function CupNoodle() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-auto h-full">
-      <path d="M25 35 L75 35 L68 105 L32 105 Z" fill="#EA4335" />
-      <ellipse cx="50" cy="35" rx="25" ry="8" fill="#F1F3F4" />
-      <ellipse cx="50" cy="31" rx="25" ry="8" fill="#FFFFFF" />
-      <rect x="35" y="55" width="30" height="15" rx="2" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function MiloBox() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-auto h-full">
-      <rect x="25" y="15" width="50" height="90" rx="4" fill="#0F9D58" />
-      <rect x="25" y="15" width="50" height="20" rx="4" fill="#0B8043" />
-      <circle cx="50" cy="65" r="14" fill="#F4B400" />
-    </svg>
-  );
-}
-
-function Pen() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-auto h-full">
-      <rect x="44" y="15" width="12" height="75" rx="6" fill="#4285F4" />
-      <rect x="44" y="15" width="12" height="15" rx="3" fill="#1A73E8" />
-      <polygon points="44,90 56,90 50,110" fill="#3C4043" />
-    </svg>
-  );
-}
-
-function Notebook() {
-  return (
-    <svg viewBox="0 0 100 120" className="w-auto h-full">
-      <rect x="25" y="15" width="55" height="90" rx="4" fill="#FBBC05" />
-      <rect x="20" y="20" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="36" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="52" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="68" width="8" height="8" rx="2" fill="#3C4043" />
-      <rect x="20" y="84" width="8" height="8" rx="2" fill="#3C4043" />
-    </svg>
-  );
-}
-
-const ILLUSTRATIONS = {
-  water: WaterDrop,
-  cola: SodaCup,
-  chips: ChipsBag,
-  wafer: WaferBag,
-  noodle: CupNoodle,
-  milo: MiloBox,
-  pen: Pen,
-  notebook: Notebook,
-};
+import { ShoppingCartIcon, QuestionMarkCircleIcon, SparklesIcon } from "@heroicons/react/24/solid";
 
 export default function Screensaver({ onWake }) {
-  const [time, setTime] = useState(new Date());
-  const [bestSellers, setBestSellers] = useState([]);
-  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [language, setLanguage] = useState("TH");
   const [slides, setSlides] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [contactInfo, setContactInfo] = useState({
+    website: "www.camt.cmu.ac.th",
+    facebook: "CAMT Chiang Mai University",
+    hotline: "053-942606"
+  });
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    // Fetch Best Sellers
-    fetch("/api/products/bestsellers")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch best sellers");
-        return res.json();
-      })
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setBestSellers(data.slice(0, 4));
-        } else {
-          // Fallback to fetch normal products if bestsellers empty
-          fetch("/api/products")
-            .then((r) => r.json())
-            .then((pData) => setBestSellers((pData || []).slice(0, 4)))
-            .catch(() => {});
-        }
-      })
-      .catch((err) => {
-        console.error("Error loading best sellers on screensaver:", err);
-      });
-  }, []);
-
-  useEffect(() => {
-    // Fetch active screensavers and config in parallel
+    // Fetch active screensaver ads, featured products config, and staff contact settings from backend
     Promise.all([
-      fetch("/api/screensavers/active").then((res) => res.json()).catch(() => []),
-      fetch("/api/screensavers/config").then((res) => res.json()).catch(() => null)
-    ]).then(([activeAds, config]) => {
-      const ads = activeAds || [];
-      const masterEnabled = config ? config.masterEnabled !== false : true;
-      const masterDuration = config ? config.masterDuration || 10 : 10;
-      if (config && Array.isArray(config.featuredProducts)) {
-        setFeaturedProducts(config.featuredProducts);
+      fetch("/api/screensavers/active").then((res) => (res.ok ? res.json() : [])).catch(() => []),
+      fetch("/api/screensavers/config").then((res) => (res.ok ? res.json() : null)).catch(() => null),
+      fetch("/api/settings/contact").then((res) => (res.ok ? res.json() : null)).catch(() => null),
+    ]).then(([ads, config, contact]) => {
+      if (Array.isArray(ads) && ads.length > 0) {
+        setSlides(ads);
       }
 
-      const masterSlide = {
-        id: "default-master",
-        isMaster: true,
-        title: "หน้าหลักระบบ",
-        duration: masterDuration
-      };
-
-      if (masterEnabled) {
-        // Master screen is enabled: put it as first slide in carousel
-        setSlides([masterSlide, ...ads]);
-      } else if (ads.length > 0) {
-        // Master screen disabled: play only active backend ads
-        setSlides(ads);
+      if (config && Array.isArray(config.featuredProducts) && config.featuredProducts.length > 0) {
+        setFeaturedProducts(config.featuredProducts.slice(0, 4));
       } else {
-        // Master screen disabled but no ads available: fallback to master slide
-        setSlides([masterSlide]);
+        // Fallback to fetch bestsellers if no featured products configured
+        fetch("/api/products/bestsellers")
+          .then((res) => (res.ok ? res.json() : []))
+          .then((bData) => {
+            if (Array.isArray(bData) && bData.length > 0) {
+              setFeaturedProducts(bData.slice(0, 4));
+            } else {
+              fetch("/api/products")
+                .then((r) => (r.ok ? r.json() : []))
+                .then((pData) => setFeaturedProducts((pData || []).slice(0, 4)))
+                .catch(() => {});
+            }
+          })
+          .catch(() => {});
+      }
+
+      if (contact) {
+        setContactInfo({
+          website: contact.website || "www.camt.cmu.ac.th",
+          facebook: contact.facebook || "CAMT Chiang Mai University",
+          hotline: contact.hotline || "053-942606"
+        });
       }
     });
   }, []);
 
+  // Automatic Carousel timer for advertisement area
   useEffect(() => {
     if (slides.length <= 1) return;
 
     const currentSlide = slides[currentSlideIndex];
-    const durationMs = (currentSlide?.duration || 10) * 1000;
+    const durationMs = (currentSlide?.duration || 6) * 1000;
 
-    const slideTimer = setTimeout(() => {
-      setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length);
+    const timer = setTimeout(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
     }, durationMs);
 
-    return () => clearTimeout(slideTimer);
+    return () => clearTimeout(timer);
   }, [slides, currentSlideIndex]);
 
-  const thaiMonths = [
-    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
-  ];
-  const thaiDays = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
-
-  const timeString = time.toLocaleTimeString("th-TH", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-
-  const dateString = `วัน${thaiDays[time.getDay()]}ที่ ${time.getDate()} ${thaiMonths[time.getMonth()]} ${time.getFullYear() + 543}`;
-
   const currentSlide = slides[currentSlideIndex];
-  const isMasterSlide = currentSlide?.isMaster || slides.length === 0;
 
   return (
     <div
       onClick={onWake}
-      className="fixed inset-0 z-50 bg-[#121214] flex items-center justify-center select-none cursor-pointer overflow-hidden font-['Prompt']"
+      className="fixed inset-0 z-50 bg-[#081028] flex flex-col justify-between p-3 sm:p-4 font-['Prompt'] select-none cursor-pointer overflow-hidden"
     >
-      <style>{`
-        @keyframes subtle-pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.03); opacity: 0.95; }
-        }
-        @keyframes float-glow {
-          0%, 100% { box-shadow: 0 10px 30px rgba(162, 75, 44, 0.35); }
-          50% { box-shadow: 0 18px 45px rgba(248, 192, 50, 0.5); }
-        }
-        .animate-subtle-pulse {
-          animation: subtle-pulse 3s infinite ease-in-out;
-        }
-        .animate-float-glow {
-          animation: float-glow 2.5s infinite ease-in-out;
-        }
-      `}</style>
+      {/* 1. TOP HEADER BAR (Outside Card) */}
+      <header className="w-full flex items-center justify-between px-2 sm:px-4 py-1 shrink-0 z-10 select-none">
+        {/* Left: DITC Logo */}
+        <div className="flex items-center gap-3">
+          <img
+            src="/ditc_logo.png"
+            alt="DITC"
+            className="h-9 sm:h-10 w-auto object-contain mix-blend-screen"
+          />
+        </div>
 
-      {/* Main Kiosk Portrait Frame (9:16) */}
-      <div className="relative aspect-[9/16] h-full max-h-screen w-auto bg-gradient-to-b from-[#FAF3EB] via-[#F5ECE2] to-[#EFE4D6] shadow-2xl flex flex-col justify-between p-6 sm:p-8 overflow-hidden">
-        
-        {/* Lanna Pattern Texture Subtle Overlay */}
-        <div className="absolute inset-0 opacity-[0.035] pointer-events-none bg-[radial-gradient(#A24B2C_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
-
-        {/* 1. TOP HEADER: BRAND + CLOCK & DATE */}
-        <header className="relative z-10 flex justify-between items-center bg-white/80 backdrop-blur-md px-5 py-3.5 rounded-2xl sm:rounded-3xl border border-[#E8DCCF] shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#A24B2C] to-[#F8C032] flex items-center justify-center shadow-md shadow-[#A24B2C]/20 text-white font-black text-lg">
-              D
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#A24B2C] tracking-tight leading-none">
-                DIIC SHOP
-              </h1>
-              <p className="text-[10px] sm:text-xs font-semibold text-[#8C7A6B] uppercase tracking-widest mt-0.5">
-                Lanna Souvenir Kiosk
-              </p>
-            </div>
+        {/* Right: Language Switcher + Help Button */}
+        <div className="flex items-center gap-4 sm:gap-6">
+          {/* Language Switcher Pill */}
+          <div
+            className="flex items-center bg-[#101C38] rounded-full p-0.5 border border-white/15 shadow-inner select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setLanguage("TH")}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                language === "TH"
+                  ? "bg-[#FABE2C] text-black shadow-xs"
+                  : "text-white/80 hover:text-white"
+              }`}
+            >
+              TH
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage("EN")}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                language === "EN"
+                  ? "bg-[#FABE2C] text-black shadow-xs"
+                  : "text-white/80 hover:text-white"
+              }`}
+            >
+              EN
+            </button>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3 text-right">
-            <div className="flex flex-col">
-              <span className="text-xl sm:text-2xl font-black text-[#3D2E24] leading-none">
-                {timeString}
-              </span>
-              <span className="text-[10px] sm:text-xs font-medium text-[#7D6B5C] mt-1">
-                {dateString}
-              </span>
-            </div>
-            <div className="w-9 h-9 rounded-xl bg-[#F8C032]/20 flex items-center justify-center text-[#A24B2C]">
-              <ClockIcon className="w-5 h-5 stroke-[2.2]" />
-            </div>
+          {/* Help Button */}
+          <div className="flex items-center gap-1.5 text-white/90 hover:text-white font-bold text-xs sm:text-sm tracking-wide cursor-pointer transition-colors">
+            <QuestionMarkCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" />
+            <span>HELP</span>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* 2. CENTER HERO AREA (Slideshow or Attract Presentation) */}
-        <main className="relative z-10 flex-1 flex flex-col items-center justify-center my-4 sm:my-6 text-center">
-          {slides.length > 0 ? (
-            /* Custom Slide Media */
-            <div className="w-full max-h-[38vh] rounded-3xl overflow-hidden shadow-xl border border-white/70 mb-5 relative bg-black/5">
+      {/* 2. MAIN FLOATING WHITE CARD (Compact & Closer Spacing) */}
+      <main className="relative w-full max-w-[580px] mx-auto flex-1 bg-white rounded-[36px] sm:rounded-[42px] shadow-2xl p-4 sm:p-5 flex flex-col items-center justify-center gap-2 sm:gap-2.5 my-1 overflow-hidden border border-white/20">
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#0E1B3E_2px,transparent_2px)] [background-size:20px_20px]" />
+
+        {/* TOP SECTION: Cute Icon + WELCOME TO DITC STORE + Tagline (Extra Large) */}
+        <div className="flex flex-col items-center text-center z-10 w-full">
+          {/* Cute Smiling Shopping Bag with 2 Stars (Extra Large) */}
+          <div className="flex items-center justify-center gap-5 mt-1">
+            {/* Left Golden Star */}
+            <span className="text-[#FABE2C] text-3xl sm:text-4xl animate-pulse">✦</span>
+
+            {/* Cute Smiling Bag SVG */}
+            <div className="w-18 h-18 sm:w-22 sm:h-22 flex items-center justify-center text-[#0E1B3E]">
+              <svg
+                viewBox="0 0 48 48"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-full h-full stroke-[3] stroke-[#0E1B3E]"
+              >
+                <path
+                  d="M10 16h28l-2.5 24a3 3 0 0 1-3 2.7H15.5A3 3 0 0 1 12.5 40L10 16z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M18 18V12a6 6 0 0 1 12 0v6"
+                  strokeLinecap="round"
+                />
+                {/* Smiling Face */}
+                <circle cx="20" cy="28" r="2" fill="#0E1B3E" stroke="none" />
+                <circle cx="28" cy="28" r="2" fill="#0E1B3E" stroke="none" />
+                <path
+                  d="M21 32c1 1.8 5 1.8 6 0"
+                  strokeLinecap="round"
+                  strokeWidth="2.8"
+                />
+              </svg>
+            </div>
+
+            {/* Right Cyan Star */}
+            <span className="text-[#38BDF8] text-3xl sm:text-4xl animate-pulse">✦</span>
+          </div>
+
+          {/* WELCOME (Extra Large) */}
+          <h1 className="text-7xl sm:text-8xl md:text-9xl font-black text-[#0E1B3E] tracking-tight leading-none mt-2 select-none">
+            WELCOME
+          </h1>
+
+          {/* "TO" Divider (Extra Large) */}
+          <div className="flex items-center gap-4 w-60 sm:w-80 justify-center my-1.5 select-none">
+            <div className="h-1 bg-gray-300 rounded-full flex-1" />
+            <span className="text-base sm:text-xl font-black text-gray-800 tracking-widest">TO</span>
+            <div className="h-1 bg-gray-300 rounded-full flex-1" />
+          </div>
+
+          {/* DITC STORE (Extra Large) */}
+          <div className="flex items-center justify-center gap-3 select-none">
+            <span className="text-6xl sm:text-7xl md:text-8xl font-black text-[#0088CC] tracking-tight leading-none">
+              DIT<span className="text-[#0E1B3E]">C</span>
+            </span>
+            <span className="text-6xl sm:text-7xl md:text-8xl font-black text-[#0E1B3E] tracking-tight leading-none">
+              STORE
+            </span>
+          </div>
+
+          {/* Tagline: Discover • Select • Pay (Extra Large) */}
+          <p className="text-xl sm:text-3xl font-black text-gray-800 tracking-wider mt-2.5 select-none">
+            Discover <span className="text-[#FABE2C]">•</span> Select <span className="text-[#FABE2C]">•</span> Pay
+          </p>
+
+          {/* Thai Subtitle (Extra Large) */}
+          <p className="text-base sm:text-xl font-bold text-gray-600 mt-1.5 select-none">
+            เลือกสิ่งที่คุณชอบ จ่ายง่าย รับของได้ทันที
+          </p>
+        </div>
+
+        {/* MIDDLE SECTION: ADVERTISEMENT AREA (Larger & Prominent) */}
+        <div className="w-full max-w-[530px] aspect-[16/9.5] sm:aspect-[16/9] min-h-[210px] sm:min-h-[250px] rounded-3xl overflow-hidden shadow-lg relative bg-gray-100 border border-gray-150 flex items-center justify-center z-10 my-0.5">
+          {slides.length > 0 && currentSlide ? (
+            /* Active Screensaver / Promotional Ad */
+            <div className="w-full h-full relative">
               <img
                 src={
-                  slides[currentSlideIndex].mediaUrl.startsWith("http") ||
-                  slides[currentSlideIndex].mediaUrl.startsWith("blob")
-                    ? slides[currentSlideIndex].mediaUrl
-                    : `/uploads/screensavers/${slides[currentSlideIndex].mediaUrl}`
+                  currentSlide.mediaUrl.startsWith("http") ||
+                  currentSlide.mediaUrl.startsWith("blob")
+                    ? currentSlide.mediaUrl
+                    : `/uploads/screensavers/${currentSlide.mediaUrl}`
                 }
-                alt={slides[currentSlideIndex].title || "Screensaver Banner"}
-                className="w-full h-full object-cover transition-all duration-700"
+                alt={currentSlide.title || "Advertisement"}
+                className="w-full h-full object-cover transition-opacity duration-700"
               />
               {slides.length > 1 && (
-                <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
+                <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5 z-10">
                   {slides.map((_, idx) => (
                     <div
                       key={idx}
                       className={`h-1.5 rounded-full transition-all duration-300 ${
-                        idx === currentSlideIndex ? "bg-[#F8C032] w-6" : "bg-white/60 w-2"
+                        idx === currentSlideIndex ? "bg-[#FABE2C] w-6" : "bg-white/70 w-2"
                       }`}
                     />
                   ))}
@@ -303,83 +230,151 @@ export default function Screensaver({ onWake }) {
               )}
             </div>
           ) : (
-            /* Default Brand Attract Content */
-            <div className="flex flex-col items-center mb-6 animate-subtle-pulse">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-[#A24B2C] via-[#C85E38] to-[#F8C032] flex items-center justify-center shadow-xl shadow-[#A24B2C]/25 mb-4 sm:mb-6">
-                <SparklesIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-black text-[#3D2E24] leading-tight">
-                ยินดีต้อนรับสู่ <br />
-                <span className="bg-gradient-to-r from-[#A24B2C] to-[#E37400] bg-clip-text text-transparent">
-                  DIIC Shop
-                </span> ของฝากล้านนา
-              </h2>
-              <p className="text-xs sm:text-sm text-[#6E5D4F] mt-2 sm:mt-3 max-w-xs leading-relaxed">
-                คัดสรรของฝากและงานหัตถกรรมคุณภาพ ชำระเงินง่ายผ่านพร้อมเพย์ รับสินค้าได้ทันที
+            /* Default Red Promotional Box matching mockup when no custom ads uploaded */
+            <div className="w-full h-full bg-[#E50914] flex flex-col items-center justify-center text-white p-6 relative overflow-hidden group">
+              <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
+              <div className="absolute -left-10 -bottom-10 w-40 h-40 rounded-full bg-black/10 blur-xl pointer-events-none" />
+              
+              <span className="bg-white/20 backdrop-blur-xs text-white text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-1.5 border border-white/30">
+                PROMOTION & ADS
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-sm text-center">
+                DITC SPECIAL OFFERS
+              </h3>
+              <p className="text-xs sm:text-sm text-white/90 mt-1 font-medium text-center max-w-sm">
+                สินค้าคุณภาพ ราคาพิเศษ พร้อมเสิร์ฟความสะดวกสบายทุกวัน
               </p>
             </div>
           )}
+        </div>
 
-          {/* 3. INTERACTIVE TOUCH TO START BUTTON */}
-          <button
-            onClick={onWake}
-            className="group relative px-8 sm:px-10 py-4 sm:py-4.5 rounded-full bg-gradient-to-r from-[#A24B2C] to-[#C85E38] text-white font-bold text-lg sm:text-xl animate-float-glow flex items-center gap-3 border border-white/40 transform hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer shadow-lg"
-          >
-            <CursorArrowRaysIcon className="w-6 h-6 text-[#F8C032] animate-bounce" />
-            <span>แตะหน้าจอเพื่อเริ่มสั่งซื้อ</span>
-            <span className="text-[10px] sm:text-xs bg-black/25 py-0.5 px-2.5 rounded-full text-white/95 font-medium">
-              Touch to Start
-            </span>
-          </button>
-        </main>
+        {/* CTA BUTTON: START SHOPPING (ชิดกับโฆษณาและสินค้า) */}
+        <button
+          type="button"
+          onClick={onWake}
+          className="w-full max-w-[440px] h-13 sm:h-14 rounded-full bg-gradient-to-b from-[#FCD24E] to-[#F5B41C] text-black font-black text-base sm:text-lg shadow-[0_10px_25px_rgba(245,180,28,0.45)] hover:shadow-[0_14px_30px_rgba(245,180,28,0.6)] border border-[#FFE885]/60 flex items-center justify-center gap-2.5 active:scale-[0.97] transition-all duration-200 cursor-pointer select-none z-10"
+        >
+          <ShoppingCartIcon className="w-5 h-5 text-black stroke-[1.5]" />
+          <span>START SHOPPING</span>
+        </button>
 
-        {/* 4. BOTTOM BEST SELLERS SHOWCASE */}
-        <footer className="relative z-10 bg-white/75 backdrop-blur-md p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#E8DCCF]">
-          <div className="flex justify-between items-center mb-3 px-1">
-            <span className="text-[11px] sm:text-xs font-bold text-[#A24B2C] uppercase tracking-wider flex items-center gap-1.5">
-              <SparklesIcon className="w-4 h-4 text-[#F8C032]" /> สินค้ายอดนิยม
+        {/* BOTTOM SECTION: FEATURED PRODUCTS SHOWCASE (ชิดกับปุ่ม) */}
+        <div className="w-full pt-1.5 sm:pt-2 border-t border-gray-100 z-10 select-none">
+          <div className="flex items-center justify-between px-1 mb-1">
+            <span className="text-[11px] sm:text-xs font-bold text-gray-800 flex items-center gap-1.5">
+              <SparklesIcon className="w-3.5 h-3.5 text-[#FABE2C]" />
+              <span>สินค้าแนะนำพิเศษ</span>
             </span>
-            <span className="text-[10px] sm:text-[11px] text-[#8C7A6B]">
-              สัมผัสเพื่อเลือกดูทั้งหมด
+            <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">
+              สัมผัสหน้าจอเพื่อสั่งซื้อ
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
-            {(bestSellers.length > 0 ? bestSellers : [1, 2, 3, 4]).map((item, idx) => {
+          <div className="grid grid-cols-4 gap-2 sm:gap-2.5 w-full">
+            {(featuredProducts.length > 0
+              ? featuredProducts
+              : [1, 2, 3, 4]
+            ).map((item, idx) => {
               const isObj = typeof item === "object";
-              const name = isObj ? item.name : `สินค้าแนะนำ ${idx + 1}`;
+              const name = isObj ? item.name : `สินค้า ${idx + 1}`;
               const price = isObj ? parseFloat(item.price).toLocaleString("th-TH") : "20";
-              const imgKey = isObj ? item.image : "water";
-              const Illustration = ILLUSTRATIONS[imgKey] || WaterDrop;
-              const isCustomImage = isObj && item.image && (item.image.startsWith("http") || item.image.startsWith("/") || item.image.includes("."));
+              const image = isObj && item.image ? item.image : "";
 
               return (
                 <div
                   key={isObj ? item.id : idx}
-                  className="bg-[#FAF3EB] rounded-xl sm:rounded-2xl p-2 sm:p-2.5 border border-[#E1D2C1] flex flex-col items-center text-center shadow-sm hover:scale-105 transition-transform duration-200"
+                  className="bg-[#F8F9FA] rounded-2xl p-1.5 sm:p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
                 >
-                  <div className="w-full h-14 sm:h-16 rounded-lg bg-white/60 flex items-center justify-center p-1 overflow-hidden mb-1.5">
-                    {isCustomImage ? (
-                      <img src={item.image} alt={name} className="h-full object-contain" />
+                  <div className="w-full h-11 sm:h-13 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden mb-1 border border-gray-100">
+                    {image ? (
+                      image.startsWith("http") || image.startsWith("/") || image.includes(".") ? (
+                        <img
+                          src={image.startsWith("http") || image.startsWith("/") ? image : `/uploads/products/${image}`}
+                          alt={name}
+                          className="h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-xl">🛍️</span>
+                      )
                     ) : (
-                      <div className="h-full flex items-center justify-center">
-                        <Illustration />
-                      </div>
+                      <span className="text-xl">🛍️</span>
                     )}
                   </div>
-                  <h4 className="text-[10px] sm:text-xs font-bold text-[#3D2E24] line-clamp-1 w-full">
+                  <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-800 line-clamp-1 w-full leading-tight">
                     {name}
                   </h4>
-                  <p className="text-[10px] sm:text-xs font-black text-[#A24B2C] mt-0.5">
+                  <p className="text-[10px] sm:text-[11px] font-black text-[#E53935] mt-0.5">
                     ฿{price}
                   </p>
                 </div>
               );
             })}
           </div>
-        </footer>
+        </div>
 
-      </div>
+        {/* STAFF CONTACT INFO STRIP (Inside Card, No Background, Separated by Dividing Lines) */}
+        <div className="w-full pt-2 border-t border-gray-150 grid grid-cols-3 divide-x divide-gray-200 z-10 select-none mt-0.5">
+          {/* 1. Website */}
+          <div className="flex items-center justify-center gap-2 px-1">
+            <div className="w-7 h-7 rounded-full border border-sky-500 bg-sky-50 flex items-center justify-center text-sky-600 shrink-0">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            </div>
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#C98B00]">เว็บไซต์:</span>
+              <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate max-w-[120px]">
+                {contactInfo.website}
+              </span>
+            </div>
+          </div>
+
+          {/* 2. Facebook */}
+          <div className="flex items-center justify-center gap-2 px-1">
+            <div className="w-7 h-7 rounded-full bg-[#1877F2] flex items-center justify-center text-white shrink-0 shadow-2xs">
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+            </div>
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#C98B00]">Facebook:</span>
+              <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate max-w-[130px]">
+                {contactInfo.facebook}
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Phone */}
+          <div className="flex items-center justify-center gap-2 px-1">
+            <div className="w-7 h-7 rounded-full border border-sky-500 bg-sky-50 flex items-center justify-center text-sky-600 shrink-0">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+            </div>
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#C98B00]">โทรศัพท์:</span>
+              <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate max-w-[110px]">
+                {contactInfo.hotline}
+              </span>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* 3. BOTTOM TOUCH SCREEN INSTRUCTION */}
+      <footer className="w-full flex items-center justify-center gap-2 py-0.5 select-none z-10">
+        <div className="flex flex-col items-center text-center">
+          <span className="text-xs font-medium text-white/90">
+            แตะหน้าจอเพื่อเริ่มใช้งาน
+          </span>
+          <span className="text-[8px] sm:text-[9px] font-bold text-[#FABE2C] tracking-widest uppercase mt-0.5">
+            TOUCH SCREEN TO BEGIN
+          </span>
+        </div>
+        <span className="text-sm text-[#FABE2C] animate-bounce">👆</span>
+      </footer>
     </div>
   );
 }

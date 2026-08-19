@@ -153,11 +153,13 @@ export default function ProductManagement() {
   const [isSavingTags, setIsSavingTags] = useState(false);
 
   // Contact settings state
-  const [contactHotlineInput, setContactHotlineInput] = useState("02-123-4567 / 081-234-5678");
+  const [contactHotlineInput, setContactHotlineInput] = useState("053-942606");
   const [contactLineIdInput, setContactLineIdInput] = useState("@ditcsupport");
   const [contactLineUrlInput, setContactLineUrlInput] = useState("https://line.me/ti/p/@ditcsupport");
   const [contactLineQrImageInput, setContactLineQrImageInput] = useState("");
   const [contactServiceHoursInput, setContactServiceHoursInput] = useState("เปิดบริการ 08:00 - 20:00 น.");
+  const [contactWebsiteInput, setContactWebsiteInput] = useState("www.camt.cmu.ac.th");
+  const [contactFacebookInput, setContactFacebookInput] = useState("CAMT Chiang Mai University");
   const [isSavingContact, setIsSavingContact] = useState(false);
   const [isUploadingQr, setIsUploadingQr] = useState(false);
 
@@ -195,6 +197,8 @@ export default function ProductManagement() {
         if (data.lineUrl) setContactLineUrlInput(data.lineUrl);
         if (data.lineQrImage !== undefined) setContactLineQrImageInput(data.lineQrImage);
         if (data.serviceHours) setContactServiceHoursInput(data.serviceHours);
+        if (data.website) setContactWebsiteInput(data.website);
+        if (data.facebook) setContactFacebookInput(data.facebook);
       }
     } catch (err) {
       console.error("Error loading contact settings:", err);
@@ -268,7 +272,9 @@ export default function ProductManagement() {
           lineId: contactLineIdInput,
           lineUrl: contactLineUrlInput,
           lineQrImage: contactLineQrImageInput,
-          serviceHours: contactServiceHoursInput
+          serviceHours: contactServiceHoursInput,
+          website: contactWebsiteInput,
+          facebook: contactFacebookInput
         })
       });
       const data = await res.json();
@@ -1254,12 +1260,34 @@ export default function ProductManagement() {
 
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">เว็บไซต์ (Website)</label>
+                  <input
+                    type="text"
+                    value={contactWebsiteInput}
+                    onChange={(e) => setContactWebsiteInput(e.target.value)}
+                    placeholder="เช่น www.camt.cmu.ac.th"
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">ชื่อเพจ Facebook</label>
+                  <input
+                    type="text"
+                    value={contactFacebookInput}
+                    onChange={(e) => setContactFacebookInput(e.target.value)}
+                    placeholder="เช่น CAMT Chiang Mai University"
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">เบอร์โทรศัพท์ Hotline</label>
                   <input
                     type="text"
                     value={contactHotlineInput}
                     onChange={(e) => setContactHotlineInput(e.target.value)}
-                    placeholder="เช่น 02-123-4567 / 081-234-5678"
+                    placeholder="เช่น 053-942606"
                     className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
                   />
                 </div>

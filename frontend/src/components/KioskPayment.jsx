@@ -131,183 +131,238 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F8F8F8] flex flex-col items-center justify-center p-6 font-['Prompt']">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-[0_15px_40px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col p-8 gap-6 animate-in fade-in-50 duration-200">
+    <div className="fixed inset-0 z-50 bg-[#F2F2F2] flex items-center justify-center p-4 font-['Prompt'] select-none">
+      <div className="w-[92%] max-w-[430px] bg-white rounded-[32px] sm:rounded-[36px] shadow-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200">
         
-        {!contactSubmitted ? (
-          <>
-            {/* Step 1: Input Contact Info BEFORE paying */}
-            <div className="text-center flex flex-col gap-2">
-              <h2 className="text-2xl font-bold text-[#2B2B2B]">ข้อมูลผู้สั่งซื้อ</h2>
-              <p className="text-sm text-gray-500">กรุณากรอกเบอร์โทรและอีเมลเพื่อรับใบเสร็จก่อนสแกนชำระเงิน</p>
-            </div>
+        {/* Top Dark Navy Strip with DITC Logo */}
+        <div className="w-full bg-[#0E1B3E] py-3 px-6 flex items-center justify-center shrink-0">
+          <img
+            src="/ditc_logo.png"
+            alt="DITC"
+            className="h-7 sm:h-8 w-auto object-contain mix-blend-screen"
+          />
+        </div>
 
-            {/* Total Price Summary */}
-            <div className="flex flex-col items-center justify-center gap-1 bg-[#F8C032]/10 p-4 rounded-2xl border border-[#F8C032]/20 text-center">
-              <span className="text-sm text-gray-600 font-medium">ยอดเงินชำระทั้งหมด</span>
-              <span className="text-3xl font-extrabold text-[#E53935]">
-                ฿{totalPrice.toLocaleString('th-TH')}
-              </span>
-            </div>
-
-            <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <PhoneIcon className="w-4 h-4 text-[#F8C032]" /> เบอร์โทรศัพท์ติดต่อ (10 หลัก)
-                </label>
-                <input
-                  type="tel"
-                  required
-                  maxLength={10}
-                  pattern="[0-9]{10}"
-                  placeholder="เช่น 0812345678"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  className="h-11 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F9C338] text-sm font-semibold"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <EnvelopeIcon className="w-4 h-4 text-[#F8C032]" /> อีเมลสำหรับรับใบเสร็จ
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="example@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#F9C338] text-sm font-semibold"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 mt-2">
-                <button
-                  type="submit"
-                  disabled={submittingContact}
-                  className={`h-12 rounded-2xl w-full font-bold text-base text-[#2B2B2B] shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer select-none
-                    ${submittingContact ? "bg-gray-100 text-gray-400" : "bg-[#F8C032] hover:bg-[#F0B420] active:scale-95"}`}
-                >
-                  {submittingContact ? (
-                    <>
-                      <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                      <span>กำลังบันทึกข้อมูล...</span>
-                    </>
-                  ) : (
-                    <span>สแกนชำระเงิน</span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  className="h-10 rounded-xl w-full font-semibold text-xs text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                >
-                  ยกเลิกคำสั่งซื้อ
-                </button>
-              </div>
-            </form>
-          </>
-        ) : paymentStatus === "pending" ? (
-          <>
-            {/* Step 2: Payment Pending UI (QR Code) */}
-            <div className="text-center flex flex-col gap-2">
-              <h2 className="text-2xl font-bold text-[#2B2B2B]">สแกนเพื่อชำระเงิน</h2>
-              <p className="text-sm text-gray-500">กรุณาแสกน QR Code เพื่อโอนเงินผ่านแอปพลิเคชันธนาคาร</p>
-            </div>
-
-            {/* QR Code Container */}
-            <div className="flex flex-col items-center justify-center gap-4 py-4 bg-gray-50 rounded-2xl border border-gray-100 relative">
-              {qrPayload ? (
-                <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-                  {qrPayload.startsWith("http://") || qrPayload.startsWith("https://") ? (
-                    <img src={qrPayload} alt="PromptPay QR Code" className="w-[200px] h-[200px] object-contain" />
-                  ) : (
-                    <QRCodeSVG value={qrPayload} size={200} />
-                  )}
-                </div>
-              ) : (
-                <div className="h-[232px] flex flex-col items-center justify-center text-gray-400">
-                  <ArrowPathIcon className="w-10 h-10 animate-spin mb-2" />
-                  <span className="text-xs">กำลังสร้าง QR Code จาก Omise...</span>
-                </div>
-              )}
-              <span className="text-xs font-mono text-gray-400 select-all">
-                ID: {orderId}
-              </span>
-            </div>
-
-            {/* 5-minute Payment Countdown Badge */}
-            <div className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-xs font-bold transition-all ${
-              payTimerSeconds <= 60
-                ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
-                : "bg-amber-50 border-amber-200 text-amber-800"
-            }`}>
-              <ClockIcon className="w-4.5 h-4.5 text-amber-600 shrink-0" />
-              <span>กรุณาสแกนชำระเงินภายใน: <strong className="font-mono text-sm font-black">{formatMMSS(payTimerSeconds)}</strong> นาที</span>
-            </div>
-
-            {/* Price summary */}
-            <div className="flex flex-col items-center justify-center gap-1 bg-[#F8C032]/10 p-4 rounded-2xl border border-[#F8C032]/20 text-center">
-              <span className="text-xs text-gray-500 font-medium">ยอดเงินชำระทั้งหมด</span>
-              <span className="text-2xl font-extrabold text-[#E53935]">
-                ฿{totalPrice.toLocaleString('th-TH')}
-              </span>
-            </div>
-
-            {/* Real-time Loader */}
-            <div className="flex items-center justify-center gap-2.5 text-[#2E7D32] bg-[#E8F5E9] py-3 px-4 rounded-xl border border-[#C8E6C9] font-medium text-xs">
-              <ArrowPathIcon className="w-4 h-4 animate-spin shrink-0" />
-              <span>ระบบตรวจสอบการชำระเงินเรียลไทม์...</span>
-            </div>
-
-            {/* Cancel Order Button */}
-            <button
-              onClick={onCancel}
-              className="py-2.5 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-semibold border border-red-200 active:scale-95 transition-all text-center text-xs cursor-pointer"
-            >
-              ยกเลิกคำสั่งซื้อ
-            </button>
-          </>
-        ) : (
-          <>
-            {/* Step 3: Payment & Contact Success Final Screen */}
-            <div className="text-center flex flex-col items-center justify-center py-4 gap-4">
-              <CheckCircleIcon className="w-20 h-20 text-[#2E7D32] animate-bounce" />
-              
-              <div className="flex flex-col gap-1.5">
-                <h2 className="text-2xl font-extrabold text-[#2B2B2B]">ชำระเงินสำเร็จ!</h2>
-                <p className="text-xs text-gray-500 px-4">
-                  ระบบได้ส่งใบเสร็จการชำระเงินไปยัง <span className="font-semibold text-gray-700">{email}</span> เรียบร้อยแล้ว
+        {/* Modal Body */}
+        <div className="p-6 sm:p-7 flex flex-col gap-4">
+          {!contactSubmitted ? (
+            <>
+              {/* Step 1: Input Contact Info BEFORE paying */}
+              <div className="text-center flex flex-col gap-1">
+                <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                  ข้อมูลผู้สั่งซื้อ
+                </h2>
+                <p className="text-xs text-gray-500 font-normal leading-relaxed">
+                  กรุณากรอกเบอร์โทรและอีเมลเพื่อรับใบเสร็จก่อนสแกนชำระเงิน
                 </p>
               </div>
 
-              <div className="w-full flex flex-col gap-2 bg-[#E8F5E9]/50 p-4 rounded-2xl border border-[#C8E6C9]/40 mt-1">
-                <span className="text-[10px] text-gray-400 font-semibold font-mono uppercase tracking-wider">
-                  Order Reference
+              {/* Total Price Box: Light cream tint container */}
+              <div className="flex flex-col items-center justify-center gap-0.5 bg-[#FFF9EC] py-3.5 px-6 rounded-[22px] border border-[#FFE7B8] text-center shadow-2xs">
+                <span className="text-xs font-semibold text-gray-700">
+                  ยอดเงินชำระทั้งหมด
                 </span>
-                <span className="text-sm font-bold text-[#2B2B2B] font-mono">
-                  {orderId}
+                <span className="text-3xl sm:text-4xl font-black text-[#FF0000] tracking-tight">
+                  ฿{totalPrice.toLocaleString("th-TH")}
                 </span>
               </div>
-            </div>
 
-            {/* Auto Close Info */}
-            <div className="flex flex-col gap-2.5">
+              <form onSubmit={handleContactSubmit} className="flex flex-col gap-3.5">
+                {/* Field 1: Phone */}
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <PhoneIcon className="w-4 h-4 text-[#FABE2C] stroke-[2.2]" />
+                    <span>เบอร์โทรศัพท์ติดต่อ (10 หลัก)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    pattern="[0-9]{10}"
+                    placeholder="เช่น 0812345678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                    className="h-12 px-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-[#FABE2C] text-sm font-medium text-gray-800 placeholder-gray-400 transition-colors"
+                  />
+                </div>
+
+                {/* Field 2: Email */}
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <EnvelopeIcon className="w-4 h-4 text-[#FABE2C] stroke-[2.2]" />
+                    <span>อีเมลสำหรับรับใบเสร็จ</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="example@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 px-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-[#FABE2C] text-sm font-medium text-gray-800 placeholder-gray-400 transition-colors"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex flex-col gap-2 mt-2">
+                  <button
+                    type="submit"
+                    disabled={submittingContact}
+                    className={`h-13 sm:h-14 rounded-2xl w-full font-bold text-base bg-[#FABE2C] hover:bg-[#F5B41C] text-black shadow-[0_10px_25px_rgba(245,180,28,0.4)] hover:shadow-[0_14px_30px_rgba(245,180,28,0.55)] flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] select-none
+                      ${submittingContact ? "opacity-70 cursor-not-allowed" : ""}`}
+                  >
+                    {submittingContact ? (
+                      <>
+                        <ArrowPathIcon className="w-5 h-5 animate-spin text-black" />
+                        <span>กำลังบันทึกข้อมูล...</span>
+                      </>
+                    ) : (
+                      <span>สแกนชำระเงิน</span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    className="text-xs sm:text-sm font-bold text-[#E53935] hover:underline cursor-pointer text-center py-1 select-none transition-colors"
+                  >
+                    ยกเลิกคำสั่งซื้อ
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : paymentStatus === "pending" ? (
+            <>
+              {/* Step 2: Payment Pending UI (QR Code) matching mockup */}
+              <div className="text-center flex flex-col gap-1">
+                <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                  สแกนเพื่อชำระเงิน
+                </h2>
+                <p className="text-xs text-gray-500 font-normal">
+                  กรุณาสแกน QR Code เพื่อโอนเงินผ่านแอปพลิเคชันธนาคาร
+                </p>
+              </div>
+
+              {/* Total Due Price without box matching mockup */}
+              <div className="flex flex-col items-center justify-center mt-1 text-center select-none">
+                <span className="text-xs sm:text-sm font-bold text-gray-800">
+                  ยอดรวมที่ต้องชำระ
+                </span>
+                <span className="text-3xl sm:text-4xl font-black text-[#FF0000] tracking-tight mt-0.5">
+                  ฿ {totalPrice.toLocaleString("th-TH")}
+                </span>
+              </div>
+
+              {/* QR Code Container matching mockup */}
+              <div className="flex flex-col items-center justify-center gap-2.5 py-4 px-6 bg-[#F8F9FA] rounded-[24px] border border-gray-100 mt-1 select-none">
+                {/* Inner White Card with Thai QR Header */}
+                <div className="p-3 bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col items-center justify-center gap-1.5 w-[210px] sm:w-[220px]">
+                  {/* Thai QR Banner */}
+                  <div className="w-full bg-[#003B71] text-white py-1 px-2.5 rounded-md text-[9px] font-bold flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                    <svg className="w-3 h-3 text-white fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                    </svg>
+                    <span>THAI QR PAYMENT</span>
+                  </div>
+                  {/* PromptPay sub-logo badge */}
+                  <div className="text-[9px] font-bold text-[#003B71] tracking-widest uppercase">
+                    PromptPay
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="flex items-center justify-center py-1">
+                    {qrPayload ? (
+                      qrPayload.startsWith("http://") || qrPayload.startsWith("https://") ? (
+                        <img src={qrPayload} alt="PromptPay QR Code" className="w-[160px] h-[160px] object-contain" />
+                      ) : (
+                        <QRCodeSVG value={qrPayload} size={160} />
+                      )
+                    ) : (
+                      <div className="h-[160px] w-[160px] flex flex-col items-center justify-center text-gray-400">
+                        <ArrowPathIcon className="w-8 h-8 animate-spin mb-1.5 text-[#FABE2C]" />
+                        <span className="text-[10px]">กำลังสร้าง QR Code...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Order ID */}
+                <span className="text-xs font-mono text-gray-400 tracking-wider">
+                  ID: {orderId}
+                </span>
+              </div>
+
+              {/* Dots Divider */}
+              <div className="text-center text-gray-300 text-xs tracking-widest select-none -my-1 font-bold">
+                ...
+              </div>
+
+              {/* 5-minute Payment Countdown Badge */}
+              <div className={`flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border text-xs font-bold transition-all ${
+                payTimerSeconds <= 60
+                  ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
+                  : "bg-[#FFF9EC] border-[#FFE7B8] text-[#D97706]"
+              }`}>
+                <ClockIcon className="w-4 h-4 text-[#D97706] shrink-0" />
+                <span>กรุณาสแกนชำระเงินภายใน: <strong className="font-mono text-xs font-black">{formatMMSS(payTimerSeconds)}</strong> นาที</span>
+              </div>
+
+              {/* Real-time Loader */}
+              <div className="flex items-center justify-center gap-2 text-[#2E7D32] bg-[#E8F5E9] py-2.5 px-4 rounded-xl border border-[#C8E6C9] font-bold text-xs">
+                <ArrowPathIcon className="w-4 h-4 animate-spin shrink-0 text-[#2E7D32]" />
+                <span>ระบบตรวจสอบการชำระเงินเรียลไทม์...</span>
+              </div>
+
+              {/* Cancel Order Button */}
               <button
-                onClick={onPaymentSuccess}
-                className="h-12 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95
-                           flex items-center justify-center gap-2 transition-transform duration-150 shadow-md font-semibold text-[#2B2B2B] cursor-pointer text-sm"
+                type="button"
+                onClick={onCancel}
+                className="h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-[#E53935] font-bold border border-rose-200 active:scale-95 transition-all text-center text-xs cursor-pointer select-none"
               >
-                กลับสู่หน้าหลัก
+                ยกเลิกคำสั่งซื้อ
               </button>
-              <p className="text-center text-xs text-gray-400">
-                ระบบจะนำคุณกลับสู่หน้าหลักอัตโนมัติใน {countdown} วินาที
-              </p>
-            </div>
-          </>
-        )}
+            </>
+          ) : (
+            <>
+              {/* Step 3: Payment & Contact Success Final Screen */}
+              <div className="text-center flex flex-col items-center justify-center py-4 gap-3">
+                <CheckCircleIcon className="w-16 h-16 text-[#2E7D32] animate-bounce" />
+                
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+                    ชำระเงินสำเร็จ!
+                  </h2>
+                  <p className="text-xs text-gray-500 px-2 leading-relaxed">
+                    ระบบได้ส่งใบเสร็จการชำระเงินไปยัง <span className="font-semibold text-gray-800">{email}</span> เรียบร้อยแล้ว
+                  </p>
+                </div>
 
+                <div className="w-full flex flex-col gap-1 bg-[#E8F5E9]/50 p-3 rounded-2xl border border-[#C8E6C9]/40 mt-1">
+                  <span className="text-[10px] text-gray-400 font-semibold font-mono uppercase tracking-wider">
+                    Order Reference
+                  </span>
+                  <span className="text-xs font-bold text-gray-800 font-mono">
+                    {orderId}
+                  </span>
+                </div>
+              </div>
+
+              {/* Auto Close Info */}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={onPaymentSuccess}
+                  className="h-12 w-full rounded-2xl bg-[#FABE2C] hover:bg-[#F5B41C] active:scale-95
+                             flex items-center justify-center gap-2 transition-transform shadow-md font-bold text-black cursor-pointer text-sm"
+                >
+                  กลับสู่หน้าหลัก
+                </button>
+                <p className="text-center text-[11px] text-gray-400">
+                  ระบบจะนำคุณกลับสู่หน้าหลักอัตโนมัติใน {countdown} วินาที
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
