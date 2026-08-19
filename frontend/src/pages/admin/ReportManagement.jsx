@@ -10,7 +10,9 @@ import {
   ArrowPathIcon,
   AdjustmentsHorizontalIcon,
   TvIcon,
-  TagIcon
+  TagIcon,
+  ChevronDownIcon,
+  ChevronRightIcon
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "../../components/admin/AdminNavbar";
 
@@ -35,6 +37,21 @@ export default function ReportManagement() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
+
+  // State สำหรับการเปิด/ปิด Dropdown รายการออเดอร์ในตารางแนวโน้ม
+  const [expandedDates, setExpandedDates] = useState(new Set());
+
+  const toggleDateExpand = (date) => {
+    setExpandedDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) {
+        next.delete(date);
+      } else {
+        next.add(date);
+      }
+      return next;
+    });
+  };
 
   // ตรวจสอบสิทธิ์ผู้ดูแลระบบ (Admin)
   useEffect(() => {
@@ -383,17 +400,24 @@ export default function ReportManagement() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {stats && stats.deliveryBreakdown && stats.deliveryBreakdown.length > 0 ? (
                         stats.deliveryBreakdown.map((item, idx) => (
-                          <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-between">
-                            <div>
-                              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
-                                {item.delivery_option === "delivery" ? "🚚 จัดส่งพัสดุ (Delivery)" : "🏪 รับสินค้าที่นี่ (Pick Up)"}
-                              </span>
-                              <span className="text-xl font-black text-[#1B1B1C] mt-1 block">
-                                ฿{parseFloat(item.total_amount).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                              </span>
+                          <div key={idx} className="p-5 bg-gray-50/80 rounded-2xl border border-gray-200 flex items-center justify-between shadow-2xs">
+                            <div className="flex items-center gap-3.5">
+                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg ${
+                                item.delivery_option === "delivery" ? "bg-blue-100/70 text-blue-700" : "bg-emerald-100/70 text-emerald-700"
+                              }`}>
+                                {item.delivery_option === "delivery" ? "🚚" : "🏪"}
+                              </div>
+                              <div>
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                                  {item.delivery_option === "delivery" ? "จัดส่งพัสดุ (Delivery)" : "รับสินค้าที่นี่ (Pick Up)"}
+                                </span>
+                                <span className="text-xl font-black text-[#1B1B1C] mt-0.5 block">
+                                  ฿{parseFloat(item.total_amount).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                                </span>
+                              </div>
                             </div>
                             <div className="text-right">
-                              <span className="text-sm font-black text-gray-700 bg-white px-3 py-1 rounded-xl border border-gray-200">
+                              <span className="text-xs font-bold text-gray-700 bg-white px-3.5 py-1.5 rounded-xl border border-gray-200 shadow-2xs inline-block">
                                 {item.order_count} ออเดอร์
                               </span>
                             </div>
@@ -407,34 +431,131 @@ export default function ReportManagement() {
                     </div>
 
                     {/* Daily Revenue Trend Table Preview */}
-                    <div className="mt-6 border border-gray-200 rounded-2xl overflow-hidden">
-                      <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 font-bold text-xs text-gray-700 flex justify-between">
-                        <span>แนวโน้มยอดขายรายวัน (Daily Revenue)</span>
-                        <span>จำนวนวันที่มีข้อมูล: {stats && stats.dailyTrend ? stats.dailyTrend.length : 0} วัน</span>
+                    <div className="mt-6 border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+                      <div className="bg-gray-100 px-5 py-3.5 border-b border-gray-200 font-bold text-xs text-gray-700 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span>แนวโน้มยอดขายรายวัน (Daily Revenue)</span>
+                          <span className="text-[10px] text-gray-400 font-normal hidden sm:inline">(คลิกที่แถวเพื่อดูรายการออเดอร์)</span>
+                        </div>
+                        <span className="text-gray-500">จำนวนวันที่มีข้อมูล: {stats && stats.dailyTrend ? stats.dailyTrend.length : 0} วัน</span>
                       </div>
-                      <div className="max-h-64 overflow-y-auto">
+                      <div className="max-h-96 overflow-y-auto">
                         <table className="w-full text-left text-xs">
-                          <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-bold uppercase sticky top-0">
+                          <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-bold uppercase sticky top-0 z-10">
                             <tr>
-                              <th className="px-4 py-2.5">วันที่</th>
-                              <th className="px-4 py-2.5 text-center">จำนวนคำสั่งซื้อ</th>
-                              <th className="px-4 py-2.5 text-right">ยอดขายรวม (บาท)</th>
+                              <th className="py-3 px-3 w-10 text-center"></th>
+                              <th className="py-3 px-4 text-left">วันที่</th>
+                              <th className="py-3 px-4 text-center w-48">จำนวนคำสั่งซื้อ</th>
+                              <th className="py-3 px-6 text-right w-48">ยอดขายรวม (บาท)</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-150">
                             {stats && stats.dailyTrend && stats.dailyTrend.length > 0 ? (
-                              stats.dailyTrend.map((row, i) => (
-                                <tr key={i} className="hover:bg-gray-50">
-                                  <td className="px-4 py-2.5 font-bold text-gray-800">{row.date}</td>
-                                  <td className="px-4 py-2.5 text-center">{row.orders_count} รายการ</td>
-                                  <td className="px-4 py-2.5 text-right font-black text-emerald-600">
-                                    ฿{parseFloat(row.daily_revenue).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                                  </td>
-                                </tr>
-                              ))
+                              stats.dailyTrend.map((row, i) => {
+                                const isExpanded = expandedDates.has(row.date);
+                                const orderList = Array.isArray(row.orders) ? row.orders : [];
+
+                                return (
+                                  <React.Fragment key={row.date || i}>
+                                    <tr
+                                      onClick={() => toggleDateExpand(row.date)}
+                                      className={`cursor-pointer transition-colors select-none ${
+                                        isExpanded ? "bg-amber-50/60 font-semibold" : "hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      <td className="py-3.5 px-3 text-center text-gray-400">
+                                        {isExpanded ? (
+                                          <ChevronDownIcon className="w-4 h-4 text-amber-600 transition-transform duration-200 mx-auto" />
+                                        ) : (
+                                          <ChevronRightIcon className="w-4 h-4 text-gray-400 hover:text-gray-600 transition-transform duration-200 mx-auto" />
+                                        )}
+                                      </td>
+                                      <td className="py-3.5 px-4 font-bold text-gray-800 flex items-center gap-2">
+                                        <span>{row.date}</span>
+                                        {isExpanded && (
+                                          <span className="text-[10px] bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                                            กำลังแสดงรายละเอียด
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="py-3.5 px-4 text-center">
+                                        <span className="inline-flex items-center justify-center gap-1 bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-bold min-w-[72px]">
+                                          {row.orders_count} รายการ
+                                        </span>
+                                      </td>
+                                      <td className="py-3.5 px-6 text-right font-black text-emerald-600 text-sm">
+                                        ฿{parseFloat(row.daily_revenue).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                                      </td>
+                                    </tr>
+
+                                    {/* Expanded Sub-table */}
+                                    {isExpanded && (
+                                      <tr>
+                                        <td colSpan="4" className="p-0 bg-gray-50/80 border-b border-gray-200">
+                                          <div className="p-4 space-y-2.5">
+                                            <div className="flex items-center justify-between text-xs text-gray-500 font-bold px-1">
+                                              <span className="flex items-center gap-1.5 text-gray-700">
+                                                <span>📋 รายการคำสั่งซื้อวันที่ {row.date}</span>
+                                                <span className="text-gray-400 font-normal">({orderList.length} ออเดอร์)</span>
+                                              </span>
+                                            </div>
+
+                                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+                                              <table className="w-full text-xs">
+                                                <thead className="bg-gray-100/90 text-gray-600 font-bold border-b border-gray-200">
+                                                  <tr>
+                                                    <th className="py-3 px-5 text-left w-3/12">รหัสคำสั่งซื้อ (Order ID)</th>
+                                                    <th className="py-3 px-4 text-center w-3/12">เวลาสั่งซื้อ</th>
+                                                    <th className="py-3 px-4 text-center w-3/12">รูปแบบการรับของ</th>
+                                                    <th className="py-3 px-6 text-right w-3/12">ยอดเงิน (บาท)</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                  {orderList.length > 0 ? (
+                                                    orderList.map((ord, ordIdx) => (
+                                                      <tr key={ord.id || ordIdx} className="hover:bg-amber-50/30 transition-colors">
+                                                        <td className="py-3 px-5 font-mono font-bold text-gray-800">
+                                                          <span className="truncate max-w-[280px] block" title={ord.id}>{ord.id}</span>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-center text-gray-500 font-medium">
+                                                          {ord.created_at
+                                                            ? new Date(ord.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+                                                            : '-'}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-center">
+                                                          <span className={`inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                                            ord.delivery_option === 'delivery'
+                                                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                              : 'bg-green-50 text-green-700 border border-green-200'
+                                                          }`}>
+                                                            {ord.delivery_option === 'delivery' ? '🚚 จัดส่งพัสดุ' : '🏪 รับที่นี่'}
+                                                          </span>
+                                                        </td>
+                                                        <td className="py-3 px-6 text-right font-bold text-emerald-600 text-sm">
+                                                          ฿{parseFloat(ord.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </td>
+                                                      </tr>
+                                                    ))
+                                                  ) : (
+                                                    <tr>
+                                                      <td colSpan="4" className="py-4 text-center text-gray-400">
+                                                        ไม่พบรายการคำสั่งซื้อ
+                                                      </td>
+                                                    </tr>
+                                                  )}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })
                             ) : (
                               <tr>
-                                <td colSpan="3" className="px-4 py-8 text-center text-gray-400">
+                                <td colSpan="4" className="px-4 py-8 text-center text-gray-400">
                                   ไม่มีรายการยอดขายในช่วงเวลานี้
                                 </td>
                               </tr>
@@ -453,20 +574,20 @@ export default function ReportManagement() {
                       <h3 className="text-sm font-bold text-[#1B1B1C]">ตารางสรุปประสิทธิภาพและการขายสินค้า (Product Sales & Conversion)</h3>
                     </div>
 
-                    <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                    <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
                       <div className="max-h-80 overflow-y-auto">
                         <table className="w-full text-left text-xs">
                           <thead className="bg-gray-100 border-b border-gray-200 text-gray-600 font-bold uppercase sticky top-0">
                             <tr>
-                              <th className="px-4 py-3 text-center">ID</th>
-                              <th className="px-4 py-3">ชื่อสินค้า</th>
-                              <th className="px-4 py-3">หมวดหมู่</th>
-                              <th className="px-4 py-3 text-right">ราคา (บาท)</th>
-                              <th className="px-4 py-3 text-center">คงเหลือ (ชิ้น)</th>
-                              <th className="px-4 py-3 text-center">ยอดดู (Views)</th>
-                              <th className="px-4 py-3 text-center">ขายได้ (ชิ้น)</th>
-                              <th className="px-4 py-3 text-right">รายได้รวม (บาท)</th>
-                              <th className="px-4 py-3 text-center">Conversion</th>
+                              <th className="px-4 py-3 text-center w-16">ID</th>
+                              <th className="px-5 py-3 text-left">ชื่อสินค้า</th>
+                              <th className="px-4 py-3 text-center w-28">หมวดหมู่</th>
+                              <th className="px-4 py-3 text-right w-24">ราคา (บาท)</th>
+                              <th className="px-4 py-3 text-center w-24">คงเหลือ (ชิ้น)</th>
+                              <th className="px-4 py-3 text-center w-24">ยอดดู (Views)</th>
+                              <th className="px-4 py-3 text-center w-24">ขายได้ (ชิ้น)</th>
+                              <th className="px-5 py-3 text-right w-32">รายได้รวม (บาท)</th>
+                              <th className="px-4 py-3 text-center w-24">Conversion</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-150">
@@ -474,11 +595,11 @@ export default function ReportManagement() {
                               stats.productReportList.map((prod) => (
                                 <tr key={prod.id} className="hover:bg-gray-50">
                                   <td className="px-4 py-2.5 text-center font-bold text-gray-500">{prod.id}</td>
-                                  <td className="px-4 py-2.5 font-bold text-gray-900">{prod.name}</td>
-                                  <td className="px-4 py-2.5 text-gray-500">{prod.category}</td>
+                                  <td className="px-5 py-2.5 font-bold text-gray-900">{prod.name}</td>
+                                  <td className="px-4 py-2.5 text-center text-gray-500">{prod.category}</td>
                                   <td className="px-4 py-2.5 text-right font-medium">฿{prod.price.toFixed(2)}</td>
                                   <td className="px-4 py-2.5 text-center">
-                                    <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                                    <span className={`px-2 py-0.5 rounded-full font-bold text-[11px] inline-block ${
                                       prod.stock <= 0 ? "bg-red-100 text-red-700" : prod.stock <= 5 ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-700"
                                     }`}>
                                       {prod.stock}
@@ -486,7 +607,7 @@ export default function ReportManagement() {
                                   </td>
                                   <td className="px-4 py-2.5 text-center text-gray-600">{prod.views}</td>
                                   <td className="px-4 py-2.5 text-center font-bold text-[#1B1B1C]">{prod.unitsSold}</td>
-                                  <td className="px-4 py-2.5 text-right font-black text-emerald-600">
+                                  <td className="px-5 py-2.5 text-right font-black text-emerald-600">
                                     ฿{prod.totalRevenue.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-4 py-2.5 text-center font-bold text-blue-600">{prod.conversionRate}</td>
@@ -528,26 +649,26 @@ export default function ReportManagement() {
                     </div>
 
                     {/* Hourly distribution table */}
-                    <div className="border border-gray-200 rounded-2xl overflow-hidden">
-                      <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 font-bold text-xs text-gray-700">
+                    <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+                      <div className="bg-gray-100 px-5 py-3.5 border-b border-gray-200 font-bold text-xs text-gray-700">
                         สถิติคำสั่งซื้อและการชำระเงินตามช่วงเวลาของวัน (Hourly Traffic Distribution)
                       </div>
                       <div className="max-h-64 overflow-y-auto">
                         <table className="w-full text-left text-xs">
                           <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-bold uppercase sticky top-0">
                             <tr>
-                              <th className="px-4 py-2.5">ช่วงเวลา (ชั่วโมง)</th>
-                              <th className="px-4 py-2.5 text-center">จำนวนคำสั่งซื้อ</th>
-                              <th className="px-4 py-2.5 text-right">ยอดเงินรวม (บาท)</th>
+                              <th className="px-6 py-3 text-left w-1/3">ช่วงเวลา (ชั่วโมง)</th>
+                              <th className="px-6 py-3 text-center w-1/3">จำนวนคำสั่งซื้อ</th>
+                              <th className="px-6 py-3 text-right w-1/3">ยอดเงินรวม (บาท)</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-150">
                             {stats && stats.hourlyDistribution && stats.hourlyDistribution.length > 0 ? (
                               stats.hourlyDistribution.map((item, i) => (
                                 <tr key={i} className="hover:bg-gray-50">
-                                  <td className="px-4 py-2.5 font-bold text-gray-800">{item.hour}</td>
-                                  <td className="px-4 py-2.5 text-center font-bold text-[#1B1B1C]">{item.orders} รายการ</td>
-                                  <td className="px-4 py-2.5 text-right font-black text-emerald-600">
+                                  <td className="px-6 py-3 font-bold text-gray-800 text-left">{item.hour}</td>
+                                  <td className="px-6 py-3 text-center font-bold text-[#1B1B1C]">{item.orders} รายการ</td>
+                                  <td className="px-6 py-3 text-right font-black text-emerald-600">
                                     ฿{item.revenue.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                                   </td>
                                 </tr>

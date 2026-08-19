@@ -161,10 +161,12 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
               isOutOfStock
-                ? "bg-red-50 text-[#FF5252]"
-                : "bg-[#E0F2F1] text-[#00796B]"
+                ? "bg-red-50 text-[#FF5252] border border-red-200"
+                : status === "Pre-Order"
+                  ? "bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2]"
+                  : "bg-[#E0F2F1] text-[#00796B] border border-[#80CBC4]/30"
             }`}>
-              {isOutOfStock ? "Out of stock" : "Ready"}
+              {isOutOfStock ? "Out of stock" : status === "Pre-Order" ? "Pre-Order" : "Ready (In Stock)"}
             </span>
             {(product.purchaseLimit || product.purchase_limit) && (
               <span className="bg-red-50 text-red-600 text-[10px] font-black px-3 py-1 rounded-full border border-red-200 tracking-wider">

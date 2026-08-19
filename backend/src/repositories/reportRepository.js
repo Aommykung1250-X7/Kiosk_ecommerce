@@ -65,7 +65,21 @@ export const getSummaryStats = async (startDate, endDate) => {
         SELECT 
             TO_CHAR(created_at, 'YYYY-MM-DD') AS date,
             COUNT(id) AS orders_count,
-            COALESCE(SUM(total_amount), 0) AS daily_revenue
+            COALESCE(SUM(total_amount), 0) AS daily_revenue,
+            COALESCE(
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'id', COALESCE(order_uuid, CAST(id AS VARCHAR)),
+                        'db_id', id,
+                        'total_amount', total_amount,
+                        'delivery_option', COALESCE(delivery_option, 'pickup'),
+                        'customer_name', customer_name,
+                        'fulfillment_status', fulfillment_status,
+                        'created_at', created_at
+                    ) ORDER BY created_at DESC
+                ) FILTER (WHERE id IS NOT NULL),
+                '[]'::json
+            ) AS orders
         FROM orders
         WHERE payment_status = 'paid' ${dateFilter}
         GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')

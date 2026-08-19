@@ -14,6 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { notify, confirmDialog } from "../../components/notify";
 import AdminNavbar from "../../components/admin/AdminNavbar";
+import CustomDropdown from "../../components/admin/CustomDropdown";
 
 // CATEGORIES list is now loaded dynamically in component state
 
@@ -738,7 +739,7 @@ export default function ProductManagement() {
 
     // 3. กรองตามสถานะสต็อก / พรีออเดอร์ / โปรโมชั่น
     const stockVal = p.stock !== undefined ? p.stock : (p.quantity || 0);
-    if (stockStatusFilter === "in_stock" && p.status !== "In Stock") return false;
+    if (stockStatusFilter === "in_stock" && (p.status !== "In Stock" || stockVal <= 0)) return false;
     if (stockStatusFilter === "pre_order" && p.status !== "Pre-Order") return false;
     if (stockStatusFilter === "low_stock" && !(stockVal > 0 && stockVal <= 5)) return false;
     if (stockStatusFilter === "out_of_stock" && stockVal > 0) return false;
@@ -861,21 +862,19 @@ export default function ProductManagement() {
 
                 {/* Category Dropdown Filter */}
                 <div className="w-full sm:w-auto shrink-0 flex items-center gap-2">
-                  <select
+                  <CustomDropdown
                     value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="h-11 px-3.5 bg-gray-50 border border-gray-150 hover:border-gray-250 focus:border-[#F8C032] focus:bg-white rounded-xl text-sm font-medium text-gray-700 outline-none transition-all cursor-pointer w-full sm:w-auto"
-                  >
-                    <option value="all">หมวดหมู่ทั้งหมด ({products.length})</option>
-                    {categories.map((c) => {
-                      const count = products.filter((p) => p.category === c.id).length;
-                      return (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({count})
-                        </option>
-                      );
-                    })}
-                  </select>
+                    onChange={(val) => setCategoryFilter(val)}
+                    className="w-full sm:w-56"
+                    options={[
+                      { value: "all", label: "หมวดหมู่ทั้งหมด", count: products.length },
+                      ...categories.map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                        count: products.filter((p) => p.category === c.id).length
+                      }))
+                    ]}
+                  />
 
                   {/* Refresh Button */}
                   <button
@@ -898,7 +897,7 @@ export default function ProductManagement() {
                 </span>
                 {[
                   { key: "all", label: "ทั้งหมด", count: products.length },
-                  { key: "in_stock", label: "พร้อมส่ง (In Stock)", count: products.filter(p => p.status === "In Stock").length },
+                  { key: "in_stock", label: "พร้อมส่ง (In Stock)", count: products.filter(p => p.status === "In Stock" && (p.stock !== undefined ? p.stock : (p.quantity || 0)) > 0).length },
                   { key: "pre_order", label: "พรีออเดอร์ (Pre-Order)", count: products.filter(p => p.status === "Pre-Order").length },
                   { key: "low_stock", label: "⚠️ ใกล้หมด (≤5)", count: lowStock },
                   { key: "out_of_stock", label: "❌ หมดสต็อก (0)", count: outOfStock },
@@ -1045,12 +1044,22 @@ export default function ProductManagement() {
                               </div>
                             </td>
                             <td className="py-4 px-6">
-                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${p.status === "In Stock"
-                                ? "bg-green-50 text-green-700 border border-green-150"
-                                : "bg-orange-50 text-orange-700 border border-orange-150"
-                                }`}>
-                                {p.status}
-                              </span>
+                              {p.status === "Pre-Order" ? (
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-150 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                  Pre-Order
+                                </span>
+                              ) : stockVal <= 0 ? (
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-150 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                  หมดสต็อก (Out of Stock)
+                                </span>
+                              ) : (
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-150 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                  In Stock
+                                </span>
+                              )}
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-700 font-mono">
                               {p.views || 0} ครั้ง
@@ -1674,15 +1683,18 @@ export default function ProductManagement() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">สถานะสินค้า (Status)</label>
-                  <select
+                  <label className="text-xs font-semibold text-gray-500">รูปแบบสินค้า / สถานะ (Product Type)</label>
+                  <CustomDropdown
                     value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
-                  >
-                    <option value="In Stock">พร้อมจำหน่าย (In Stock)</option>
-                    <option value="Pre-Order">สั่งจองล่วงหน้า (Pre-Order)</option>
-                  </select>
+                    onChange={(val) => setForm(prev => ({ ...prev, status: val }))}
+                    options={[
+                      { value: "In Stock", label: "สินค้าพร้อมส่งปกติ (In Stock)", icon: "🟢" },
+                      { value: "Pre-Order", label: "สินค้าสั่งจองล่วงหน้า (Pre-Order)", icon: "📦" }
+                    ]}
+                  />
+                  <span className="text-[10px] text-gray-400">
+                    * สินค้า In Stock ที่สต็อกเป็น 0 ชิ้น ระบบจะแสดงสถานะเป็น "หมดสต็อก (Out of Stock)" ให้อัตโนมัติ
+                  </span>
                 </div>
 
                 {form.status === "Pre-Order" && (
@@ -1796,14 +1808,14 @@ export default function ProductManagement() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-gray-500">สิทธิ์ของบัญชีนี้ (Account Role)</label>
-                <select
+                <CustomDropdown
                   value={userForm.role}
-                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
-                >
-                  <option value="staff">พนักงาน (Staff / Runner)</option>
-                  <option value="admin">ผู้ดูแลระบบ (Admin / Manager)</option>
-                </select>
+                  onChange={(val) => setUserForm(prev => ({ ...prev, role: val }))}
+                  options={[
+                    { value: "staff", label: "พนักงาน (Staff / Runner)", icon: "👤" },
+                    { value: "admin", label: "ผู้ดูแลระบบ (Admin / Manager)", icon: "👑" }
+                  ]}
+                />
               </div>
 
               <div className="flex items-center justify-end gap-3 mt-4 border-t border-gray-100 pt-5">

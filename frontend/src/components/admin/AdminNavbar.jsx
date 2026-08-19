@@ -90,7 +90,7 @@ export default function AdminNavbar({ title, subtitle, icon: IconComponent }) {
       {/* Navigation Buttons & Actions */}
       <div className="flex items-center flex-wrap gap-2 md:gap-2.5">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-gray-50 border border-gray-150 rounded-2xl">
+        <div className="h-11 flex items-center gap-1.5 p-1 bg-gray-50 border border-gray-150 rounded-2xl">
           {visibleNavItems.map((item) => {
             const ItemIcon = item.icon;
             const isActive = location.pathname === item.path;
@@ -104,7 +104,7 @@ export default function AdminNavbar({ title, subtitle, icon: IconComponent }) {
                     navigate(item.path);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3.5 py-2 text-sm rounded-xl transition-all duration-150 cursor-pointer ${
+                className={`h-full flex items-center gap-1.5 px-3.5 text-sm rounded-xl transition-all duration-150 cursor-pointer ${
                   isActive
                     ? "bg-[#F8C032] text-[#2B2B2B] font-bold shadow-xs border border-amber-400/40"
                     : "text-gray-600 hover:text-[#2B2B2B] hover:bg-gray-200/80 font-medium"
@@ -120,7 +120,7 @@ export default function AdminNavbar({ title, subtitle, icon: IconComponent }) {
 
         {/* User Info (Hidden on small screens) */}
         {currentUser && (
-          <div className="hidden xl:flex flex-col text-right px-2">
+          <div className="hidden xl:flex flex-col justify-center text-right px-2">
             <span className="text-xs font-bold text-gray-700 leading-tight truncate max-w-[120px]">
               {currentUser.name || currentUser.username}
             </span>
@@ -134,7 +134,7 @@ export default function AdminNavbar({ title, subtitle, icon: IconComponent }) {
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100/80 border border-red-150 rounded-xl transition-all duration-150 cursor-pointer ml-1"
+          className="h-11 flex items-center gap-1.5 px-4 text-sm text-red-600 font-bold bg-red-50 hover:bg-red-100 border border-red-150 rounded-2xl transition-all duration-150 cursor-pointer ml-1 shadow-2xs"
           title="ออกจากระบบ"
         >
           <ArrowRightOnRectangleIcon className="w-4.5 h-4.5" />
