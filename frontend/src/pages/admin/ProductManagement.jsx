@@ -74,6 +74,7 @@ export default function ProductManagement() {
   const [form, setForm] = useState({
     name: "",
     description: "",
+    additional_info: "",
     price: 0,
     stock: 0,
     category: "drinks",
@@ -532,6 +533,7 @@ export default function ProductManagement() {
     setForm({
       name: "",
       description: "",
+      additional_info: "",
       price: 0,
       stock: 0,
       category: "drinks",
@@ -555,6 +557,7 @@ export default function ProductManagement() {
     setForm({
       name: p.name,
       description: p.description || "",
+      additional_info: p.additional_info || p.additionalInfo || "",
       price: p.price,
       stock: p.stock || p.quantity || 0,
       category: p.category || "drinks",
@@ -1258,6 +1261,20 @@ export default function ProductManagement() {
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     placeholder="กรอกรายละเอียดสั้นๆ..."
                     className="w-full h-20 py-2 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-4 text-sm outline-none transition-all resize-none"
+                  />
+                </div>
+
+                <div className="col-span-2 flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-500 flex items-center justify-between">
+                    <span>ข้อมูลเพิ่มเติม / หมายเหตุอื่น (Additional Info)</span>
+                    <span className="text-[10px] text-gray-400 font-normal">(ไม่บังคับกรอก - Optional)</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="เช่น ข้อมูลคุณสมบัติเพิ่มเติม, หมายเหตุการจัดส่ง, ข้อควรระวัง..."
+                    value={form.additional_info || form.additionalInfo || ""}
+                    onChange={(e) => setForm({ ...form, additional_info: e.target.value, additionalInfo: e.target.value })}
+                    className="w-full py-2 bg-gray-50 border border-gray-100 focus:border-[#F8C032] focus:bg-white rounded-xl px-4 text-sm outline-none transition-all resize-none font-normal"
                   />
                 </div>
 

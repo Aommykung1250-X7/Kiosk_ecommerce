@@ -45,6 +45,7 @@ export const initDb = async () => {
         pickup_location VARCHAR(255),
         status VARCHAR(50) DEFAULT 'In Stock',
         views INTEGER DEFAULT 0,
+        additional_info TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -250,6 +251,7 @@ export const initDb = async () => {
         await pool.query(`
             ALTER TABLE products ADD COLUMN IF NOT EXISTS preorder_release_date DATE DEFAULT NULL;
             ALTER TABLE products ADD COLUMN IF NOT EXISTS purchase_limit INTEGER DEFAULT NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS additional_info TEXT;
             ALTER TABLE screensavers ADD COLUMN IF NOT EXISTS title VARCHAR(255) DEFAULT 'Untitled Ad';
         `);
 

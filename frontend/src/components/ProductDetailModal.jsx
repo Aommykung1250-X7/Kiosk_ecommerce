@@ -204,6 +204,14 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
                 })()}
               </div>
             )}
+            {(product.additional_info || product.additionalInfo) && (
+              <div className="mt-2 text-xs text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-200 flex flex-col gap-1">
+                <span className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">ข้อมูลเพิ่มเติม (Additional Info)</span>
+                <p className="whitespace-pre-line text-xs font-medium text-gray-700">
+                  {product.additional_info || product.additionalInfo}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Add to Cart Button matching item detail.png */}

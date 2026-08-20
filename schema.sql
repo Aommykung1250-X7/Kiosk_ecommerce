@@ -44,6 +44,7 @@ CREATE TABLE products (
     views INTEGER DEFAULT 0,
     preorder_release_date DATE DEFAULT NULL,
     purchase_limit INTEGER DEFAULT NULL,
+    additional_info TEXT,
     category_id VARCHAR(100) REFERENCES categories(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
