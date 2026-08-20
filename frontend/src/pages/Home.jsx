@@ -299,7 +299,8 @@ export default function Home() {
         setActiveOrder({
           orderId: data.orderId,
           totalPrice: data.totalPrice,
-          qrPayload: data.qrPayload
+          qrPayload: data.qrPayload,
+          deliveryOption: data.deliveryOption || deliveryOption
         });
       })
       .catch((err) => notify.error(err.message));
@@ -566,6 +567,7 @@ export default function Home() {
           orderId={activeOrder.orderId}
           totalPrice={activeOrder.totalPrice}
           qrPayload={activeOrder.qrPayload}
+          deliveryOption={activeOrder.deliveryOption}
           onPaymentSuccess={handlePaymentSuccess}
           onCancel={handleCancelOrder}
         />
