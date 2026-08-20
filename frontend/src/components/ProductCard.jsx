@@ -32,7 +32,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
       className="group cursor-pointer select-none flex flex-col w-full font-['Prompt'] transition-all"
     >
       {/* 1. Large Rounded Grey Image Box */}
-      <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[28px] sm:rounded-[32px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
+      <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[28px] sm:rounded-[10px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
         {/* Top-Right Badge matching mockup */}
         {isOutOfStock ? (
           <div className="absolute top-3 right-3 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
