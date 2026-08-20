@@ -81,8 +81,26 @@ class ProductRepository {
         const dbImages = imagesMap[row.id] || [];
         const fallbackImage = dbImages.length > 0 ? dbImages[0] : row.image;
         const imagesList = dbImages.length > 0 ? dbImages : (row.image ? [row.image] : []);
+
+        // Auto-check Pre-Order release date
+        let computedStatus = row.status;
+        if (computedStatus === "Pre-Order" && row.preorder_release_date) {
+          const releaseDate = new Date(row.preorder_release_date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          releaseDate.setHours(0, 0, 0, 0);
+          if (releaseDate <= today) {
+            computedStatus = "In Stock";
+            // Persist status update to DB in background
+            pool.query("UPDATE products SET status = 'In Stock' WHERE id = $1", [row.id]).catch(err => {
+              console.error(`Error auto-updating status for product ${row.id}:`, err);
+            });
+          }
+        }
+
         return {
           ...row,
+          status: computedStatus,
           category: row.category_id,
           image: fallbackImage,
           images: imagesList.slice(0, 5),
@@ -90,7 +108,9 @@ class ProductRepository {
           quantity: row.stock,
           pickupLocation: row.pickup_location,
           preorderReleaseDate: row.preorder_release_date,
-          purchaseLimit: row.purchase_limit
+          purchaseLimit: row.purchase_limit,
+          additional_info: row.additional_info,
+          additionalInfo: row.additional_info
         };
       });
     } catch (error) {
@@ -133,11 +153,11 @@ class ProductRepository {
     const primaryImg = rawImages.length > 0 ? rawImages[0] : (p.image || null);
 
     const query = `
-      INSERT INTO products (name, description, price, stock, category_id, image, promotion, pickup_location, status, preorder_release_date, purchase_limit)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO products (name, description, price, stock, category_id, image, promotion, pickup_location, status, preorder_release_date, purchase_limit, additional_info)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null];
+    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null];
     try {
       const res = await pool.query(query, values);
       const newProduct = res.rows[0];
@@ -179,11 +199,11 @@ class ProductRepository {
 
     const query = `
       UPDATE products 
-      SET name = $1, description = $2, price = $3, stock = $4, category_id = $5, image = COALESCE($6, image), promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11
-      WHERE id = $12
+      SET name = $1, description = $2, price = $3, stock = $4, category_id = $5, image = COALESCE($6, image), promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11, additional_info = $12
+      WHERE id = $13
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, id];
+    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, id];
     try {
       const res = await pool.query(query, values);
       if (res.rows.length === 0) return null;

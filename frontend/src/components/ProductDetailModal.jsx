@@ -31,7 +31,7 @@ export default function ProductDetailModal({
 
   if (!product) return null;
 
-  const { name, price, image, images, promotion, status, quantity, category, views } = product;
+  const { name, price, image, images, promotion, status, quantity, category, views, description } = product;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
   const isMostViewed = (views || 0) > 0;
   const purchaseLimit = product.purchaseLimit || product.purchase_limit;
@@ -87,7 +87,7 @@ export default function ProductDetailModal({
   };
 
   const getCategoryLabel = () => {
-    return "LOCAL EXPRESS";
+    return category ? String(category).toUpperCase() : "LOCAL EXPRESS";
   };
 
   const handlePrevImage = (e) => {
@@ -107,12 +107,12 @@ export default function ProductDetailModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['Prompt']"
       onClick={onClose}
     >
-      {/* Modal Card matching mockup with top space for close button */}
+      {/* Modal Card matching mockup */}
       <div
         className="relative w-[92%] max-w-[460px] bg-white rounded-[36px] sm:rounded-[40px] pt-13 sm:pt-14 pb-6 sm:pb-7 px-6 sm:px-7 flex flex-col shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Red Circle Close Button in top white area */}
+        {/* Red Circle Close Button */}
         <button
           type="button"
           onClick={onClose}
@@ -124,13 +124,12 @@ export default function ProductDetailModal({
 
         {/* 1. Main Product Image Box */}
         <div className="w-full aspect-[4/3] bg-[#F4F5F7] rounded-[28px] relative flex items-center justify-center p-6 overflow-hidden select-none">
-          {/* Top-Right Badge matching mockup */}
+          {/* Badges */}
           {isOutOfStock ? (
             <div className="absolute top-3.5 right-3.5 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
               SOLD OUT
             </div>
           ) : isMostViewed ? (
-            /* Comic Speech Bubble HOT badge */
             <div className="absolute top-3.5 right-3.5 z-10 select-none">
               <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
@@ -152,7 +151,7 @@ export default function ProductDetailModal({
             </div>
           )}
 
-          {/* Left / Right Arrow Buttons on Main Image */}
+          {/* Left / Right Arrow Buttons */}
           {imagesList.length > 1 && (
             <>
               <button
@@ -190,12 +189,10 @@ export default function ProductDetailModal({
 
         {/* 2. Text Details Below Image */}
         <div className="flex flex-col mt-3.5 px-0.5 text-left">
-          {/* Subtitle */}
           <span className="text-[11px] sm:text-xs font-normal text-gray-400 uppercase tracking-wider truncate">
             {getCategoryLabel()}
           </span>
 
-          {/* Product Name */}
           <h2 className="text-sm sm:text-base font-normal text-gray-900 leading-snug mt-1">
             {name}
           </h2>
@@ -209,7 +206,7 @@ export default function ProductDetailModal({
               })}
             </span>
 
-            {/* Yellow Stepper Pill Button matching mockup */}
+            {/* Stepper Button */}
             <div className="bg-[#FABE2C] text-black rounded-full px-3.5 py-1 flex items-center gap-3.5 shadow-xs">
               <button
                 type="button"
@@ -229,6 +226,34 @@ export default function ProductDetailModal({
                 +
               </button>
             </div>
+          </div>
+
+          {/* Description & Additional Info Section */}
+          <div className="flex flex-col gap-1.5 mt-3">
+            {description && (
+              <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-normal">
+                {description}
+              </p>
+            )}
+            {product.status === "Pre-Order" && (product.preorderReleaseDate || product.preorder_release_date) && (
+              <div className="text-xs font-bold text-[#E65100] bg-[#FFF3E0] px-3 py-1.5 rounded-xl border border-[#FFE0B2]/50 w-fit">
+                📦 วันที่ปล่อยสินค้าส่งมอบ: {(() => {
+                  const d = new Date(product.preorderReleaseDate || product.preorder_release_date);
+                  const day = String(d.getDate()).padStart(2, '0');
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const year = d.getFullYear();
+                  return `${day}/${month}/${year}`;
+                })()}
+              </div>
+            )}
+            {(product.additional_info || product.additionalInfo) && (
+              <div className="mt-1 text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200 flex flex-col gap-0.5">
+                <span className="font-bold text-gray-400 uppercase text-[9px] tracking-wider">ข้อมูลเพิ่มเติม (Additional Info)</span>
+                <p className="whitespace-pre-line text-xs font-medium text-gray-700">
+                  {product.additional_info || product.additionalInfo}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -323,7 +348,7 @@ export default function ProductDetailModal({
               onClose();
             }
           }}
-          className={`mt-5 sm:mt-6 h-13 sm:h-14 w-full rounded-2xl flex items-center justify-center gap-2.5
+          className={`mt-4 sm:mt-5 h-13 sm:h-14 w-full rounded-2xl flex items-center justify-center gap-2.5
                      transition-all font-bold text-sm sm:text-base uppercase cursor-pointer select-none ${
                        isOutOfStock
                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"

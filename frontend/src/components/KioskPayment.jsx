@@ -6,7 +6,7 @@ import { notify } from "./notify";
 
 export default function KioskPayment({ orderId, totalPrice, qrPayload, onPaymentSuccess, onCancel }) {
   const [paymentStatus, setPaymentStatus] = useState("pending");
-  const [countdown, setCountdown] = useState(10);
+  const [countdown, setCountdown] = useState(60); // 1 minute (60 seconds)
   const [payTimerSeconds, setPayTimerSeconds] = useState(300); // 5 minutes (300 seconds)
 
   const formatMMSS = (totalSec) => {
@@ -87,7 +87,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
     }
 
     if (paymentStatus === "success") {
-      // Start 10-second countdown to auto-close and return to catalog
+      // Start 60-second countdown to auto-close and return to catalog
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -157,7 +157,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                 </p>
               </div>
 
-              {/* Total Price Box: Light cream tint container */}
+              {/* Total Price Box */}
               <div className="flex flex-col items-center justify-center gap-0.5 bg-[#FFF9EC] py-3.5 px-6 rounded-[22px] border border-[#FFE7B8] text-center shadow-2xs">
                 <span className="text-xs font-semibold text-gray-700">
                   ยอดเงินชำระทั้งหมด
@@ -232,7 +232,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
             </>
           ) : paymentStatus === "pending" ? (
             <>
-              {/* Step 2: Payment Pending UI (QR Code) matching mockup */}
+              {/* Step 2: Payment Pending UI (QR Code) */}
               <div className="text-center flex flex-col gap-1">
                 <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
                   สแกนเพื่อชำระเงิน
@@ -242,7 +242,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                 </p>
               </div>
 
-              {/* Total Due Price without box matching mockup */}
+              {/* Total Due Price */}
               <div className="flex flex-col items-center justify-center mt-1 text-center select-none">
                 <span className="text-xs sm:text-sm font-bold text-gray-800">
                   ยอดรวมที่ต้องชำระ
@@ -252,23 +252,19 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                 </span>
               </div>
 
-              {/* QR Code Container matching mockup */}
+              {/* QR Code Container */}
               <div className="flex flex-col items-center justify-center gap-2.5 py-4 px-6 bg-[#F8F9FA] rounded-[24px] border border-gray-100 mt-1 select-none">
-                {/* Inner White Card with Thai QR Header */}
                 <div className="p-3 bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col items-center justify-center gap-1.5 w-[210px] sm:w-[220px]">
-                  {/* Thai QR Banner */}
                   <div className="w-full bg-[#003B71] text-white py-1 px-2.5 rounded-md text-[9px] font-bold flex items-center justify-center gap-1.5 uppercase tracking-wider">
                     <svg className="w-3 h-3 text-white fill-current" viewBox="0 0 24 24">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
                     </svg>
                     <span>THAI QR PAYMENT</span>
                   </div>
-                  {/* PromptPay sub-logo badge */}
                   <div className="text-[9px] font-bold text-[#003B71] tracking-widest uppercase">
                     PromptPay
                   </div>
 
-                  {/* QR Code */}
                   <div className="flex items-center justify-center py-1">
                     {qrPayload ? (
                       qrPayload.startsWith("http://") || qrPayload.startsWith("https://") ? (
@@ -285,8 +281,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                   </div>
                 </div>
 
-                {/* Order ID */}
-                <span className="text-xs font-mono text-gray-400 tracking-wider">
+                <span className="text-xs font-mono text-gray-400 tracking-wider select-all">
                   ID: {orderId}
                 </span>
               </div>
@@ -324,7 +319,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
           ) : (
             <>
               {/* Step 3: Payment & Contact Success Final Screen */}
-              <div className="text-center flex flex-col items-center justify-center py-4 gap-3">
+              <div className="text-center flex flex-col items-center justify-center py-2 gap-3">
                 <CheckCircleIcon className="w-16 h-16 text-[#2E7D32] animate-bounce" />
                 
                 <div className="flex flex-col gap-1">
@@ -344,6 +339,21 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                     {orderId}
                   </span>
                 </div>
+
+                {/* Mobile Delivery QR Code Card */}
+                <div className="w-full flex flex-col items-center gap-2 bg-gradient-to-br from-[#FFF9E6] to-[#FFF3CC] p-3.5 rounded-2xl border border-[#F8C032]/40 shadow-2xs">
+                  <div className="flex items-center gap-1.5 text-[#8A6200]">
+                    <span className="text-xs font-black text-center leading-tight">
+                      📱 สามารถสแกน QR Code เพื่อกรอกข้อมูลสำหรับการจัดส่งสินค้า
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-xl shadow-2xs border border-[#F8C032]/30">
+                    <QRCodeSVG value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={135} level="M" />
+                  </div>
+                  <span className="text-[10px] text-gray-500 text-center font-medium">
+                    สแกนด้วยกล้องมือถือ เพื่อระบุชื่อและที่อยู่จัดส่งสินค้า (หรือกดลิงก์ในอีเมล)
+                  </span>
+                </div>
               </div>
 
               {/* Auto Close Info */}
@@ -356,8 +366,8 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                 >
                   กลับสู่หน้าหลัก
                 </button>
-                <p className="text-center text-[11px] text-gray-400">
-                  ระบบจะนำคุณกลับสู่หน้าหลักอัตโนมัติใน {countdown} วินาที
+                <p className="text-center text-[11px] text-gray-400 font-medium">
+                  ระบบจะนำคุณกลับสู่หน้าหลักอัตโนมัติใน <strong className="text-gray-700 font-mono font-bold">{countdown}</strong> วินาที
                 </p>
               </div>
             </>
@@ -367,4 +377,3 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
     </div>
   );
 }
-
