@@ -6,7 +6,7 @@ import { notify } from "./notify";
 
 export default function KioskPayment({ orderId, totalPrice, qrPayload, onPaymentSuccess, onCancel }) {
   const [paymentStatus, setPaymentStatus] = useState("pending");
-  const [countdown, setCountdown] = useState(10);
+  const [countdown, setCountdown] = useState(60); // 1 minute (60 seconds)
   const [payTimerSeconds, setPayTimerSeconds] = useState(300); // 5 minutes (300 seconds)
 
   const formatMMSS = (totalSec) => {
@@ -213,7 +213,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
             {/* Step 2: Payment Pending UI (QR Code) */}
             <div className="text-center flex flex-col gap-2">
               <h2 className="text-2xl font-bold text-[#2B2B2B]">สแกนเพื่อชำระเงิน</h2>
-              <p className="text-sm text-gray-500">กรุณาแสกน QR Code เพื่อโอนเงินผ่านแอปพลิเคชันธนาคาร</p>
+              <p className="text-sm text-gray-500">กรุณาสแกน QR Code เพื่อโอนเงินผ่านแอปพลิเคชันธนาคาร</p>
             </div>
 
             {/* QR Code Container */}
@@ -272,37 +272,53 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
         ) : (
           <>
             {/* Step 3: Payment & Contact Success Final Screen */}
-            <div className="text-center flex flex-col items-center justify-center py-4 gap-4">
-              <CheckCircleIcon className="w-20 h-20 text-[#2E7D32] animate-bounce" />
+            <div className="text-center flex flex-col items-center justify-center py-2 gap-3">
+              <CheckCircleIcon className="w-16 h-16 text-[#2E7D32] animate-bounce" />
               
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1">
                 <h2 className="text-2xl font-extrabold text-[#2B2B2B]">ชำระเงินสำเร็จ!</h2>
-                <p className="text-xs text-gray-500 px-4">
+                <p className="text-xs text-gray-500 px-2">
                   ระบบได้ส่งใบเสร็จการชำระเงินไปยัง <span className="font-semibold text-gray-700">{email}</span> เรียบร้อยแล้ว
                 </p>
               </div>
 
-              <div className="w-full flex flex-col gap-2 bg-[#E8F5E9]/50 p-4 rounded-2xl border border-[#C8E6C9]/40 mt-1">
-                <span className="text-[10px] text-gray-400 font-semibold font-mono uppercase tracking-wider">
+              {/* Order Reference Box */}
+              <div className="w-full flex items-center justify-between bg-gray-50 px-4 py-2 rounded-xl border border-gray-200">
+                <span className="text-[11px] text-gray-500 font-semibold font-mono uppercase">
                   Order Reference
                 </span>
                 <span className="text-sm font-bold text-[#2B2B2B] font-mono">
                   {orderId}
                 </span>
               </div>
+
+              {/* Mobile Delivery QR Code Card */}
+              <div className="w-full flex flex-col items-center gap-2.5 bg-gradient-to-br from-[#FFF9E6] to-[#FFF3CC] p-4 rounded-2xl border border-[#F8C032]/40 shadow-xs">
+                <div className="flex items-center gap-1.5 text-[#8A6200]">
+                  <span className="text-xs font-black text-center leading-tight">
+                    📱 สามารถสแกน QR Code เพื่อกรอกข้อมูลสำหรับการจัดส่งสินค้า
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl shadow-xs border border-[#F8C032]/30">
+                  <QRCodeSVG value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={140} level="M" />
+                </div>
+                <span className="text-[10px] text-gray-500 text-center font-medium">
+                  สแกนด้วยกล้องมือถือ เพื่อระบุชื่อและที่อยู่จัดส่งสินค้า (หรือกดลิงก์ในอีเมล)
+                </span>
+              </div>
             </div>
 
-            {/* Auto Close Info */}
-            <div className="flex flex-col gap-2.5">
+            {/* Auto Close Info (1 Minute Timer) */}
+            <div className="flex flex-col gap-2">
               <button
                 onClick={onPaymentSuccess}
-                className="h-12 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95
+                className="h-11 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95
                            flex items-center justify-center gap-2 transition-transform duration-150 shadow-md font-semibold text-[#2B2B2B] cursor-pointer text-sm"
               >
                 กลับสู่หน้าหลัก
               </button>
-              <p className="text-center text-xs text-gray-400">
-                ระบบจะนำคุณกลับสู่หน้าหลักอัตโนมัติใน {countdown} วินาที
+              <p className="text-center text-xs text-gray-400 font-medium">
+                ระบบจะนำคุณกลับสู่หน้าหลักอัตโนมัติใน <strong className="text-gray-700 font-mono font-bold">{countdown}</strong> วินาที
               </p>
             </div>
           </>
