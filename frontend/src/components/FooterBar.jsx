@@ -3,7 +3,7 @@ import { ExclamationTriangleIcon, PhoneIcon, ChevronRightIcon } from "@heroicons
 
 export default function FooterBar({ onOpenSupport }) {
   return (
-    <footer className="w-full h-16 bg-[#1B1B1C] text-white border-t border-gray-800 flex items-center justify-between px-4 shrink-0 font-['Prompt'] z-30 shadow-lg relative">
+    <footer className="w-full h-16 bg-[#1B1B1C] text-white border-t border-gray-800 flex items-center justify-between px-4 shrink-0 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] z-30 shadow-lg relative">
       
       {/* Left: Support text & Icon */}
       <div className="flex items-center gap-3">

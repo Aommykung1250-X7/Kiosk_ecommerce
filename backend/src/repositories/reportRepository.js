@@ -60,10 +60,10 @@ export const getSummaryStats = async (startDate, endDate) => {
     `;
     const deliveryOptionRes = await pool.query(deliveryOptionQuery, queryParams);
 
-    // 5. สรุปรายได้รายวัน (Daily Revenue Trend)
+    // 5. สรุปรายได้รายวัน (Daily Revenue Trend ตามเวลาประเทศไทย UTC+7)
     const dailyTrendQuery = `
         SELECT 
-            TO_CHAR(created_at, 'YYYY-MM-DD') AS date,
+            TO_CHAR(created_at + INTERVAL '7 hours', 'YYYY-MM-DD') AS date,
             COUNT(id) AS orders_count,
             COALESCE(SUM(total_amount), 0) AS daily_revenue,
             COALESCE(
@@ -75,14 +75,14 @@ export const getSummaryStats = async (startDate, endDate) => {
                         'delivery_option', COALESCE(delivery_option, 'pickup'),
                         'customer_name', customer_name,
                         'fulfillment_status', fulfillment_status,
-                        'created_at', created_at
+                        'created_at', TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
                     ) ORDER BY created_at DESC
                 ) FILTER (WHERE id IS NOT NULL),
                 '[]'::json
             ) AS orders
         FROM orders
         WHERE payment_status = 'paid' ${dateFilter}
-        GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+        GROUP BY TO_CHAR(created_at + INTERVAL '7 hours', 'YYYY-MM-DD')
         ORDER BY date ASC
     `;
     const dailyTrendRes = await pool.query(dailyTrendQuery, queryParams);
@@ -215,15 +215,15 @@ export const getKioskTrafficReport = async (startDate, endDate) => {
         queryParams.push(dateRange.startTimestamp, dateRange.endTimestamp);
     }
 
-    // 1. สถิติคำสั่งซื้อแยกตามช่วงเวลาของวัน (Hourly Traffic Breakdown 00:00 - 23:00)
+    // 1. สถิติคำสั่งซื้อแยกตามช่วงเวลาของวัน (Hourly Traffic Breakdown 00:00 - 23:00 ตามเวลาไทย)
     const hourlyQuery = `
         SELECT 
-            EXTRACT(HOUR FROM created_at) AS hour_of_day,
+            EXTRACT(HOUR FROM (created_at + INTERVAL '7 hours')) AS hour_of_day,
             COUNT(id) AS order_count,
             COALESCE(SUM(total_amount), 0) AS total_revenue
         FROM orders
         WHERE payment_status = 'paid' ${dateFilter}
-        GROUP BY EXTRACT(HOUR FROM created_at)
+        GROUP BY EXTRACT(HOUR FROM (created_at + INTERVAL '7 hours'))
         ORDER BY hour_of_day ASC
     `;
     const hourlyRes = await pool.query(hourlyQuery, queryParams);

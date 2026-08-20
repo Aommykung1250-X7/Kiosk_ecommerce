@@ -44,18 +44,46 @@ export default function ProductDetailModal({
 
   // Other / Next products list (excluding current product)
   const otherProducts = allProducts.filter((p) => p.id !== product.id);
-  const visibleOtherProducts = otherProducts.slice(otherPageIndex, otherPageIndex + 3);
+  const maxOtherIndex = Math.max(0, otherProducts.length - 3);
+
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handlePrevOther = (e) => {
     e?.stopPropagation();
     if (otherProducts.length <= 3) return;
-    setOtherPageIndex((prev) => (prev === 0 ? Math.max(0, otherProducts.length - 3) : prev - 1));
+    setOtherPageIndex((prev) => (prev <= 0 ? maxOtherIndex : prev - 1));
   };
 
   const handleNextOther = (e) => {
     e?.stopPropagation();
     if (otherProducts.length <= 3) return;
-    setOtherPageIndex((prev) => (prev + 3 >= otherProducts.length ? 0 : prev + 1));
+    setOtherPageIndex((prev) => (prev >= maxOtherIndex ? 0 : prev + 1));
+  };
+
+  const handleTouchStart = (e) => {
+    setTouchStartX(e.touches ? e.touches[0].clientX : e.clientX);
+    setTouchDeltaX(0);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || touchStartX === null) return;
+    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+    setTouchDeltaX(currentX - touchStartX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (touchDeltaX < -40) {
+      handleNextOther();
+    } else if (touchDeltaX > 40) {
+      handlePrevOther();
+    }
+    setTouchStartX(null);
+    setTouchDeltaX(0);
+    setIsDragging(false);
   };
 
   const getCategoryLabel = () => {
@@ -76,7 +104,7 @@ export default function ProductDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['Prompt']"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['DIN_Pro_Cond',_'Prompt',_sans-serif]"
       onClick={onClose}
     >
       {/* Modal Card matching mockup */}
@@ -105,7 +133,7 @@ export default function ProductDetailModal({
             <div className="absolute top-3.5 right-3.5 z-10 select-none">
               <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
-                <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
+                <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'DIN Pro Cond', 'DIN Condensed', 'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
               </svg>
             </div>
           ) : promotion ? (
@@ -229,43 +257,80 @@ export default function ProductDetailModal({
           </div>
         </div>
 
-        {/* 3. Next / Other Products Carousel Row */}
+        {/* 3. Next / Other Products Smooth Sliding Carousel (สินค้าชิ้นต่อไปแบบแอนิเมชันลื่นไหล) */}
         {otherProducts.length > 0 && (
-          <div className="flex items-center justify-center gap-2.5 mt-4 select-none">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-5 select-none">
+            {/* Prev Button */}
             <button
               type="button"
               onClick={handlePrevOther}
-              className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 flex items-center justify-center cursor-pointer transition-all active:scale-90 text-[10px]"
+              disabled={otherProducts.length <= 3}
+              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-85 text-xs font-bold shrink-0 ${
+                otherProducts.length <= 3
+                  ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400"
+                  : "bg-gray-100 hover:bg-[#FABE2C] text-gray-700 hover:text-black shadow-2xs hover:shadow-xs"
+              }`}
               title="สินค้าก่อนหน้า"
             >
               ◀
             </button>
 
-            <div className="flex items-center gap-2.5">
-              {visibleOtherProducts.map((otherProd) => (
-                <div
-                  key={otherProd.id}
-                  onClick={() => onSelectProduct && onSelectProduct(otherProd)}
-                  className="w-16 h-16 sm:w-18 sm:h-18 bg-[#F4F5F7] hover:bg-[#ECEEF2] rounded-[18px] p-2 flex items-center justify-center overflow-hidden cursor-pointer transition-all active:scale-95 border-2 border-transparent hover:border-gray-400 shadow-2xs group"
-                  title={otherProd.name}
-                >
-                  {otherProd.image && otherProd.image.includes(".") ? (
-                    <img
-                      src={otherProd.image.startsWith("/") || otherProd.image.startsWith("http") ? otherProd.image : `/uploads/products/${otherProd.image}`}
-                      alt={otherProd.name}
-                      className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-150"
-                    />
-                  ) : (
-                    <CategoryPlaceholder category={otherProd.category} />
-                  )}
-                </div>
-              ))}
+            {/* Smooth Viewport (3 items wide with smooth transform track) */}
+            <div
+              className="w-[242px] sm:w-[260px] overflow-hidden py-1"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleTouchStart}
+              onMouseMove={handleTouchMove}
+              onMouseUp={handleTouchEnd}
+              onMouseLeave={handleTouchEnd}
+            >
+              <div
+                className="flex items-center gap-2.5 sm:gap-3 transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                style={{
+                  transform: `translateX(calc(-${otherPageIndex * 84}px + ${isDragging ? touchDeltaX : 0}px))`
+                }}
+              >
+                {otherProducts.map((otherProd) => (
+                  <div
+                    key={otherProd.id}
+                    onClick={() => {
+                      if (Math.abs(touchDeltaX) < 8) {
+                        onSelectProduct && onSelectProduct(otherProd);
+                      }
+                    }}
+                    className="w-[74px] h-[74px] sm:w-[78px] sm:h-[78px] shrink-0 bg-[#F4F5F7] hover:bg-[#ECEEF2] rounded-[8px] p-2.5 flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 active:scale-95 hover:border-[#FABE2C] hover:shadow-md shadow-2xs group select-none"
+                    title={otherProd.name}
+                  >
+                    {otherProd.image && otherProd.image.includes(".") ? (
+                      <img
+                        src={
+                          otherProd.image.startsWith("/") || otherProd.image.startsWith("http")
+                            ? otherProd.image
+                            : `/uploads/products/${otherProd.image}`
+                        }
+                        alt={otherProd.name}
+                        className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-300 pointer-events-none"
+                      />
+                    ) : (
+                      <CategoryPlaceholder category={otherProd.category} />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
+            {/* Next Button */}
             <button
               type="button"
               onClick={handleNextOther}
-              className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 flex items-center justify-center cursor-pointer transition-all active:scale-90 text-[10px]"
+              disabled={otherProducts.length <= 3}
+              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-85 text-xs font-bold shrink-0 ${
+                otherProducts.length <= 3
+                  ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400"
+                  : "bg-gray-100 hover:bg-[#FABE2C] text-gray-700 hover:text-black shadow-2xs hover:shadow-xs"
+              }`}
               title="สินค้าถัดไป"
             >
               ▶

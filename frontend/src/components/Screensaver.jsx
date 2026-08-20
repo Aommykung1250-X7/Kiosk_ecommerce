@@ -72,7 +72,7 @@ export default function Screensaver({ onWake }) {
   return (
     <div
       onClick={onWake}
-      className="fixed inset-0 z-50 bg-[#081028] flex flex-col justify-between p-3 sm:p-4 font-['Prompt'] select-none cursor-pointer overflow-hidden"
+      className="fixed inset-0 z-50 bg-[#081028] flex flex-col justify-between p-3 sm:p-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none cursor-pointer overflow-hidden"
     >
       {/* 1. TOP HEADER BAR (Outside Card) */}
       <header className="w-full flex items-center justify-between px-2 sm:px-4 py-1 shrink-0 z-10 select-none">
@@ -283,7 +283,7 @@ export default function Screensaver({ onWake }) {
               return (
                 <div
                   key={isObj ? item.id : idx}
-                  className="bg-[#F8F9FA] rounded-2xl p-1.5 sm:p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
+                  className="bg-[#F8F9FA] rounded-[20px] p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
                 >
                   <div className="w-full h-11 sm:h-13 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden mb-1 border border-gray-100">
                     {image ? (
@@ -363,17 +363,13 @@ export default function Screensaver({ onWake }) {
         </div>
       </main>
 
-      {/* 3. BOTTOM TOUCH SCREEN INSTRUCTION */}
-      <footer className="w-full flex items-center justify-center gap-2 py-0.5 select-none z-10">
-        <div className="flex flex-col items-center text-center">
-          <span className="text-xs font-medium text-white/90">
-            แตะหน้าจอเพื่อเริ่มใช้งาน
-          </span>
-          <span className="text-[8px] sm:text-[9px] font-bold text-[#FABE2C] tracking-widest uppercase mt-0.5">
-            TOUCH SCREEN TO BEGIN
-          </span>
-        </div>
-        <span className="text-sm text-[#FABE2C] animate-bounce">👆</span>
+      {/* 3. BOTTOM TOUCH SCREEN INSTRUCTION (ใช้รูปภาพต้นฉบับโดยตรง) */}
+      <footer className="w-full flex items-center justify-center py-1 sm:py-2 select-none z-10">
+        <img
+          src="/touch_to_begin.png"
+          alt="แตะหน้าจอเพื่อเริ่มใช้งาน - TOUCH SCREEN TO BEGIN"
+          className="h-9 sm:h-11 w-auto object-contain select-none pointer-events-none drop-shadow-sm animate-pulse"
+        />
       </footer>
     </div>
   );

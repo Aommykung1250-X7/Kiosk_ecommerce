@@ -9,6 +9,8 @@
    เช่น bg-brand / text-ink / border-danger โดยไม่ต้องเขียน hex ซ้ำ
 --------------------------------------------------------------------------- */
 @theme {
+  --font-sans: "DIN Pro Cond", "DIN Pro Condensed", "DIN Condensed", "DIN Alternate", "DIN Next LT Pro", "Prompt", sans-serif;
+  --font-din: "DIN Pro Cond", "DIN Pro Condensed", "DIN Condensed", "DIN Alternate", "DIN Next LT Pro", "Prompt", sans-serif;
   --color-brand: #F8C032;         /* สีหลักของแบรนด์ (ใช้ 147 ครั้ง) */
   --color-brand-hover: #F0B420;   /* สีหลักตอน hover (ใช้ 20 ครั้ง) */
   --color-ink: #2B2B2B;           /* สีตัวอักษรหลัก (ใช้ 81 ครั้ง) */
@@ -152,7 +154,7 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  font-family: 'Prompt', sans-serif;
+  font-family: 'DIN Pro Cond', 'DIN Pro Condensed', 'DIN Condensed', 'DIN Alternate', 'DIN Next LT Pro', 'Prompt', sans-serif;
   background-color: #F8F8F8;
   user-select: none;
   -webkit-user-select: none;
