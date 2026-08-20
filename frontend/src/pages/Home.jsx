@@ -124,7 +124,7 @@ export default function Home() {
   useEffect(() => {
     let idleTimer;
     // ตัวอย่าง: 30 * 1000 (30 วินาที), 60 * 1000 (1 นาที), 120 * 1000 (2 นาที)
-    const timeoutDuration = 24 * 1000; // 24 วินาที (0.4 นาที)
+    const timeoutDuration = 240 * 1000; // 24 วินาที (0.4 นาที)
 
     const resetTimer = () => {
       clearTimeout(idleTimer);
@@ -327,7 +327,7 @@ export default function Home() {
   const bottomDisplayTotal = cart.totalPrice;
 
   return (
-    <div className="kiosk-app-container flex flex-col font-['Prompt']">
+    <div className="kiosk-app-container flex flex-col font-['DIN_Pro_Cond',_'Prompt',_sans-serif]">
       <Header
         cart={cart}
         onCartClick={handleCartClick}
@@ -341,7 +341,7 @@ export default function Home() {
           onToggleCategory={handleToggleCategory}
         />
 
-        <main className="flex-1 overflow-y-auto min-w-0 bg-white pb-24 font-['Prompt']">
+        <main className="flex-1 overflow-y-auto min-w-0 bg-white pb-24 font-['DIN_Pro_Cond',_'Prompt',_sans-serif]">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#2B2B2B]/60">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#101C3D] mb-4"></div>
@@ -519,42 +519,42 @@ export default function Home() {
         onCheckout={handleCheckout}
       />
 
-      {/* Floating Cart Pop-up Bar at Bottom */}
+      {/* Floating Cart Pop-up Bar (พื้นหลังสี #2B2B2B) */}
       {cart.totalItems > 0 && (
         <div
           onClick={handleCartClick}
-          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 
-                     w-[92%] max-w-[620px] h-16 bg-[#0E1B3E] text-white rounded-2xl 
-                     shadow-[0_12px_36px_rgba(14,27,62,0.45)] border border-white/15
-                     flex items-center justify-between px-5 cursor-pointer 
-                     hover:bg-[#152554] active:scale-[0.98] transition-all duration-200
-                     animate-in slide-in-from-bottom-10 select-none"
+          className="absolute bottom-[72px] sm:bottom-[76px] right-3 sm:right-5 left-3 sm:left-[232px] max-w-[430px] ml-auto z-40 
+                     h-15 sm:h-16 bg-[#2B2B2B] text-white rounded-2xl 
+                     shadow-[0_12px_36px_rgba(43,43,43,0.45)] border border-white/15
+                     flex items-center justify-between px-4 sm:px-5 cursor-pointer 
+                     hover:bg-[#383838] active:scale-[0.98] transition-all duration-200
+                     animate-in slide-in-from-bottom-6 select-none"
         >
           <div className="flex items-center gap-3">
-            <div className="relative p-2.5 bg-[#FABE2C] rounded-xl text-white shadow-sm">
-              <ShoppingCartIcon className="w-6 h-6" />
-              <span className="absolute -top-1.5 -right-1.5 bg-[#20C997] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#0E1B3E]">
+            <div className="relative p-2 sm:p-2.5 bg-[#FABE2C] rounded-xl text-white shadow-sm">
+              <ShoppingCartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-black stroke-[1.5]" />
+              <span className="absolute -top-1.5 -right-1.5 bg-[#20C997] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
                 {cart.totalItems}
               </span>
             </div>
-            <span className="font-extrabold text-sm sm:text-base">ดูตะกร้าสินค้าของคุณ</span>
+            <span className="font-extrabold text-xs sm:text-sm">ดูตะกร้าสินค้า</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <div className="flex flex-col items-end justify-center leading-tight">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-white/70 font-medium">ยอดรวม:</span>
-                <span className="text-xl font-black text-[#FABE2C]">
+                <span className="text-[11px] text-white/70 font-medium">ยอดรวม:</span>
+                <span className="text-lg sm:text-xl font-black text-[#FABE2C]">
                   ฿{(bottomDisplayTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               {bottomHasPreOrder && (
                 <span className="text-[9px] text-[#F8A838] font-bold mt-0.5">
-                  (มีค่าจัดส่งสินค้า Pre-order)
+                  (มีสินค้า Pre-order)
                 </span>
               )}
             </div>
-<span className="text-xs font-black text-[#F8C032] bg-[#F8C032]/10 px-2.5 py-1 rounded-xl">
+            <span className="text-xs font-black text-[#F8C032] bg-[#F8C032]/10 px-2.5 py-1 rounded-xl">
               เปิด {'>'}
             </span>
           </div>

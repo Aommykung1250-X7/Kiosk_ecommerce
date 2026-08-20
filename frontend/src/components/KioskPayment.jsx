@@ -131,7 +131,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F2F2F2] flex items-center justify-center p-4 font-['Prompt'] select-none">
+    <div className="fixed inset-0 z-50 bg-[#F2F2F2] flex items-center justify-center p-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none">
       <div className="w-[92%] max-w-[430px] bg-white rounded-[32px] sm:rounded-[36px] shadow-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200">
         
         {/* Top Dark Navy Strip with DITC Logo */}

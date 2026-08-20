@@ -29,10 +29,10 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
   return (
     <div
       onClick={() => onSelectProduct(product)}
-      className="group cursor-pointer select-none flex flex-col w-full font-['Prompt'] transition-all"
+      className="group cursor-pointer select-none flex flex-col w-full font-['DIN_Pro_Cond',_'Prompt',_sans-serif] transition-all"
     >
       {/* 1. Large Rounded Grey Image Box */}
-      <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[28px] sm:rounded-[10px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
+      <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[28px] sm:rounded-[32px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
         {/* Top-Right Badge matching mockup */}
         {isOutOfStock ? (
           <div className="absolute top-3 right-3 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
@@ -43,7 +43,7 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           <div className="absolute top-3 right-3 z-10 select-none">
             <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
-              <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
+              <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'DIN Pro Cond', 'DIN Condensed', 'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
             </svg>
           </div>
         ) : promotion ? (

@@ -92,7 +92,7 @@ const exportExcelReport = async (req, res, type, startDate, endDate) => {
                 shipping_option: row.shipping_option === "split" ? "แยกจัดส่ง" : "จัดส่งพร้อมกัน",
                 payment_status: row.payment_status === "paid" ? "ชำระเงินสำเร็จ" : row.payment_status,
                 total_amount: amount,
-                paid_at: row.paid_at ? new Date(row.paid_at).toLocaleString("th-TH") : "-",
+                paid_at: row.paid_at ? new Date(row.paid_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }) : "-",
                 courier_1: row.courier_1 || "-",
                 tracking_number_1: row.tracking_number_1 || "-",
                 courier_2: row.courier_2 || "-",
@@ -191,7 +191,7 @@ const exportCsvReport = async (req, res, type, startDate, endDate) => {
                 "Delivery Option": r.delivery_option === "delivery" ? "จัดส่งสินค้า" : "รับสินค้าที่นี่",
                 "Total Amount (THB)": r.total_amount,
                 "Payment Status": r.payment_status,
-                "Paid Date": r.paid_at ? new Date(r.paid_at).toLocaleString("th-TH") : "-"
+                "Paid Date": r.paid_at ? new Date(r.paid_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }) : "-"
             });
         });
     } else if (type === "products") {
@@ -228,6 +228,7 @@ const exportCsvReport = async (req, res, type, startDate, endDate) => {
  */
 const exportPdfReport = async (req, res, type, startDate, endDate) => {
     const timestampStr = new Date().toLocaleDateString("th-TH", {
+        timeZone: "Asia/Bangkok",
         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
@@ -245,7 +246,7 @@ const exportPdfReport = async (req, res, type, startDate, endDate) => {
                 <td>${r.customer_name || 'ไม่ระบุ'}</td>
                 <td>${r.delivery_option === 'delivery' ? 'จัดส่งพัสดุ' : 'รับหน้าร้าน'}</td>
                 <td style="text-align:right; font-weight:bold;">${parseFloat(r.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-                <td>${r.paid_at ? new Date(r.paid_at).toLocaleDateString('th-TH') : '-'}</td>
+                <td>${r.paid_at ? new Date(r.paid_at).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : '-'}</td>
             </tr>
         `);
     } else if (type === "products") {

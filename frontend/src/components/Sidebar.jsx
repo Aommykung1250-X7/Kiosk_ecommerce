@@ -61,7 +61,7 @@ export default function Sidebar({
   return (
     <aside
       className="w-[190px] sm:w-[210px] h-full bg-white border-r border-gray-200 shrink-0 flex flex-col 
-                 pt-5 pb-4 px-3.5 sm:px-4 font-['Prompt'] select-none z-10 overflow-hidden justify-between"
+                 pt-5 pb-4 px-3.5 sm:px-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none z-10 overflow-hidden justify-between"
     >
       {/* Scrollable Category List Container */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2.5">

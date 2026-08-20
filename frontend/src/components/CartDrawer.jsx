@@ -64,7 +64,7 @@ export default function CartDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#F2F2F2] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['Prompt'] overflow-hidden"
+      className="fixed inset-0 z-50 bg-[#F2F2F2] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       {/* 1. Header: Dark Navy with DITC logo and Shopping basket title */}
@@ -116,7 +116,7 @@ export default function CartDrawer({
         ) : (
           <>
             {/* Top Row: Items label + Clear Cart */}
-            <div className="flex justify-between items-center px-1 select-none shrink-0">
+            <div className="w-full max-w-[569.39px] mx-auto flex justify-between items-center px-1 select-none shrink-0">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Items in the shopping cart
               </span>
@@ -129,8 +129,14 @@ export default function CartDrawer({
               </button>
             </div>
 
-            {/* Cart Items List: Shows 3 items at a time and scrollable */}
-            <div className="flex flex-col gap-3 max-h-[345px] sm:max-h-[360px] overflow-y-auto pr-1.5 pb-1 scroll-smooth shrink-0">
+            {/* Cart Items List: Shows 4 items by default, or 3 items when split-shipping options are visible */}
+            <div
+              className={`w-full max-w-[569.39px] mx-auto flex flex-col gap-3 overflow-y-auto pr-1 pb-1 scroll-smooth shrink-0 transition-all duration-300 ${
+                deliveryOption === "delivery" && isMixed
+                  ? "max-h-[365px]"
+                  : "max-h-[488px]"
+              }`}
+            >
               {items.map((item) => {
                 const { product, quantity } = item;
                 const isOutOfStock = product.status === "In Stock" && product.quantity <= 0;
@@ -138,10 +144,10 @@ export default function CartDrawer({
                 return (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between p-3.5 sm:p-4 bg-white border border-gray-100 rounded-[22px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] hover:shadow-md transition-all gap-3.5 shrink-0"
+                    className="w-full max-w-[569.39px] h-[112.87px] flex items-center justify-between p-3.5 bg-white border border-gray-100 rounded-[28px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] hover:shadow-md transition-all gap-3.5 shrink-0 mx-auto"
                   >
                     {/* Left: Product Image */}
-                    <div className="w-18 h-18 bg-[#F2F2F2] flex items-center justify-center p-1.5 rounded-2xl shrink-0 overflow-hidden select-none">
+                    <div className="w-18 h-18 bg-[#F2F2F2] flex items-center justify-center p-1.5 rounded-[14px] shrink-0 overflow-hidden select-none">
                       {product.image && product.image.includes(".") ? (
                         <img
                           src={`/uploads/products/${product.image}`}
@@ -236,7 +242,7 @@ export default function CartDrawer({
             </div>
 
             {/* 3. Order Summary Card matching mockup */}
-            <div className="w-full bg-white p-5 sm:p-6 rounded-[28px] sm:rounded-[32px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.06)] flex flex-col gap-3.5 mt-auto select-none shrink-0 animate-in slide-in-from-bottom duration-300">
+            <div className="w-full max-w-[569.39px] mx-auto bg-white p-5 sm:p-6 rounded-[28px] sm:rounded-[32px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.06)] flex flex-col gap-3.5 mt-auto select-none shrink-0 animate-in slide-in-from-bottom duration-300">
               <div className="flex flex-col gap-3">
                 <h2 className="text-2xl font-black text-gray-900 tracking-tight">
                   Order Summary

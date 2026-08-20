@@ -104,7 +104,7 @@ export default function ProductDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['Prompt']"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['DIN_Pro_Cond',_'Prompt',_sans-serif]"
       onClick={onClose}
     >
       {/* Modal Card matching mockup */}
@@ -133,7 +133,7 @@ export default function ProductDetailModal({
             <div className="absolute top-3.5 right-3.5 z-10 select-none">
               <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
-                <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
+                <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'DIN Pro Cond', 'DIN Condensed', 'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
               </svg>
             </div>
           ) : promotion ? (
