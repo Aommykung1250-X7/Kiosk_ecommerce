@@ -81,8 +81,26 @@ class ProductRepository {
         const dbImages = imagesMap[row.id] || [];
         const fallbackImage = dbImages.length > 0 ? dbImages[0] : row.image;
         const imagesList = dbImages.length > 0 ? dbImages : (row.image ? [row.image] : []);
+
+        // Auto-check Pre-Order release date
+        let computedStatus = row.status;
+        if (computedStatus === "Pre-Order" && row.preorder_release_date) {
+          const releaseDate = new Date(row.preorder_release_date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          releaseDate.setHours(0, 0, 0, 0);
+          if (releaseDate <= today) {
+            computedStatus = "In Stock";
+            // Persist status update to DB in background
+            pool.query("UPDATE products SET status = 'In Stock' WHERE id = $1", [row.id]).catch(err => {
+              console.error(`Error auto-updating status for product ${row.id}:`, err);
+            });
+          }
+        }
+
         return {
           ...row,
+          status: computedStatus,
           category: row.category_id,
           image: fallbackImage,
           images: imagesList.slice(0, 5),
