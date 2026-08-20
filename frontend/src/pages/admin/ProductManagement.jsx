@@ -1,8 +1,20 @@
-// frontend/src/pages/admin/ProductManagement.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { PlusIcon, PencilIcon, TrashIcon, ArrowRightOnRectangleIcon, ClipboardDocumentListIcon, Squares2X2Icon, TagIcon, ExclamationTriangleIcon, ChevronDownIcon, PhotoIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  Squares2X2Icon,
+  TagIcon,
+  ExclamationTriangleIcon,
+  ChevronDownIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  FunnelIcon,
+  ArrowPathIcon
+} from "@heroicons/react/24/outline";
 import { notify, confirmDialog } from "../../components/notify";
+import AdminNavbar from "../../components/admin/AdminNavbar";
+import CustomDropdown from "../../components/admin/CustomDropdown";
 
 // CATEGORIES list is now loaded dynamically in component state
 
@@ -68,6 +80,11 @@ export default function ProductManagement() {
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
+  // Search & Filter State สำหรับคลังสินค้า
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState("all");
+
   // State สำหรับควบคุม Modal ฟอร์ม
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null); // NULL = สร้างใหม่, มีค่า = แก้ไขตาม ID นั้น
@@ -91,8 +108,6 @@ export default function ProductManagement() {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatId, setNewCatId] = useState("");
-
-  const navigate = useNavigate();
 
   // แท็บทำงาน: products = จัดการสินค้า, users = จัดการพนักงาน
   const [activeTab, setActiveTab] = useState("products");
@@ -139,11 +154,13 @@ export default function ProductManagement() {
   const [isSavingTags, setIsSavingTags] = useState(false);
 
   // Contact settings state
-  const [contactHotlineInput, setContactHotlineInput] = useState("02-123-4567 / 081-234-5678");
+  const [contactHotlineInput, setContactHotlineInput] = useState("053-942606");
   const [contactLineIdInput, setContactLineIdInput] = useState("@ditcsupport");
   const [contactLineUrlInput, setContactLineUrlInput] = useState("https://line.me/ti/p/@ditcsupport");
   const [contactLineQrImageInput, setContactLineQrImageInput] = useState("");
   const [contactServiceHoursInput, setContactServiceHoursInput] = useState("เปิดบริการ 08:00 - 20:00 น.");
+  const [contactWebsiteInput, setContactWebsiteInput] = useState("www.camt.cmu.ac.th");
+  const [contactFacebookInput, setContactFacebookInput] = useState("CAMT Chiang Mai University");
   const [isSavingContact, setIsSavingContact] = useState(false);
   const [isUploadingQr, setIsUploadingQr] = useState(false);
 
@@ -181,6 +198,8 @@ export default function ProductManagement() {
         if (data.lineUrl) setContactLineUrlInput(data.lineUrl);
         if (data.lineQrImage !== undefined) setContactLineQrImageInput(data.lineQrImage);
         if (data.serviceHours) setContactServiceHoursInput(data.serviceHours);
+        if (data.website) setContactWebsiteInput(data.website);
+        if (data.facebook) setContactFacebookInput(data.facebook);
       }
     } catch (err) {
       console.error("Error loading contact settings:", err);
@@ -254,7 +273,9 @@ export default function ProductManagement() {
           lineId: contactLineIdInput,
           lineUrl: contactLineUrlInput,
           lineQrImage: contactLineQrImageInput,
-          serviceHours: contactServiceHoursInput
+          serviceHours: contactServiceHoursInput,
+          website: contactWebsiteInput,
+          facebook: contactFacebookInput
         })
       });
       const data = await res.json();
@@ -697,11 +718,6 @@ export default function ProductManagement() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/ditc-portal-to-manager");
-  };
-
   // คำนวณสถิติ
   const totalProducts = products.length;
   const outOfStock = products.filter(p => (p.stock || p.quantity) <= 0).length;
@@ -710,54 +726,45 @@ export default function ProductManagement() {
     return qty > 0 && qty <= 5;
   }).length;
 
+  // กรองรายการสินค้าตามคำค้นหา หมวดหมู่ และสถานะ
+  const filteredProducts = products.filter((p) => {
+    // 1. ค้นหาข้อความ
+    if (productSearchQuery.trim()) {
+      const q = productSearchQuery.trim().toLowerCase();
+      const matchName = p.name && p.name.toLowerCase().includes(q);
+      const matchDesc = p.description && p.description.toLowerCase().includes(q);
+      const matchCat = (p.category || "").toLowerCase().includes(q);
+      const matchPickup = (p.pickupLocation || p.pickup_location || "").toLowerCase().includes(q);
+      const matchId = String(p.id).includes(q);
+      if (!matchName && !matchDesc && !matchCat && !matchPickup && !matchId) {
+        return false;
+      }
+    }
+
+    // 2. กรองตามหมวดหมู่
+    if (categoryFilter !== "all" && p.category !== categoryFilter) {
+      return false;
+    }
+
+    // 3. กรองตามสถานะสต็อก / พรีออเดอร์ / โปรโมชั่น
+    const stockVal = p.stock !== undefined ? p.stock : (p.quantity || 0);
+    if (stockStatusFilter === "in_stock" && (p.status !== "In Stock" || stockVal <= 0)) return false;
+    if (stockStatusFilter === "pre_order" && p.status !== "Pre-Order") return false;
+    if (stockStatusFilter === "low_stock" && !(stockVal > 0 && stockVal <= 5)) return false;
+    if (stockStatusFilter === "out_of_stock" && stockVal > 0) return false;
+    if (stockStatusFilter === "promotion" && !p.promotion) return false;
+
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 font-['Prompt'] flex flex-col">
       {/* Top Navbar */}
-      <nav className="bg-white border-b border-gray-150 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F8C032]/10 rounded-xl flex items-center justify-center text-[#F8C032]">
-            <Squares2X2Icon className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#2B2B2B]">ระบบจัดการสินค้าหน้าร้าน</h1>
-            <p className="text-xs text-gray-400">ผู้จัดเตรียมสต็อกและคลังสินค้า (Admin/Manager)</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/dashboard/reports")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <DocumentChartBarIcon className="w-4.5 h-4.5" />
-            <span>ออกรายงานสรุป</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/dashboard/screensavers")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <PhotoIcon className="w-4.5 h-4.5" />
-            <span>จัดการโฆษณา</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/dashboard/orders")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <ClipboardDocumentListIcon className="w-4.5 h-4.5" />
-            <span>ไปหน้าจัดการคิว</span>
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all"
-          >
-            <ArrowRightOnRectangleIcon className="w-4.5 h-4.5" />
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      </nav>
+      <AdminNavbar
+        title="ระบบจัดการสินค้าหน้าร้าน"
+        subtitle="ผู้จัดเตรียมสต็อกและคลังสินค้า (Admin/Manager)"
+        icon={Squares2X2Icon}
+      />
 
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
 
@@ -820,14 +827,129 @@ export default function ProductManagement() {
           <>
             {/* Action Header for Products */}
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-800">คลังสินค้า Kiosk Shop</h2>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">คลังสินค้า Kiosk Shop</h2>
+                <p className="text-xs text-gray-400">
+                  {filteredProducts.length === products.length
+                    ? `ทั้งหมด ${products.length} รายการ`
+                    : `แสดง ${filteredProducts.length} จากทั้งหมด ${products.length} รายการ`}
+                </p>
+              </div>
               <button
                 onClick={handleOpenAddModal}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold rounded-xl active:scale-95 transition-all text-sm shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F8C032] hover:bg-[#F0B420] text-[#2B2B2B] font-bold rounded-xl active:scale-95 transition-all text-sm shadow-sm cursor-pointer"
               >
                 <PlusIcon className="w-5 h-5" />
                 เพิ่มสินค้าใหม่
               </button>
+            </div>
+
+            {/* Search & Filter Bar */}
+            <div className="bg-white rounded-2xl border border-gray-150 p-4 shadow-sm flex flex-col gap-3">
+              {/* Search Row */}
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="relative flex-1 w-full">
+                  <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={productSearchQuery}
+                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                    placeholder="ค้นหาชื่อสินค้า, รหัสสินค้า, หมวดหมู่ หรือจุดรับของ..."
+                    className="w-full h-11 bg-gray-50 border border-gray-150 hover:border-gray-250 focus:border-[#F8C032] focus:bg-white rounded-xl pl-11 pr-10 text-sm outline-none transition-all"
+                  />
+                  {productSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setProductSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-lg transition-colors cursor-pointer"
+                      title="ล้างคำค้นหา"
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Dropdown Filter */}
+                <div className="w-full sm:w-auto shrink-0 flex items-center gap-2">
+                  <CustomDropdown
+                    value={categoryFilter}
+                    onChange={(val) => setCategoryFilter(val)}
+                    className="w-full sm:w-56"
+                    options={[
+                      { value: "all", label: "หมวดหมู่ทั้งหมด", count: products.length },
+                      ...categories.map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                        count: products.filter((p) => p.category === c.id).length
+                      }))
+                    ]}
+                  />
+
+                  {/* Refresh Button */}
+                  <button
+                    type="button"
+                    onClick={fetchProducts}
+                    className="h-11 px-3.5 flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-150 rounded-xl text-sm font-semibold text-gray-600 transition-all cursor-pointer shrink-0"
+                    title="รีเฟรชข้อมูลสินค้า"
+                  >
+                    <ArrowPathIcon className="w-4 h-4" />
+                    <span className="hidden md:inline">รีเฟรช</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Status Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-gray-100 text-xs">
+                <span className="font-bold text-gray-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+                  <FunnelIcon className="w-3.5 h-3.5" />
+                  กรองสถานะ:
+                </span>
+                {[
+                  { key: "all", label: "ทั้งหมด", count: products.length },
+                  { key: "in_stock", label: "พร้อมส่ง (In Stock)", count: products.filter(p => p.status === "In Stock" && (p.stock !== undefined ? p.stock : (p.quantity || 0)) > 0).length },
+                  { key: "pre_order", label: "พรีออเดอร์ (Pre-Order)", count: products.filter(p => p.status === "Pre-Order").length },
+                  { key: "low_stock", label: "⚠️ ใกล้หมด (≤5)", count: lowStock },
+                  { key: "out_of_stock", label: "❌ หมดสต็อก (0)", count: outOfStock },
+                  { key: "promotion", label: "🏷️ โปรโมชั่น", count: products.filter(p => p.promotion).length }
+                ].map((chip) => {
+                  const isSelected = stockStatusFilter === chip.key;
+                  return (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => setStockStatusFilter(chip.key)}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isSelected
+                          ? "bg-[#F8C032] text-[#2B2B2B] shadow-2xs"
+                          : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
+                      }`}
+                    >
+                      <span>{chip.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                        isSelected ? "bg-black/15 text-[#2B2B2B]" : "bg-gray-200 text-gray-600"
+                      }`}>
+                        {chip.count}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {/* Reset Filters if any active */}
+                {(productSearchQuery || categoryFilter !== "all" || stockStatusFilter !== "all") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProductSearchQuery("");
+                      setCategoryFilter("all");
+                      setStockStatusFilter("all");
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700 font-bold ml-auto flex items-center gap-1 hover:underline cursor-pointer py-1"
+                  >
+                    <XMarkIcon className="w-3.5 h-3.5" />
+                    ล้างตัวกรองทั้งหมด
+                  </button>
+                )}
+              </div>
             </div>
 
             {error && (
@@ -855,10 +977,34 @@ export default function ProductManagement() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-                      {products.map((p) => {
-                        const stockVal = p.stock !== undefined ? p.stock : (p.quantity || 0);
-                        return (
-                          <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                      {filteredProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="text-center py-16 text-gray-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <MagnifyingGlassIcon className="w-8 h-8 text-gray-300" />
+                              <span className="text-sm font-semibold text-gray-600">ไม่พบสินค้าที่ตรงกับการค้นหา</span>
+                              <span className="text-xs text-gray-400">ลองค้นหาด้วยคำอื่น หรือกดล้างตัวกรอง</span>
+                              {(productSearchQuery || categoryFilter !== "all" || stockStatusFilter !== "all") && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setProductSearchQuery("");
+                                    setCategoryFilter("all");
+                                    setStockStatusFilter("all");
+                                  }}
+                                  className="mt-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                                >
+                                  ล้างตัวกรองทั้งหมด
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredProducts.map((p) => {
+                          const stockVal = p.stock !== undefined ? p.stock : (p.quantity || 0);
+                          return (
+                            <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="py-4 px-6 flex items-center gap-3">
                               <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-gray-250 shrink-0">
                                 {p.image && p.image.includes(".") ? (
@@ -868,7 +1014,7 @@ export default function ProductManagement() {
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
-                                  <span className="text-[10px] font-bold text-gray-400 uppercase">{p.category.slice(0, 3)}</span>
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase">{(p.category || "PRD").slice(0, 3)}</span>
                                 )}
                               </div>
                               <div className="flex flex-col">
@@ -893,7 +1039,7 @@ export default function ProductManagement() {
                               </div>
                             </td>
                             <td className="py-4 px-6 capitalize">
-                              {categories.find(c => c.id === p.category)?.name || p.category}
+                              {categories.find(c => c.id === p.category)?.name || p.category || "ทั่วไป"}
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-800">฿{parseFloat(p.price).toFixed(0)}</td>
                             <td className="py-4 px-6">
@@ -907,12 +1053,22 @@ export default function ProductManagement() {
                               </div>
                             </td>
                             <td className="py-4 px-6">
-                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${p.status === "In Stock"
-                                ? "bg-green-50 text-green-700 border border-green-150"
-                                : "bg-orange-50 text-orange-700 border border-orange-150"
-                                }`}>
-                                {p.status}
-                              </span>
+                              {p.status === "Pre-Order" ? (
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-150 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                  Pre-Order
+                                </span>
+                              ) : stockVal <= 0 ? (
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-150 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                  หมดสต็อก (Out of Stock)
+                                </span>
+                              ) : (
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-150 inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                  In Stock
+                                </span>
+                              )}
                             </td>
                             <td className="py-4 px-6 font-bold text-gray-700 font-mono">
                               {p.views || 0} ครั้ง
@@ -935,7 +1091,7 @@ export default function ProductManagement() {
                             </td>
                           </tr>
                         );
-                      })}
+                      }))}
                     </tbody>
                   </table>
                 </div>
@@ -1107,12 +1263,34 @@ export default function ProductManagement() {
 
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">เว็บไซต์ (Website)</label>
+                  <input
+                    type="text"
+                    value={contactWebsiteInput}
+                    onChange={(e) => setContactWebsiteInput(e.target.value)}
+                    placeholder="เช่น www.camt.cmu.ac.th"
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">ชื่อเพจ Facebook</label>
+                  <input
+                    type="text"
+                    value={contactFacebookInput}
+                    onChange={(e) => setContactFacebookInput(e.target.value)}
+                    placeholder="เช่น CAMT Chiang Mai University"
+                    className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">เบอร์โทรศัพท์ Hotline</label>
                   <input
                     type="text"
                     value={contactHotlineInput}
                     onChange={(e) => setContactHotlineInput(e.target.value)}
-                    placeholder="เช่น 02-123-4567 / 081-234-5678"
+                    placeholder="เช่น 053-942606"
                     className="h-11 w-full px-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#5EBAA8] font-semibold text-sm text-[#2B2B2B]"
                   />
                 </div>
@@ -1550,15 +1728,18 @@ export default function ProductManagement() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-500">สถานะสินค้า (Status)</label>
-                  <select
+                  <label className="text-xs font-semibold text-gray-500">รูปแบบสินค้า / สถานะ (Product Type)</label>
+                  <CustomDropdown
                     value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
-                  >
-                    <option value="In Stock">พร้อมจำหน่าย (In Stock)</option>
-                    <option value="Pre-Order">สั่งจองล่วงหน้า (Pre-Order)</option>
-                  </select>
+                    onChange={(val) => setForm(prev => ({ ...prev, status: val }))}
+                    options={[
+                      { value: "In Stock", label: "สินค้าพร้อมส่งปกติ (In Stock)", icon: "🟢" },
+                      { value: "Pre-Order", label: "สินค้าสั่งจองล่วงหน้า (Pre-Order)", icon: "📦" }
+                    ]}
+                  />
+                  <span className="text-[10px] text-gray-400">
+                    * สินค้า In Stock ที่สต็อกเป็น 0 ชิ้น ระบบจะแสดงสถานะเป็น "หมดสต็อก (Out of Stock)" ให้อัตโนมัติ
+                  </span>
                 </div>
 
                 {form.status === "Pre-Order" && (
@@ -1672,14 +1853,14 @@ export default function ProductManagement() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-gray-500">สิทธิ์ของบัญชีนี้ (Account Role)</label>
-                <select
+                <CustomDropdown
                   value={userForm.role}
-                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                  className="w-full h-11 bg-gray-50 border border-gray-100 focus:border-[#F8C032] rounded-xl px-3 text-sm outline-none transition-all"
-                >
-                  <option value="staff">พนักงาน (Staff / Runner)</option>
-                  <option value="admin">ผู้ดูแลระบบ (Admin / Manager)</option>
-                </select>
+                  onChange={(val) => setUserForm(prev => ({ ...prev, role: val }))}
+                  options={[
+                    { value: "staff", label: "พนักงาน (Staff / Runner)", icon: "👤" },
+                    { value: "admin", label: "ผู้ดูแลระบบ (Admin / Manager)", icon: "👑" }
+                  ]}
+                />
               </div>
 
               <div className="flex items-center justify-end gap-3 mt-4 border-t border-gray-100 pt-5">

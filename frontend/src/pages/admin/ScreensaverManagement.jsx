@@ -4,19 +4,16 @@ import {
   PlusIcon,
   TrashIcon,
   PencilIcon,
-  ArrowRightOnRectangleIcon,
-  ClipboardDocumentListIcon,
-  Squares2X2Icon,
   PhotoIcon,
   EyeIcon,
   EyeSlashIcon,
   SparklesIcon,
   CheckCircleIcon,
-  ClockIcon,
-  DocumentChartBarIcon
+  ClockIcon
 } from "@heroicons/react/24/outline";
 import FeaturedProductModal from "../../components/admin/FeaturedProductModal";
 import { notify, confirmDialog } from "../../components/notify";
+import AdminNavbar from "../../components/admin/AdminNavbar";
 
 export default function ScreensaverManagement() {
   const [screensavers, setScreensavers] = useState([]);
@@ -274,59 +271,14 @@ export default function ScreensaverManagement() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/ditc-portal-to-manager");
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 font-['Prompt'] flex flex-col">
       {/* Top Navbar */}
-      <nav className="bg-white border-b border-gray-150 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F8C032]/10 rounded-xl flex items-center justify-center text-[#F8C032]">
-            <PhotoIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#2B2B2B]">จัดการโฆษณาและหน้าจอพัก</h1>
-            <p className="text-xs text-gray-400">ระบบอัปโหลดและควบคุม Carousel Screensaver</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/dashboard/reports")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <DocumentChartBarIcon className="w-4.5 h-4.5" />
-            <span>ออกรายงานสรุป</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/dashboard/orders")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <ClipboardDocumentListIcon className="w-4.5 h-4.5" />
-            <span>ไปหน้าจัดการคิว</span>
-          </button>
-          
-          <button
-            onClick={() => navigate("/dashboard/products")}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-          >
-            <Squares2X2Icon className="w-4.5 h-4.5" />
-            <span>ไปหน้าคลังสินค้า</span>
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all cursor-pointer"
-          >
-            <ArrowRightOnRectangleIcon className="w-4.5 h-4.5" />
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      </nav>
+      <AdminNavbar
+        title="จัดการโฆษณาและหน้าจอพัก"
+        subtitle="ระบบอัปโหลดและควบคุม Carousel Screensaver"
+        icon={PhotoIcon}
+      />
 
       {/* Main content */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
@@ -620,10 +572,12 @@ export default function ScreensaverManagement() {
                 <span className="text-[10px] text-gray-400 font-medium">รองรับเฉพาะ JPEG, PNG และ WebP เท่านั้น (ไม่รวม MP4/วิดีโอ)</span>
               </div>
 
-              {/* Side-by-side Duration & Order inputs */}
+              {/* Side-by-side Duration & Order inputs with aligned labels */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-gray-400 uppercase">ระยะเวลาแสดงผล (วินาที)</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase h-5 flex items-center">
+                    ระยะเวลาแสดงผล (วินาที)
+                  </label>
                   <input
                     type="number"
                     required
@@ -631,19 +585,21 @@ export default function ScreensaverManagement() {
                     max={60}
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
-                    className="w-full h-11 bg-gray-50 border border-gray-150 rounded-xl px-4 text-sm outline-none focus:border-[#F8C032] font-semibold text-gray-700 transition-all"
+                    className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm outline-none focus:border-[#FABE2C] font-semibold text-gray-700 transition-all"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-gray-400 uppercase">ลำดับการแสดงผล (Display Order)</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase h-5 flex items-center">
+                    ลำดับการแสดงผล
+                  </label>
                   <input
                     type="number"
                     required
                     min={0}
                     value={displayOrder}
                     onChange={(e) => setDisplayOrder(e.target.value)}
-                    className="w-full h-11 bg-gray-50 border border-gray-150 rounded-xl px-4 text-sm outline-none focus:border-[#F8C032] font-semibold text-gray-700 transition-all"
+                    className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm outline-none focus:border-[#FABE2C] font-semibold text-gray-700 transition-all"
                   />
                 </div>
               </div>

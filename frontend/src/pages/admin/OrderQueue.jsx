@@ -1,8 +1,128 @@
-// frontend/src/pages/admin/OrderQueue.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowPathIcon, CheckIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon, XMarkIcon, Squares2X2Icon, PhotoIcon, DocumentChartBarIcon, LockClosedIcon, LockOpenIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowPathIcon,
+  CheckIcon,
+  MagnifyingGlassIcon,
+  ClipboardDocumentListIcon,
+  XMarkIcon,
+  ClockIcon,
+  FunnelIcon
+} from "@heroicons/react/24/outline";
 import { notify, confirmDialog } from "../../components/notify";
+import AdminNavbar from "../../components/admin/AdminNavbar";
+import CustomDropdown from "../../components/admin/CustomDropdown";
+
+export const getOrderStatusInfo = (order) => {
+  if (!order) {
+    return {
+      key: "pending",
+      label: "รอดำเนินการ",
+      badgeClass: "bg-gray-100 text-gray-700 border-gray-200",
+      dotColor: "bg-gray-400",
+      emoji: "⏳"
+    };
+  }
+
+  // 1. จัดการครบถ้วนแล้ว
+  if (
+    order.fulfillmentStatus === "fulfilled" ||
+    (order.fulfillmentStatusInstock === "fulfilled" &&
+      (order.fulfillmentStatusPreorder === "fulfilled" || order.fulfillmentStatusPreorder === "none"))
+  ) {
+    return {
+      key: "fulfilled",
+      label: order.deliveryOption === "delivery" ? "จัดส่งแล้ว" : "จ่ายของครบแล้ว",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      dotColor: "bg-emerald-500",
+      emoji: "✅"
+    };
+  }
+
+  // 2. รับหน้าร้าน (Pickup)
+  if (order.deliveryOption === "pickup") {
+    if (order.fulfillmentStatusInstock === "pending") {
+      return {
+        key: "waiting_pickup",
+        label: "รอลูกค้ามารับ",
+        badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+        dotColor: "bg-blue-500",
+        emoji: "🏪"
+      };
+    }
+    if (order.fulfillmentStatusPreorder === "pending") {
+      return {
+        key: "waiting_preorder",
+        label: "รอสินค้าพรีออเดอร์",
+        badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+        dotColor: "bg-purple-500",
+        emoji: "📦"
+      };
+    }
+  }
+
+  // 3. จัดส่งพัสดุ (Delivery)
+  if (order.deliveryOption === "delivery") {
+    // ยังไม่ได้ระบุที่อยู่
+    if (!order.customerAddress || order.customerAddress.trim() === "") {
+      return {
+        key: "waiting_address",
+        label: "รอลูกค้าระบุที่อยู่",
+        badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
+        dotColor: "bg-rose-500",
+        emoji: "📍"
+      };
+    }
+
+    // แยกจัดส่ง (Split)
+    if (order.shippingOption === "split") {
+      if (order.fulfillmentStatusInstock === "pending") {
+        return {
+          key: "ready_to_ship",
+          label: "รอการจัดส่ง (รอบ 1 In Stock)",
+          badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+          dotColor: "bg-amber-500",
+          emoji: "🚚"
+        };
+      }
+      if (order.fulfillmentStatusPreorder === "pending") {
+        return {
+          key: "partially_shipped",
+          label: "จัดส่งแล้วบางส่วน (รอส่งรอบ 2)",
+          badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200",
+          dotColor: "bg-indigo-500",
+          emoji: "🔄"
+        };
+      }
+    } else {
+      // ส่งรวม (Combined)
+      const hasPreorder = order.items?.some(i => i.product && i.product.status === "Pre-Order");
+      if (hasPreorder && order.fulfillmentStatusPreorder === "pending") {
+        return {
+          key: "waiting_preorder",
+          label: "รอสินค้าพรีออเดอร์ (ส่งรวม)",
+          badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+          dotColor: "bg-purple-500",
+          emoji: "📦"
+        };
+      }
+      return {
+        key: "ready_to_ship",
+        label: "รอการจัดส่ง",
+        badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+        dotColor: "bg-amber-500",
+        emoji: "🚚"
+      };
+    }
+  }
+
+  return {
+    key: "pending",
+    label: "รอดำเนินการ",
+    badgeClass: "bg-gray-100 text-gray-700 border-gray-200",
+    dotColor: "bg-gray-400",
+    emoji: "⏳"
+  };
+};
 
 const getLocalDateString = (dateStr) => {
   if (!dateStr) return "";
@@ -48,7 +168,6 @@ const COURIER_OPTIONS = [
 ];
 
 export default function OrderQueue() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all"); // "all", "pickup", "delivery", "history"
   const [queueOrders, setQueueOrders] = useState([]);
   const [historyOrders, setHistoryOrders] = useState([]);
@@ -56,7 +175,7 @@ export default function OrderQueue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "waiting_pickup", "ready_to_ship", "waiting_preorder", "partially_shipped", "waiting_address", "fulfilled"
   const [toasts, setToasts] = useState([]);
   const prevOrderIdsRef = useRef(new Set());
 
@@ -67,51 +186,9 @@ export default function OrderQueue() {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [copiedField, setCopiedField] = useState(""); // "", "name", "phone", "address", "all"
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [manualUnlockedOrders, setManualUnlockedOrders] = useState(new Set());
-
   // Helper checks
   const hasInStockItem = (order) => order.items && order.items.some(item => !item.product || item.product.status === 'In Stock');
   const hasPreOrderItem = (order) => order.items && order.items.some(item => item.product && item.product.status === 'Pre-Order');
-
-  const getPreorderReleaseDate = (order) => {
-    if (!order || !order.items) return null;
-    const preOrderItems = order.items.filter(i => i.product && i.product.status === "Pre-Order");
-    if (preOrderItems.length === 0) return null;
-
-    const dates = preOrderItems
-      .map(i => i.product?.preorder_release_date || i.product?.preorderReleaseDate)
-      .filter(Boolean)
-      .map(d => new Date(d));
-
-    if (dates.length === 0) return null;
-    return new Date(Math.max(...dates));
-  };
-
-  const isOrderPreorderReleased = (order) => {
-    if (manualUnlockedOrders.has(order.id)) return true;
-    const releaseDate = getPreorderReleaseDate(order);
-    if (!releaseDate) return true;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const relDate = new Date(releaseDate);
-    relDate.setHours(0, 0, 0, 0);
-
-    return today >= relDate;
-  };
-
-  const toggleManualUnlock = (orderId) => {
-    setManualUnlockedOrders(prev => {
-      const next = new Set(prev);
-      if (next.has(orderId)) {
-        next.delete(orderId);
-      } else {
-        next.add(orderId);
-      }
-      return next;
-    });
-  };
 
   const handleFulfillPortion = async (orderId, portion) => {
     const portionName = portion === "instock" ? "สินค้าพร้อมส่ง (In Stock)" : "สินค้าสั่งซื้อล่วงหน้า (Pre-Order)";
@@ -197,11 +274,6 @@ export default function OrderQueue() {
   };
 
   useEffect(() => {
-    const userString = localStorage.getItem("user");
-    if (userString) {
-      setCurrentUser(JSON.parse(userString));
-    }
-
     fetchData();
 
     // Auto refresh every 5 seconds
@@ -374,17 +446,16 @@ export default function OrderQueue() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/ditc-portal-to-manager");
-  };
-
   // Search filter
   const matchesSearch = (order) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    return order.id.toLowerCase().includes(query) ||
-      (order.customerName && order.customerName.toLowerCase().includes(query));
+    return (
+      order.id.toLowerCase().includes(query) ||
+      (order.customerName && order.customerName.toLowerCase().includes(query)) ||
+      (order.customerPhone && order.customerPhone.toLowerCase().includes(query)) ||
+      (order.customerEmail && order.customerEmail.toLowerCase().includes(query))
+    );
   };
 
   // Date filter
@@ -393,8 +464,13 @@ export default function OrderQueue() {
     return getLocalDateString(order.createdAt) === selectedDate;
   };
 
-  // Compute lists for each section
-  const allOrdersList = queueOrders.filter(matchesSearch).filter(matchesDate);
+  // Combined all orders for "all" tab
+  const combinedAllOrders = [...queueOrders, ...historyOrders].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  // Base lists for each tab (filtered by search and date)
+  const allOrdersList = combinedAllOrders.filter(matchesSearch).filter(matchesDate);
   const pickupOrdersList = queueOrders
     .filter(order => order.deliveryOption === "pickup" && (order.fulfillmentStatusInstock === "pending" || order.fulfillmentStatusPreorder === "pending" || order.fulfillmentStatus === "pending"))
     .filter(matchesSearch)
@@ -405,80 +481,53 @@ export default function OrderQueue() {
     .filter(matchesDate);
   const historyOrdersList = historyOrders.filter(matchesSearch).filter(matchesDate);
 
-  // Get active list to display
-  const getDisplayOrders = () => {
+  // Get active tab base list
+  const getTabBaseOrders = () => {
     switch (activeTab) {
-      case "all":
-        return allOrdersList;
       case "pickup":
         return pickupOrdersList;
       case "delivery":
         return deliveryOrdersList;
       case "history":
         return historyOrdersList;
+      case "all":
       default:
         return allOrdersList;
     }
   };
 
-  const currentDisplayOrders = getDisplayOrders();
+  const currentTabBaseOrders = getTabBaseOrders();
+
+  // Status counts for current tab
+  const statusCounts = {
+    all: currentTabBaseOrders.length,
+    waiting_pickup: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "waiting_pickup").length,
+    ready_to_ship: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "ready_to_ship").length,
+    waiting_preorder: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "waiting_preorder").length,
+    partially_shipped: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "partially_shipped").length,
+    waiting_address: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "waiting_address").length,
+    fulfilled: currentTabBaseOrders.filter(o => getOrderStatusInfo(o).key === "fulfilled").length
+  };
+
+  // Apply status filter
+  const currentDisplayOrders = currentTabBaseOrders.filter(order => {
+    if (statusFilter === "all") return true;
+    return getOrderStatusInfo(order).key === statusFilter;
+  });
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setStatusFilter("all");
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 font-['Prompt'] flex flex-col">
       {/* Top Navigation Navbar */}
-      <nav className="bg-white border-b border-gray-150 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F8C032]/10 rounded-xl flex items-center justify-center text-[#F8C032]">
-            <ClipboardDocumentListIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#2B2B2B]">ระบบคิวรับสินค้าหน้าร้าน</h1>
-            <p className="text-xs text-gray-400">พนักงานร้านค้า CAMT คัดแยกของ</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-gray-700">{currentUser?.name}</p>
-            <p className="text-xs text-gray-400 font-medium capitalize">สิทธิ์: {currentUser?.role}</p>
-          </div>
-          {currentUser?.role === "admin" && (
-            <>
-              <button
-                onClick={() => navigate("/dashboard/reports")}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-              >
-                <DocumentChartBarIcon className="w-4.5 h-4.5" />
-                <span>ออกรายงานสรุป</span>
-              </button>
-
-              <button
-                onClick={() => navigate("/dashboard/products")}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-              >
-                <Squares2X2Icon className="w-4.5 h-4.5" />
-                <span>ไปหน้าจัดการสินค้า</span>
-              </button>
-
-              <button
-                onClick={() => navigate("/dashboard/screensavers")}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-gray-600 hover:text-[#2B2B2B] font-semibold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-              >
-                <PhotoIcon className="w-4.5 h-4.5" />
-                <span>จัดการโฆษณา</span>
-              </button>
-            </>
-          )}
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-red-600 font-semibold bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all"
-          >
-            <ArrowRightOnRectangleIcon className="w-4.5 h-4.5" />
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      </nav>
+      <AdminNavbar
+        title="ระบบคิวรับสินค้าหน้าร้าน"
+        subtitle="พนักงานร้านค้า CAMT คัดแยกของ"
+        icon={ClipboardDocumentListIcon}
+      />
 
       {/* Main Container */}
       <main className="flex-1 p-6 max-w-7xl w-full mx-auto flex flex-col gap-6">
@@ -567,12 +616,53 @@ export default function OrderQueue() {
               </div>
             </div>
           </div>
+
+          {/* Quick Status Filter Row */}
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
+              <FunnelIcon className="w-3.5 h-3.5" />
+              กรองสถานะ:
+            </span>
+            
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { key: "all", label: "ทั้งหมด", count: statusCounts.all },
+                { key: "waiting_pickup", label: "🏪 รอลูกค้ามารับ", count: statusCounts.waiting_pickup },
+                { key: "ready_to_ship", label: "🚚 รอการจัดส่ง", count: statusCounts.ready_to_ship },
+                { key: "waiting_preorder", label: "📦 รอสินค้าพรีออเดอร์", count: statusCounts.waiting_preorder },
+                { key: "partially_shipped", label: "🔄 จัดส่งแล้วบางส่วน", count: statusCounts.partially_shipped },
+                { key: "waiting_address", label: "📍 รอลูกค้าระบุที่อยู่", count: statusCounts.waiting_address },
+                { key: "fulfilled", label: "✅ จ่ายของครบ/ส่งแล้ว", count: statusCounts.fulfilled }
+              ]
+                .filter(chip => chip.key === "all" || chip.count > 0 || activeTab === "all")
+                .map(chip => (
+                  <button
+                    key={chip.key}
+                    onClick={() => setStatusFilter(chip.key)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusFilter === chip.key
+                        ? "bg-[#2B2B2B] text-white shadow-xs"
+                        : "bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-150"
+                    }`}
+                  >
+                    <span>{chip.label}</span>
+                    <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-extrabold ${
+                      statusFilter === chip.key
+                        ? "bg-[#F8C032] text-[#2B2B2B]"
+                        : "bg-gray-200/80 text-gray-600"
+                    }`}>
+                      {chip.count}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </div>
         </div>
 
         {/* 4-Tab Navigation System with Real-Time Counts */}
         <div className="flex border-b border-gray-200 gap-6 overflow-x-auto whitespace-nowrap scrollbar-none">
           <button
-            onClick={() => setActiveTab("all")}
+            onClick={() => handleTabChange("all")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "all" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -583,7 +673,7 @@ export default function OrderQueue() {
           </button>
 
           <button
-            onClick={() => setActiveTab("pickup")}
+            onClick={() => handleTabChange("pickup")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "pickup" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -594,7 +684,7 @@ export default function OrderQueue() {
           </button>
 
           <button
-            onClick={() => setActiveTab("delivery")}
+            onClick={() => handleTabChange("delivery")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "delivery" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -605,7 +695,7 @@ export default function OrderQueue() {
           </button>
 
           <button
-            onClick={() => setActiveTab("history")}
+            onClick={() => handleTabChange("history")}
             className={`pb-3 text-sm font-bold transition-all relative cursor-pointer ${activeTab === "history" ? "text-[#F8C032]" : "text-gray-400 hover:text-gray-650"
               }`}
           >
@@ -634,16 +724,20 @@ export default function OrderQueue() {
             </div>
             <div className="flex flex-col gap-1">
               <h3 className="text-lg font-bold text-gray-700">
-                {activeTab === "all" && "ไม่มีรายการคำสั่งซื้อค้างส่ง"}
-                {activeTab === "pickup" && "ไม่มีคิวรับหน้าร้านค้างจ่าย"}
-                {activeTab === "delivery" && "ไม่มีคิวจัดส่งสินค้าค้างจัดส่ง"}
-                {activeTab === "history" && "ไม่มีประวัติการจ่ายสินค้าสำเร็จ"}
+                {statusFilter !== "all" 
+                  ? "ไม่มีออเดอร์ในสถานะที่เลือก"
+                  : activeTab === "all" && "ไม่มีรายการคำสั่งซื้อค้างส่ง"}
+                {statusFilter === "all" && activeTab === "pickup" && "ไม่มีคิวรับหน้าร้านค้างจ่าย"}
+                {statusFilter === "all" && activeTab === "delivery" && "ไม่มีคิวจัดส่งสินค้าค้างจัดส่ง"}
+                {statusFilter === "all" && activeTab === "history" && "ไม่มีประวัติการจ่ายสินค้าสำเร็จ"}
               </h3>
               <p className="text-sm text-gray-400 px-6">
-                {activeTab === "all" && "ออเดอร์ที่จ่ายเงินสำเร็จแต่มีสถานะค้างจ่ายจะแสดงที่นี่"}
-                {activeTab === "pickup" && "ออเดอร์ที่เลือกรับสินค้าหน้าร้านจะแสดงที่นี่"}
-                {activeTab === "delivery" && "ออเดอร์ที่จัดส่งพัสดุจะแสดงที่นี่"}
-                {activeTab === "history" && "ประวัติคำสั่งซื้อทั้งหมดที่ดำเนินการจัดส่งเรียบร้อยแล้ว"}
+                {statusFilter !== "all" 
+                  ? "ลองเปลี่ยนตัวกรองสถานะ หรือล้างตัวกรองเพื่อดูรายการทั้งหมด"
+                  : activeTab === "all" && "ออเดอร์ที่จ่ายเงินสำเร็จแต่มีสถานะค้างจ่ายจะแสดงที่นี่"}
+                {statusFilter === "all" && activeTab === "pickup" && "ออเดอร์ที่เลือกรับสินค้าหน้าร้านจะแสดงที่นี่"}
+                {statusFilter === "all" && activeTab === "delivery" && "ออเดอร์ที่จัดส่งพัสดุจะแสดงที่นี่"}
+                {statusFilter === "all" && activeTab === "history" && "ประวัติคำสั่งซื้อทั้งหมดที่ดำเนินการจัดส่งเรียบร้อยแล้ว"}
               </p>
             </div>
           </div>
@@ -651,6 +745,8 @@ export default function OrderQueue() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentDisplayOrders.map((order) => {
               const displayItems = order.items || [];
+              const statusInfo = getOrderStatusInfo(order);
+              const totalItemsQty = displayItems.reduce((acc, it) => acc + (it.quantity || 1), 0);
 
               return (
                 <div
@@ -658,39 +754,58 @@ export default function OrderQueue() {
                   className="bg-white rounded-2xl border border-gray-150 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-all duration-200"
                 >
                   {/* Card Header */}
-                  <div className="bg-gray-50/50 p-5 border-b border-gray-100 flex flex-col gap-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-gray-400 font-mono select-all">
-                        REF: {order.id.slice(-4)}
+                  <div className="bg-gray-50/70 p-5 border-b border-gray-100 flex flex-col gap-2">
+                    {/* Row 1: Delivery Option Tag (บรรทัดบน) */}
+                    <div>
+                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border inline-flex items-center gap-1 ${
+                        order.deliveryOption === "delivery"
+                          ? (order.shippingOption === "split" ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-blue-50 text-blue-700 border-blue-200")
+                          : "bg-green-50 text-green-700 border-green-200"
+                      }`}>
+                        {order.deliveryOption === "delivery"
+                          ? (order.shippingOption === "split" ? "🚚 ให้จัดส่งพัสดุ (แยกส่ง)" : "🚚 ให้จัดส่งพัสดุ")
+                          : "🏪 รับที่นี่"}
                       </span>
-                      {order.fulfillmentStatus === "fulfilled" ? (
-                        <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-150 rounded-full">
-                          จ่ายของครบแล้ว
-                        </span>
-                      ) : (
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md ${
-                          order.deliveryOption === "delivery"
-                            ? (order.shippingOption === "split" ? "bg-orange-50 text-orange-655 border border-orange-200" : "bg-blue-50 text-blue-655 border border-blue-200")
-                            : "bg-green-50 text-green-700 border border-green-200"
-                        }`}>
-                          {order.deliveryOption === "delivery"
-                            ? (order.shippingOption === "split" ? "🚚 จัดส่งพัสดุ (แยกส่ง)" : "🚚 จัดส่งพัสดุ (รวมส่ง)")
-                            : "🏪 รับที่ตู้ Kiosk"}
-                        </span>
-                      )}
                     </div>
-                    <span className="text-sm font-bold text-gray-700 font-mono mt-1 select-all">{order.id}</span>
-                    <span className="text-xs text-gray-400">
-                      เวลาสั่งซื้อ: {new Date(order.createdAt).toLocaleTimeString("th-TH")} น.
-                    </span>
+
+                    {/* Row 2: Status Badge (อีกบรรทัดเป็นสถานะ) */}
+                    <div>
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border shadow-2xs ${statusInfo.badgeClass}`}>
+                        <span className={`w-2 h-2 rounded-full ${statusInfo.dotColor} ${statusInfo.key !== "fulfilled" ? "animate-pulse" : ""}`} />
+                        <span>{statusInfo.label}</span>
+                      </span>
+                    </div>
+
+                    {/* Row 3: Order ID, Time & Total Price Highlight */}
+                    <div className="flex items-end justify-between gap-2 pt-2 border-t border-gray-200/60 mt-1">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-gray-700 font-mono select-all truncate" title={order.id}>
+                          {order.id}
+                        </span>
+                        <span className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
+                          <ClockIcon className="w-3.5 h-3.5" />
+                          เวลาสั่งซื้อ: {order.createdAt ? new Date(order.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : "-"} น.
+                        </span>
+                      </div>
+
+                      {/* Total Price Badge */}
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          ยอดรวม
+                        </span>
+                        <span className="text-sm font-extrabold text-[#2B2B2B] bg-[#F8C032]/25 px-2.5 py-0.5 rounded-lg border border-[#F8C032]/50 shadow-2xs">
+                          ฿{Number(order.totalPrice || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Items details */}
-                  <div className="p-5 flex-1 flex flex-col gap-4">
+                  <div className="p-5 flex-1 flex flex-col gap-3">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                          รายการสินค้าทั้งหมด ({displayItems.length})
+                          รายการสินค้า ({displayItems.length} รายการ) รวม {totalItemsQty} ชิ้น
                         </span>
                       </div>
 
@@ -700,7 +815,6 @@ export default function OrderQueue() {
                           {displayItems.map((item, index) => {
                             const isPreOrder = item.product?.status === "Pre-Order";
                             const relDateStr = isPreOrder ? (item.product?.preorder_release_date || item.product?.preorderReleaseDate) : null;
-                            const isItemReleased = !relDateStr || (new Date() >= new Date(relDateStr)) || manualUnlockedOrders.has(order.id);
                             const isItemFulfilled = item.fulfillmentStatus === "fulfilled" || order.fulfillmentStatus === "fulfilled";
 
                             return (
@@ -713,18 +827,14 @@ export default function OrderQueue() {
                                       ({isPreOrder ? 'Pre-Order' : 'In Stock'})
                                     </span>
                                     {isPreOrder && relDateStr && (
-                                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
-                                        isItemReleased 
-                                          ? "bg-green-50 text-green-700 border-green-200" 
-                                          : "bg-amber-50 text-amber-700 border-amber-200 font-mono"
-                                      }`}>
-                                        {isItemReleased ? "🟢 พร้อมรับ" : `🔒 รอของ ${formatDMYDateString(relDateStr)}`}
+                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                                        📅 รอของ {formatDMYDateString(relDateStr)}
                                       </span>
                                     )}
                                   </div>
                                 </div>
 
-                                {/* Right: Quantity Badge + Confirm / Unlock Button Underneath */}
+                                {/* Right: Quantity Badge + Confirm Button Underneath */}
                                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                                   <span className="font-bold text-[#E53935] px-2.5 py-0.5 bg-red-50 border border-red-150 rounded-lg text-xs">
                                     x{item.quantity}
@@ -737,21 +847,12 @@ export default function OrderQueue() {
                                         <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
                                           <CheckIcon className="w-3 h-3" /> จ่ายแล้ว
                                         </span>
-                                      ) : isItemReleased ? (
+                                      ) : (
                                         <button
                                           onClick={() => handleFulfillSingleItem(order.id, item.id, item.product?.name || "สินค้า")}
                                           className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                                         >
                                           <CheckIcon className="w-3.5 h-3.5" /> ยืนยันจ่าย
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() => toggleManualUnlock(order.id)}
-                                          className="text-[10px] font-bold text-amber-800 bg-amber-100/90 hover:bg-amber-200/90 px-2 py-0.5 rounded-md border border-amber-300 transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-2xs"
-                                          title="กดเพื่อปลดล็อกสินค้าชิ้นนี้ก่อนกำหนด"
-                                        >
-                                          <LockOpenIcon className="w-3 h-3 text-amber-600 stroke-[2]" />
-                                          <span>ปลดล็อก</span>
                                         </button>
                                       )}
                                     </div>
@@ -759,30 +860,29 @@ export default function OrderQueue() {
                                 </div>
                               </li>
                             );
-                        })}
-                      </ul>
+                          })}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Customer & Delivery Address details */}
+                    {/* Customer & Delivery Address details */}
                     {order.customerName && (
-                      <div className="border-t border-gray-100 pt-3 flex flex-col gap-1 text-xs text-gray-500">
-                        <p><span className="font-semibold">ผู้สั่งซื้อ:</span> {order.customerName}</p>
-                        <p><span className="font-semibold">เบอร์โทร:</span> {order.customerPhone}</p>
+                      <div className="border-t border-gray-100 pt-2.5 flex flex-col gap-1 text-xs text-gray-500">
+                        <p><span className="font-semibold text-gray-700">ผู้สั่งซื้อ:</span> {order.customerName}</p>
+                        <p><span className="font-semibold text-gray-700">เบอร์โทร:</span> {order.customerPhone}</p>
                         {order.deliveryOption === "delivery" && (
                           <p className="mt-1 bg-amber-50/40 p-2 rounded-lg border border-amber-100/60 text-gray-600">
                             <span className="font-semibold text-[#2B2B2B]">ที่อยู่จัดส่ง:</span> {order.customerAddress || "รอลูกค้ากรอกที่อยู่ผ่านมือถือ..."}
                           </p>
                         )}
-
                       </div>
                     )}
                   </div>
 
                   {/* Card Footer Actions based on activeTab & deliveryOptions */}
-                  <div className="p-5 bg-gray-50/30 border-t border-gray-100 mt-auto">
+                  <div className="p-5 bg-gray-50/30 border-t border-gray-100 mt-auto min-h-[88px] flex flex-col justify-center">
                     {activeTab === "history" || order.fulfillmentStatus === "fulfilled" ? (
-                      <div className="bg-[#E8F5E9] text-[#2E7D32] p-4 rounded-xl border border-[#C8E6C9] flex flex-col gap-1">
+                      <div className="bg-[#E8F5E9] text-[#2E7D32] p-3.5 rounded-xl border border-[#C8E6C9] flex flex-col gap-1">
                         <div className="flex items-center gap-1.5 font-bold text-sm">
                           <CheckIcon className="w-5 h-5 stroke-[2.5]" />
                           <span>จัดเตรียมเรียบร้อยครบทุกรายการ</span>
@@ -810,18 +910,13 @@ export default function OrderQueue() {
                         {order.deliveryOption === "pickup" && (
                           <div className="flex flex-col gap-2">
                             {order.items && order.items.every(i => i.fulfillmentStatus === "fulfilled") ? (
-                              <div className="text-center text-xs font-bold text-emerald-700 bg-emerald-50 py-2.5 rounded-lg border border-emerald-200">
+                              <div className="text-center text-xs font-bold text-emerald-700 bg-emerald-50 py-3 rounded-xl border border-emerald-200">
                                 ✓ จ่ายสินค้าหน้าร้านครบทุกรายการแล้ว
                               </div>
                             ) : (
                               <button
                                 onClick={() => handleFulfillInStock(order.id)}
-                                disabled={!isOrderPreorderReleased(order)}
-                                className={`w-full h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm border cursor-pointer ${
-                                  isOrderPreorderReleased(order)
-                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
-                                    : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                                }`}
+                                className="w-full h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm border cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
                               >
                                 <CheckIcon className="w-4 h-4" />
                                 ยืนยันจ่ายสินค้าที่เหลือทั้งหมด (หน้าร้าน)
@@ -832,12 +927,12 @@ export default function OrderQueue() {
 
                         {/* ALL / DELIVERY TAB - PARCEL DELIVERY FLOW */}
                         {order.deliveryOption === "delivery" && (
-                          <div className="flex flex-col gap-3">
+                          <div className="flex flex-col gap-2.5">
                             {/* 1. Split Delivery Option */}
                             {order.shippingOption === "split" ? (
-                              <div className="flex flex-col gap-2.5">
+                              <div className="flex flex-col gap-2">
                                 {/* In-Stock Portion */}
-                                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2">
+                                <div className="flex items-center justify-between gap-2">
                                   <span className="text-xs text-gray-500 font-medium">ส่วน In Stock:</span>
                                   {order.fulfillmentStatusInstock === "fulfilled" ? (
                                     <span className="text-xs font-bold text-green-600">✓ ส่งพัสดุแล้ว</span>
@@ -862,7 +957,7 @@ export default function OrderQueue() {
                                 </div>
 
                                 {/* Pre-Order Portion */}
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center justify-between gap-2 border-t border-gray-150/70 pt-2">
                                   <span className="text-xs text-gray-500 font-medium">ส่วน Pre-Order:</span>
                                   {order.fulfillmentStatusPreorder === "fulfilled" ? (
                                     <span className="text-xs font-bold text-green-600">✓ ส่งพัสดุแล้ว</span>
@@ -890,7 +985,7 @@ export default function OrderQueue() {
                               /* 2. Combined Delivery Option */
                               <div className="flex flex-col gap-2">
                                 {order.fulfillmentStatusPreorder === "fulfilled" && order.fulfillmentStatusInstock === "fulfilled" ? (
-                                  <div className="text-center text-xs font-bold text-green-600 bg-green-50 py-2.5 rounded-lg border border-green-150">
+                                  <div className="text-center text-xs font-bold text-green-600 bg-green-50 py-3 rounded-xl border border-green-150">
                                     ✓ จัดส่งพัสดุรวมกันครบถ้วนแล้ว
                                   </div>
                                 ) : (
@@ -913,12 +1008,6 @@ export default function OrderQueue() {
                                   </button>
                                 )}
                               </div>
-                            )}
-                            
-                            {!order.customerAddress && (
-                              <p className="text-[10px] text-amber-600 text-center font-bold animate-pulse">
-                                ⚠️ รอลูกค้าระบุที่อยู่จัดส่ง (ส่งลิงก์ทางอีเมลแล้ว)
-                              </p>
                             )}
                           </div>
                         )}
@@ -1020,15 +1109,14 @@ export default function OrderQueue() {
               {/* Courier Selection & Portal External Link */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">1. เลือกบริการขนส่ง (Courier)</label>
-                <select
+                <CustomDropdown
                   value={courier}
-                  onChange={(e) => setCourier(e.target.value)}
-                  className="w-full h-11 bg-gray-50 border border-gray-200 rounded-xl px-4 text-sm font-semibold outline-none focus:border-[#F8C032] cursor-pointer"
-                >
-                  {COURIER_OPTIONS.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setCourier(val)}
+                  options={COURIER_OPTIONS.map(c => ({
+                    value: c.id,
+                    label: c.name
+                  }))}
+                />
 
                 {/* Direct Link to Courier Portal */}
                 {(() => {
@@ -1100,10 +1188,10 @@ export default function OrderQueue() {
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-bold text-gray-800">มีออเดอร์ใหม่เข้ามา!</h4>
               <p className="text-xs text-gray-500 font-mono mt-0.5 truncate">
-                REF: {t.order.id.slice(-4)} ({t.order.id})
+                REF: {String(t.order?.id || "").slice(-4)} ({t.order?.id})
               </p>
               <p className="text-xs text-gray-600 font-semibold mt-1">
-                ยอดรวม: ฿{t.order.totalPrice || t.order.totalAmount || 0}
+                ยอดรวม: ฿{Number(t.order.totalPrice || t.order.totalAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <button

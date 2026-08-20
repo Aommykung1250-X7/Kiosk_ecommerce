@@ -13,7 +13,9 @@ class SettingController {
         "contact_line_url",
         "contact_line_qr_image",
         "contact_service_hours",
-        "contact_external_website_url"
+        "contact_external_website_url",
+        "contact_website",
+        "contact_facebook"
       ];
       
       const result = await pool.query(
@@ -26,13 +28,17 @@ class SettingController {
         settingsMap[row.key] = row.value;
       });
 
+      const webUrl = settingsMap["contact_external_website_url"] || settingsMap["contact_website"] || "https://www.ditc.co.th";
+
       return res.json({
-        hotline: settingsMap["contact_hotline"] ?? "02-123-4567 / 081-234-5678",
+        hotline: settingsMap["contact_hotline"] ?? "053-942606",
         lineId: settingsMap["contact_line_id"] ?? "@ditcsupport",
         lineUrl: settingsMap["contact_line_url"] ?? "https://line.me/ti/p/@ditcsupport",
         lineQrImage: settingsMap["contact_line_qr_image"] ?? "",
         serviceHours: settingsMap["contact_service_hours"] ?? "เปิดบริการ 08:00 - 20:00 น.",
-        externalWebsiteUrl: settingsMap["contact_external_website_url"] ?? "https://www.ditc.co.th"
+        externalWebsiteUrl: webUrl,
+        website: settingsMap["contact_website"] ?? "www.camt.cmu.ac.th",
+        facebook: settingsMap["contact_facebook"] ?? "CAMT Chiang Mai University"
       });
     } catch (error) {
       console.error("Error in getContactSettings:", error);
@@ -46,15 +52,19 @@ class SettingController {
    */
   async updateContactSettings(req, res) {
     try {
-      const { hotline, lineId, lineUrl, lineQrImage, serviceHours, externalWebsiteUrl } = req.body;
+      const { hotline, lineId, lineUrl, lineQrImage, serviceHours, externalWebsiteUrl, website, facebook } = req.body;
+
+      const webUrl = externalWebsiteUrl || website || "https://www.ditc.co.th";
 
       const updates = [
-        ["contact_hotline", hotline ?? "02-123-4567 / 081-234-5678"],
+        ["contact_hotline", hotline ?? "053-942606"],
         ["contact_line_id", lineId ?? "@ditcsupport"],
         ["contact_line_url", lineUrl ?? "https://line.me/ti/p/@ditcsupport"],
         ["contact_line_qr_image", lineQrImage ?? ""],
         ["contact_service_hours", serviceHours ?? "เปิดบริการ 08:00 - 20:00 น."],
-        ["contact_external_website_url", externalWebsiteUrl ?? "https://www.ditc.co.th"]
+        ["contact_external_website_url", webUrl],
+        ["contact_website", website ?? "www.camt.cmu.ac.th"],
+        ["contact_facebook", facebook ?? "CAMT Chiang Mai University"]
       ];
 
       for (const [key, value] of updates) {

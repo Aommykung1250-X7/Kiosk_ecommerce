@@ -13,7 +13,7 @@ import { ShoppingCartIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/rea
 import { notify } from "../components/notify";
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategories, setSelectedCategories] = useState(["all"]);
   const [searchQuery, setSearchQuery] = useState("");
   const [popularSearchTags, setPopularSearchTags] = useState([]);
   const [cart, setCart] = useState({ items: [], totalPrice: 0, totalItems: 0 });
@@ -28,6 +28,25 @@ export default function Home() {
   const [isIdle, setIsIdle] = useState(false);
   const [isWaking, setIsWaking] = useState(false);
   const [sessionViewedProductIds, setSessionViewedProductIds] = useState([]);
+
+  const isAllSelected = selectedCategories.length === 0 || selectedCategories.includes("all");
+
+  const handleToggleCategory = (catId) => {
+    if (catId === "all") {
+      setSelectedCategories(["all"]);
+      return;
+    }
+
+    setSelectedCategories((prev) => {
+      const withoutAll = prev.filter((c) => c !== "all");
+      if (withoutAll.includes(catId)) {
+        const next = withoutAll.filter((c) => c !== catId);
+        return next.length === 0 ? ["all"] : next;
+      } else {
+        return [...withoutAll, catId];
+      }
+    });
+  };
 
   // Fetch cart details & categories on mount
   const fetchCart = () => {
@@ -59,8 +78,8 @@ export default function Home() {
     setLoading(true);
     setError(null);
     const queryParams = new URLSearchParams();
-    if (selectedCategory !== "all") {
-      queryParams.append("category", selectedCategory);
+    if (!isAllSelected) {
+      queryParams.append("category", selectedCategories.join(","));
     }
     if (searchQuery.trim() !== "") {
       queryParams.append("search", searchQuery.trim());
@@ -99,12 +118,13 @@ export default function Home() {
 
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategories, searchQuery]);
 
-  // Idle detection timer (2 minutes) - Paused when payment modal (activeOrder) is open
+  // Idle detection timer - ปรับเวลารอพักหน้าจอตรงนี้ (หน่วยเป็นมิลลิวินาที ms)
   useEffect(() => {
     let idleTimer;
-    const timeoutDuration = 240000; // 120 seconds in ms
+    // ตัวอย่าง: 30 * 1000 (30 วินาที), 60 * 1000 (1 นาที), 120 * 1000 (2 นาที)
+    const timeoutDuration = 240 * 1000; // 24 วินาที (0.4 นาที)
 
     const resetTimer = () => {
       clearTimeout(idleTimer);
@@ -187,14 +207,15 @@ export default function Home() {
     }
   };
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (product, quantityToAdd = 1) => {
     if (product && product.id) {
       trackProductView(product.id);
     }
 
+    const qty = typeof quantityToAdd === "number" && quantityToAdd > 0 ? quantityToAdd : 1;
     const existingItem = cart.items.find(item => item.product?.id === product.id);
     const limit = product.purchaseLimit || product.purchase_limit;
-    if (existingItem && limit && existingItem.quantity >= limit) {
+    if (existingItem && limit && (existingItem.quantity + qty) > limit) {
       notify.warning(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
       return;
     }
@@ -202,7 +223,7 @@ export default function Home() {
     fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id, quantity: 1 })
+      body: JSON.stringify({ productId: product.id, quantity: qty })
     })
       .then((res) => res.json())
       .then((data) => setCart(data))
@@ -302,9 +323,6 @@ export default function Home() {
     setActiveOrder(null);
     setIsCartOpen(true);
   };
-
-
-
   const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
   const bottomDisplayTotal = cart.totalPrice;
 
@@ -319,42 +337,48 @@ export default function Home() {
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          selectedCategories={selectedCategories}
+          onToggleCategory={handleToggleCategory}
         />
 
-        <main className="flex-1 overflow-y-auto min-w-0 bg-[#F8F8F8]">
+        <main className="flex-1 overflow-y-auto min-w-0 bg-white pb-24 font-['Prompt']">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#2B2B2B]/60">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#5EBAA8] mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#101C3D] mb-4"></div>
               <p className="text-lg font-medium animate-pulse">กำลังโหลดข้อมูลสินค้า...</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#E53935]">
               <p className="text-xl font-semibold">เกิดข้อผิดพลาด: {error}</p>
               <button
-                onClick={() => setSelectedCategory(selectedCategory)}
-                className="mt-4 px-6 py-2 bg-[#F9C338] text-black border-2 border-black rounded-xl font-semibold active:scale-95 transition-all shadow-sm"
+                onClick={() => setSelectedCategories(["all"])}
+                className="mt-4 px-6 py-2 bg-[#101C3D] text-white rounded-xl font-semibold active:scale-95 transition-all shadow-sm cursor-pointer"
               >
                 ลองใหม่
               </button>
             </div>
           ) : (
             <>
-              {/* Quick Search Chips */}
-              {popularSearchTags.length > 0 && (
-                <div className="px-5 pt-4 flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">คำค้นยอดนิยม:</span>
-                  {popularSearchTags.map((tag) => {
+              {/* 1. Quick Popular Search Tags Bar matching mockup */}
+              <div className="flex items-center gap-3 px-6 pt-5 pb-1 overflow-x-auto scrollbar-none select-none">
+                <span className="text-sm font-semibold text-gray-800 shrink-0">
+                  คำค้นหายอดนิยม
+                </span>
+                <div className="flex items-center gap-2 flex-nowrap">
+                  {(popularSearchTags.length > 0
+                    ? popularSearchTags
+                    : ["น้ำดื่ม", "ชาเขียว", "นม", "kitkat"]
+                  ).map((tag) => {
                     const isSelected = searchQuery === tag;
                     return (
                       <button
                         key={tag}
+                        type="button"
                         onClick={() => setSearchQuery(isSelected ? "" : tag)}
-                        className={`text-xs px-3 py-1 rounded-full border font-semibold transition-all active:scale-95 cursor-pointer ${
+                        className={`px-3.5 py-1 rounded-full border text-xs font-normal transition-all cursor-pointer shadow-2xs whitespace-nowrap active:scale-95 ${
                           isSelected
-                            ? "bg-[#1B1B1C] text-white border-[#1B1B1C] shadow-sm"
-                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
+                            ? "bg-[#101C38] text-white border-[#101C38] font-medium"
+                            : "bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
                         }`}
                       >
                         {tag}
@@ -362,88 +386,114 @@ export default function Home() {
                     );
                   })}
                 </div>
-              )}
-
-              {/* Category / Search Heading */}
-              <div className="px-5 pt-3 flex items-end justify-between">
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none">
-                    {searchQuery ? "Search Results" : "Now Showing"}
-                  </span>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <h1 className="text-2xl font-black text-black leading-none">
-                      {searchQuery ? `ค้นหา: "${searchQuery}"` : (() => {
-                        if (selectedCategory === "all") return "ทั้งหมด";
-                        if (selectedCategory === "promotion") return "โปรโมชั่น";
-                        const match = categoryList.find(
-                          (c) => String(c.id).toLowerCase() === String(selectedCategory).toLowerCase()
-                        );
-                        if (match && match.name) return match.name;
-                        if (selectedCategory === "drinks") return "เครื่องดื่ม";
-                        if (selectedCategory === "snacks") return "ขนมขบเคี้ยว";
-                        if (selectedCategory === "instant") return "อาหารพร้อมทาน";
-                        if (selectedCategory === "stationery") return "เครื่องเขียน";
-                        if (selectedCategory === "souvenirs") return "ของที่ระลึก";
-                        return "สินค้า";
-                      })()}
-                    </h1>
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
-                      >
-                        <XMarkIcon className="w-3.5 h-3.5" />
-                        ล้างค้นหา
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <span className="text-xs font-black text-gray-400 shrink-0">
-                  {products.length} รายการ
-                </span>
               </div>
 
-              {products.length > 0 ? (
-                <div
-                  className={`grid grid-cols-2 gap-4 p-4 ${cart.totalItems > 0 ? "pb-36" : "pb-20"}`}
-                >
-                  {(() => {
-                    const maxViews = products.length > 0 ? Math.max(...products.map(p => p.views || 0)) : 0;
-                    return products.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={handleAddToCart}
-                        onSelectProduct={handleSelectProduct}
-                        isMostViewed={maxViews > 0 && product.views === maxViews}
-                      />
-                    ));
-                  })()}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                  <div className="w-16 h-16 rounded-3xl bg-gray-200/60 flex items-center justify-center text-gray-400 mb-4 shadow-inner">
-                    <MagnifyingGlassIcon className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#1B1B1C]">ไม่พบสินค้าที่ตรงกับการค้นหา</h3>
-                  <p className="text-xs font-medium text-gray-500 mt-1 max-w-xs leading-relaxed">
-                    {searchQuery
-                      ? `ไม่พบข้อมูลสำหรับคำว่า "${searchQuery}" ลองค้นหาด้วยคำอื่น หรือกดล้างการค้นหาเพื่อดูสินค้าทั้งหมด`
-                      : `ไม่มีสินค้าในหมวดหมู่นี้ในขณะนี้`}
-                  </p>
-                  {(searchQuery || selectedCategory !== "all") && (
-                    <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setSelectedCategory("all");
-                      }}
-                      className="mt-5 px-6 py-2.5 bg-[#5EBAA8] text-white font-bold rounded-xl active:scale-95 transition-all shadow-md text-sm cursor-pointer"
-                    >
-                      ดูสินค้าทั้งหมด
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* 2. Category Title & Item Count matching mockup */}
+              {(() => {
+                let filteredProducts = products;
+                if (selectedCategories.includes("hot") && !isAllSelected) {
+                  filteredProducts = products.filter(p => (p.views || 0) > 0 || p.promotion);
+                  if (filteredProducts.length === 0) filteredProducts = products.slice(0, 4);
+                }
+
+                const isPromoSelected = selectedCategories.includes("promotion");
+                const isHotSelected = selectedCategories.includes("hot");
+                const regularCategoryIds = selectedCategories.filter(
+                  (c) => c !== "promotion" && c !== "hot" && c !== "all"
+                );
+
+                const categoryTitle = searchQuery
+                  ? `SEARCH: "${searchQuery}"`
+                  : isAllSelected
+                  ? "ALL"
+                  : (() => {
+                      const regularNames = regularCategoryIds.map((catId) => {
+                        const match = categoryList.find(
+                          (c) => String(c.id).toLowerCase() === String(catId).toLowerCase()
+                        );
+                        return (match?.name || catId).toUpperCase();
+                      });
+
+                      if (isPromoSelected && regularNames.length > 0) {
+                        return `PROMOTION: ${regularNames.join(", ")}`;
+                      }
+                      if (isPromoSelected && regularNames.length === 0) {
+                        return "PROMOTION";
+                      }
+                      if (isHotSelected && regularNames.length === 0) {
+                        return "HOT NOW";
+                      }
+                      if (isHotSelected && regularNames.length > 0) {
+                        return `${regularNames.join(", ")} (HOT NOW)`;
+                      }
+                      return regularNames.join(", ");
+                    })();
+
+                return (
+                  <>
+                    <div className="px-6 pt-4 pb-1 flex items-end justify-between select-none">
+                      <div className="flex flex-col">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight uppercase leading-none">
+                          {categoryTitle}
+                        </h1>
+                        <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 tracking-wider uppercase mt-1">
+                          NOW SHOWING
+                        </span>
+                      </div>
+
+                      <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                        {filteredProducts.length} ITEM
+                      </span>
+                    </div>
+
+                    {/* 3. Product Grid matching mockup */}
+                    {filteredProducts.length > 0 ? (
+                      <div
+                        className={`grid grid-cols-2 gap-x-4 sm:gap-x-5 gap-y-6 sm:gap-y-7 p-4 sm:p-5 ${
+                          cart.totalItems > 0 ? "pb-36" : "pb-24"
+                        }`}
+                      >
+                        {(() => {
+                          const maxViews = filteredProducts.length > 0 ? Math.max(...filteredProducts.map(p => p.views || 0)) : 0;
+                          return filteredProducts.map((product) => (
+                            <ProductCard
+                              key={product.id}
+                              product={product}
+                              onAddToCart={handleAddToCart}
+                              onSelectProduct={handleSelectProduct}
+                              isMostViewed={maxViews > 0 && product.views === maxViews}
+                            />
+                          ));
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-20 px-4 text-center select-none">
+                        <div className="w-16 h-16 rounded-3xl bg-gray-100 flex items-center justify-center text-gray-400 mb-4 shadow-inner">
+                          <MagnifyingGlassIcon className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">ไม่พบสินค้าที่ตรงกับการค้นหา</h3>
+                        <p className="text-xs font-medium text-gray-500 mt-1 max-w-xs leading-relaxed">
+                          {searchQuery
+                            ? `ไม่พบข้อมูลสำหรับคำว่า "${searchQuery}" ลองค้นหาด้วยคำอื่น หรือกดล้างการค้นหาเพื่อดูสินค้าทั้งหมด`
+                            : `ไม่มีสินค้าในหมวดหมู่นี้ในขณะนี้`}
+                        </p>
+                        {(searchQuery || !isAllSelected) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setSelectedCategories(["all"]);
+                            }}
+                            className="mt-5 px-6 py-2.5 bg-[#101C3D] text-white font-bold rounded-xl active:scale-95 transition-all shadow-md text-sm cursor-pointer"
+                          >
+                            ดูสินค้าทั้งหมด
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </>
           )}
         </main>
@@ -452,6 +502,8 @@ export default function Home() {
       {selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}
+          allProducts={products}
+          onSelectProduct={handleSelectProduct}
           onClose={() => setSelectedProduct(null)}
           onAddToCart={handleAddToCart}
         />
@@ -467,43 +519,43 @@ export default function Home() {
         onCheckout={handleCheckout}
       />
 
-      {/* Floating Cart Pop-up Bar at Bottom matching home.jpg */}
+      {/* Floating Cart Pop-up Bar at Bottom */}
       {cart.totalItems > 0 && (
         <div
           onClick={handleCartClick}
-          className="absolute bottom-[70px] left-1/2 -translate-x-1/2 z-40 
-                     w-[92%] h-14 bg-[#2B2B2B] text-white rounded-2xl 
-                     shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-white/10
-                     flex items-center justify-between px-4 cursor-pointer 
-                     hover:bg-[#3A3A3A] active:scale-[0.98] transition-all duration-200
+          className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 
+                     w-[92%] max-w-[620px] h-16 bg-[#0E1B3E] text-white rounded-2xl 
+                     shadow-[0_12px_36px_rgba(14,27,62,0.45)] border border-white/15
+                     flex items-center justify-between px-5 cursor-pointer 
+                     hover:bg-[#152554] active:scale-[0.98] transition-all duration-200
                      animate-in slide-in-from-bottom-10 select-none"
         >
           <div className="flex items-center gap-3">
-            <div className="relative p-2 bg-[#F9C338] rounded-xl text-[#2B2B2B]">
+            <div className="relative p-2.5 bg-[#FABE2C] rounded-xl text-white shadow-sm">
               <ShoppingCartIcon className="w-6 h-6" />
-              <span className="absolute -top-1.5 -right-1.5 bg-[#FF5252] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
+              <span className="absolute -top-1.5 -right-1.5 bg-[#20C997] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#0E1B3E]">
                 {cart.totalItems}
               </span>
             </div>
-            <span className="font-extrabold text-sm text-white">View your shopping cart</span>
+            <span className="font-extrabold text-sm sm:text-base">ดูตะกร้าสินค้าของคุณ</span>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end justify-center leading-none">
+            <div className="flex flex-col items-end justify-center leading-tight">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-white/60">ยอดรวมสุทธิ:</span>
-                <span className="text-xl font-extrabold text-[#F8C032]">
-                  ฿{bottomDisplayTotal.toLocaleString('th-TH')}
+                <span className="text-xs text-white/70 font-medium">ยอดรวม:</span>
+                <span className="text-xl font-black text-[#FABE2C]">
+                  ฿{(bottomDisplayTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               {bottomHasPreOrder && (
-                <span className="text-[10px] text-red-400 font-bold mt-1">
-                  (มีค่าจัดส่งเพิ่มเติมสำหรับสินค้า Pre-order)
+                <span className="text-[9px] text-[#F8A838] font-bold mt-0.5">
+                  (มีค่าจัดส่งสินค้า Pre-order)
                 </span>
               )}
             </div>
-            <span className="text-xs font-black text-[#F9C338] bg-[#F9C338]/20 px-2.5 py-1 rounded-lg uppercase tracking-wider">
-              OPEN {'>'}
+<span className="text-xs font-black text-[#F8C032] bg-[#F8C032]/10 px-2.5 py-1 rounded-xl">
+              เปิด {'>'}
             </span>
           </div>
         </div>

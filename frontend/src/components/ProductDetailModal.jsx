@@ -1,127 +1,135 @@
-import { useState } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import { ShoppingCartIcon } from "@heroicons/react/24/solid";
+import { useState, useEffect } from "react";
+import { TagIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
 
 function CategoryPlaceholder({ category }) {
-  const getIcon = () => {
-    switch (category) {
-      case "drinks":
-        return (
-          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9V5.25c0-.414.168-.75.375-.75h3.75c.207 0 .375.336.375.75V9m-4.5 0h4.5m-4.5 0a3 3 0 0 1-3-3V3.75c0-.414.168-.75.375-.75h6.75c.207 0 .375.336.375.75V6a3 3 0 0 1-3 3M3.75 21h16.5M12 9v12m-5.25-6h10.5" />
-          </svg>
-        );
-      case "snacks":
-        return (
-          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
-          </svg>
-        );
-      case "instant":
-        return (
-          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-          </svg>
-        );
-      case "stationery":
-        return (
-          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-          </svg>
-        );
-      default:
-        return (
-          <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-          </svg>
-        );
-    }
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center gap-1 opacity-60">
-      {getIcon()}
-      <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{category || "Product"}</span>
+    <div className="flex flex-col items-center justify-center gap-1 opacity-40">
+      <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+      </svg>
+      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
     </div>
   );
 }
 
-export default function ProductDetailModal({ product, onClose, onAddToCart }) {
+export default function ProductDetailModal({
+  product,
+  allProducts = [],
+  onSelectProduct,
+  onClose,
+  onAddToCart
+}) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [qty, setQty] = useState(1);
+  const [otherPageIndex, setOtherPageIndex] = useState(0);
+
+  // Reset states whenever active product changes
+  useEffect(() => {
+    setQty(1);
+    setActiveImageIndex(0);
+  }, [product?.id]);
 
   if (!product) return null;
 
-  const { name, price, image, images, promotion, description, status, quantity } = product;
-  const isOutOfStock = status === "In Stock" && quantity <= 0;
+  const { name, price, image, images, promotion, status, quantity, category, views, description } = product;
+  const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
+  const isMostViewed = (views || 0) > 0;
+  const purchaseLimit = product.purchaseLimit || product.purchase_limit;
 
-  const imagesList = Array.isArray(images) && images.length > 0 
-    ? images 
+  const imagesList = Array.isArray(images) && images.length > 0
+    ? images
     : (image && image.includes(".") ? [image] : []);
 
   const currentImg = imagesList[activeImageIndex] || image;
 
-  const bgColors = {
-    water: "bg-[#E9F4FA]",
-    cola: "bg-[#FDF1F0]",
-    chips: "bg-[#FEF9EB]",
-    wafer: "bg-[#FFF5F3]",
-    noodle: "bg-[#FFF3E6]",
-    milo: "bg-[#EDF7EE]",
-    pen: "bg-[#F1F0FA]",
+  // Other / Next products list (excluding current product)
+  const otherProducts = allProducts.filter((p) => p.id !== product.id);
+  const visibleOtherProducts = otherProducts.slice(otherPageIndex, otherPageIndex + 3);
+
+  const handlePrevOther = (e) => {
+    e?.stopPropagation();
+    if (otherProducts.length <= 3) return;
+    setOtherPageIndex((prev) => (prev === 0 ? Math.max(0, otherProducts.length - 3) : prev - 1));
   };
-  const imgBg = bgColors[currentImg] || "bg-gray-50";
+
+  const handleNextOther = (e) => {
+    e?.stopPropagation();
+    if (otherProducts.length <= 3) return;
+    setOtherPageIndex((prev) => (prev + 3 >= otherProducts.length ? 0 : prev + 1));
+  };
+
+  const getCategoryLabel = () => {
+    return category ? String(category).toUpperCase() : "LOCAL EXPRESS";
+  };
 
   const handlePrevImage = (e) => {
-    e.stopPropagation();
-    setActiveImageIndex(prev => (prev === 0 ? imagesList.length - 1 : prev - 1));
+    e?.stopPropagation();
+    if (imagesList.length <= 1) return;
+    setActiveImageIndex((prev) => (prev === 0 ? imagesList.length - 1 : prev - 1));
   };
 
   const handleNextImage = (e) => {
-    e.stopPropagation();
-    setActiveImageIndex(prev => (prev === imagesList.length - 1 ? 0 : prev + 1));
+    e?.stopPropagation();
+    if (imagesList.length <= 1) return;
+    setActiveImageIndex((prev) => (prev === imagesList.length - 1 ? 0 : prev + 1));
   };
 
   return (
-    <div 
-      className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 font-['Prompt']"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['Prompt']"
       onClick={onClose}
     >
-      {/* Modal Container matching item detail.png */}
-      <div 
-        className="relative w-full max-w-md bg-white rounded-[32px] border-2 border-black shadow-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200"
+      {/* Modal Card matching mockup */}
+      <div
+        className="relative w-[92%] max-w-[460px] bg-white rounded-[36px] sm:rounded-[40px] pt-13 sm:pt-14 pb-6 sm:pb-7 px-6 sm:px-7 flex flex-col shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button matching item detail.png (X in circle) */}
-        <button 
+        {/* Red Circle Close Button */}
+        <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white text-black hover:bg-gray-100 border-2 border-black font-bold flex items-center justify-center transition-colors cursor-pointer shadow-sm text-sm"
+          className="absolute top-3.5 right-4 sm:top-4 sm:right-5 z-20 w-7 h-7 bg-[#F85153] hover:bg-[#e04547] text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md cursor-pointer transition-all active:scale-90 select-none"
+          title="ปิด"
         >
           ✕
         </button>
 
-        {/* Product Image Area / Carousel */}
-        <div className={`w-full aspect-[8/5] ${imgBg} border-b-2 border-[#1B1B1C] relative overflow-hidden group`}>
-          <div className="absolute inset-0 flex items-center justify-center p-10">
-            <div className="w-full h-full max-w-[200px] flex items-center justify-center">
-              {currentImg && currentImg.includes(".") ? (
-                <img
-                  src={currentImg.startsWith("/") || currentImg.startsWith("http") ? currentImg : `/uploads/products/${currentImg}`}
-                  alt={name}
-                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg transition-all duration-300"
-                />
-              ) : (
-                <CategoryPlaceholder category={product.category} />
-              )}
+        {/* 1. Main Product Image Box */}
+        <div className="w-full aspect-[4/3] bg-[#F4F5F7] rounded-[28px] relative flex items-center justify-center p-6 overflow-hidden select-none">
+          {/* Badges */}
+          {isOutOfStock ? (
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+              SOLD OUT
             </div>
-          </div>
+          ) : isMostViewed ? (
+            <div className="absolute top-3.5 right-3.5 z-10 select-none">
+              <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
+                <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
+              </svg>
+            </div>
+          ) : promotion ? (
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#FF6B00] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
+              <TagIcon className="w-3 h-3 text-white" />
+              <span>PROMO</span>
+            </div>
+          ) : status === "Pre-Order" ? (
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#F5A623] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+              PRE-ORDER
+            </div>
+          ) : (
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#1CD0A2] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+              In-stock
+            </div>
+          )}
 
-          {/* Carousel Navigation Controls */}
+          {/* Left / Right Arrow Buttons */}
           {imagesList.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={handlePrevImage}
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 text-[#1B1B1C] border-2 border-[#1B1B1C] shadow-md flex items-center justify-center hover:bg-amber-400 active:scale-95 transition-all cursor-pointer z-10"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/10 hover:bg-black/20 text-gray-700 flex items-center justify-center cursor-pointer transition-all active:scale-90 text-xs font-bold z-10"
                 title="รูปก่อนหน้า"
               >
                 ◀
@@ -129,72 +137,78 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
               <button
                 type="button"
                 onClick={handleNextImage}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 text-[#1B1B1C] border-2 border-[#1B1B1C] shadow-md flex items-center justify-center hover:bg-amber-400 active:scale-95 transition-all cursor-pointer z-10"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/10 hover:bg-black/20 text-gray-700 flex items-center justify-center cursor-pointer transition-all active:scale-90 text-xs font-bold z-10"
                 title="รูปถัดไป"
               >
                 ▶
               </button>
-
-              {/* Thumbnails indicator */}
-              <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-2 z-10">
-                {imagesList.map((imgItem, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveImageIndex(idx);
-                    }}
-                    className={`w-3 h-3 rounded-full transition-all border border-[#1B1B1C] cursor-pointer ${
-                      activeImageIndex === idx ? "bg-amber-400 scale-125" : "bg-white/80 hover:bg-white"
-                    }`}
-                  />
-                ))}
-              </div>
             </>
           )}
-        </div>
 
-        {/* Content Area matching item detail.png */}
-        <div className="p-6 flex flex-col gap-4 text-left">
-          {/* Badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
-              isOutOfStock
-                ? "bg-red-50 text-[#FF5252]"
-                : "bg-[#E0F2F1] text-[#00796B]"
-            }`}>
-              {isOutOfStock ? "Out of stock" : "Ready"}
-            </span>
-            {(product.purchaseLimit || product.purchase_limit) && (
-              <span className="bg-red-50 text-red-600 text-[10px] font-black px-3 py-1 rounded-full border border-red-200 tracking-wider">
-                จำกัดไม่เกิน {product.purchaseLimit || product.purchase_limit} ชิ้น
-              </span>
+          {/* Product Image */}
+          <div className="w-full h-full flex items-center justify-center">
+            {currentImg && currentImg.includes(".") ? (
+              <img
+                src={currentImg.startsWith("/") || currentImg.startsWith("http") ? currentImg : `/uploads/products/${currentImg}`}
+                alt={name}
+                className="max-w-full max-h-full w-auto h-auto object-contain drop-shadow-sm transition-transform duration-200"
+              />
+            ) : (
+              <CategoryPlaceholder category={category} />
             )}
           </div>
+        </div>
 
-          {/* Title and Price */}
-          <div className="flex flex-col gap-1">
-            <h2 className="text-2xl font-black text-black leading-tight">
-              {name}
-            </h2>
-            <div className="text-3xl font-black text-[#F9C338]">
-              ฿{Number(price || 0).toFixed(0)}
+        {/* 2. Text Details Below Image */}
+        <div className="flex flex-col mt-3.5 px-0.5 text-left">
+          <span className="text-[11px] sm:text-xs font-normal text-gray-400 uppercase tracking-wider truncate">
+            {getCategoryLabel()}
+          </span>
+
+          <h2 className="text-sm sm:text-base font-normal text-gray-900 leading-snug mt-1">
+            {name}
+          </h2>
+
+          {/* Price & Quantity Stepper Row */}
+          <div className="flex items-center justify-between mt-3.5 select-none">
+            <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+              ฿{(price || 0).toLocaleString("th-TH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+
+            {/* Stepper Button */}
+            <div className="bg-[#FABE2C] text-black rounded-full px-3.5 py-1 flex items-center gap-3.5 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setQty((prev) => Math.max(1, prev - 1))}
+                className="text-base font-bold px-0.5 hover:opacity-70 active:scale-90 transition-all cursor-pointer select-none"
+              >
+                −
+              </button>
+              <span className="text-sm font-bold min-w-3 text-center">
+                {qty}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQty((prev) => (purchaseLimit ? Math.min(purchaseLimit, prev + 1) : prev + 1))}
+                className="text-base font-bold px-0.5 hover:opacity-70 active:scale-90 transition-all cursor-pointer select-none"
+              >
+                +
+              </button>
             </div>
           </div>
 
-          <hr className="border-gray-200 my-1" />
-
-          {/* Detail Label and Text */}
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-bold text-gray-400">
-              Detail
-            </span>
-            <p className="text-gray-600 text-sm leading-relaxed font-semibold">
-              {description || "Product detail description."}
-            </p>
+          {/* Description & Additional Info Section */}
+          <div className="flex flex-col gap-1.5 mt-3">
+            {description && (
+              <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-normal">
+                {description}
+              </p>
+            )}
             {product.status === "Pre-Order" && (product.preorderReleaseDate || product.preorder_release_date) && (
-              <div className="mt-2 text-xs font-bold text-[#E65100] bg-[#FFF3E0] px-3.5 py-2 rounded-xl border border-[#FFE0B2]/50 w-fit">
+              <div className="text-xs font-bold text-[#E65100] bg-[#FFF3E0] px-3 py-1.5 rounded-xl border border-[#FFE0B2]/50 w-fit">
                 📦 วันที่ปล่อยสินค้าส่งมอบ: {(() => {
                   const d = new Date(product.preorderReleaseDate || product.preorder_release_date);
                   const day = String(d.getDate()).padStart(2, '0');
@@ -205,35 +219,80 @@ export default function ProductDetailModal({ product, onClose, onAddToCart }) {
               </div>
             )}
             {(product.additional_info || product.additionalInfo) && (
-              <div className="mt-2 text-xs text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-200 flex flex-col gap-1">
-                <span className="font-bold text-gray-400 uppercase text-[10px] tracking-wider">ข้อมูลเพิ่มเติม (Additional Info)</span>
+              <div className="mt-1 text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200 flex flex-col gap-0.5">
+                <span className="font-bold text-gray-400 uppercase text-[9px] tracking-wider">ข้อมูลเพิ่มเติม (Additional Info)</span>
                 <p className="whitespace-pre-line text-xs font-medium text-gray-700">
                   {product.additional_info || product.additionalInfo}
                 </p>
               </div>
             )}
           </div>
-
-          {/* Add to Cart Button matching item detail.png */}
-          <button
-            disabled={isOutOfStock}
-            onClick={() => {
-              if (!isOutOfStock) {
-                onAddToCart(product);
-                onClose();
-              }
-            }}
-            className={`mt-3 h-14 w-full rounded-2xl flex items-center justify-center gap-2 border-2 border-black
-                       transition-all duration-150 font-extrabold text-base uppercase cursor-pointer select-none ${
-                         isOutOfStock
-                           ? "bg-[#E5E5E7] text-[#8E8E93] border-[#D1D1D6] cursor-not-allowed"
-                           : "bg-[#F9C338] text-black hover:bg-[#F2BD2B] active:scale-[0.98] shadow-sm"
-                       }`}
-          >
-            <ShoppingCartIcon className="w-5 h-5" />
-            <span>{isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}</span>
-          </button>
         </div>
+
+        {/* 3. Next / Other Products Carousel Row */}
+        {otherProducts.length > 0 && (
+          <div className="flex items-center justify-center gap-2.5 mt-4 select-none">
+            <button
+              type="button"
+              onClick={handlePrevOther}
+              className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 flex items-center justify-center cursor-pointer transition-all active:scale-90 text-[10px]"
+              title="สินค้าก่อนหน้า"
+            >
+              ◀
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              {visibleOtherProducts.map((otherProd) => (
+                <div
+                  key={otherProd.id}
+                  onClick={() => onSelectProduct && onSelectProduct(otherProd)}
+                  className="w-16 h-16 sm:w-18 sm:h-18 bg-[#F4F5F7] hover:bg-[#ECEEF2] rounded-[18px] p-2 flex items-center justify-center overflow-hidden cursor-pointer transition-all active:scale-95 border-2 border-transparent hover:border-gray-400 shadow-2xs group"
+                  title={otherProd.name}
+                >
+                  {otherProd.image && otherProd.image.includes(".") ? (
+                    <img
+                      src={otherProd.image.startsWith("/") || otherProd.image.startsWith("http") ? otherProd.image : `/uploads/products/${otherProd.image}`}
+                      alt={otherProd.name}
+                      className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-150"
+                    />
+                  ) : (
+                    <CategoryPlaceholder category={otherProd.category} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextOther}
+              className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 flex items-center justify-center cursor-pointer transition-all active:scale-90 text-[10px]"
+              title="สินค้าถัดไป"
+            >
+              ▶
+            </button>
+          </div>
+        )}
+
+        {/* 4. Bottom Action Button: ADD TO CART */}
+        <button
+          type="button"
+          disabled={isOutOfStock}
+          onClick={() => {
+            if (!isOutOfStock) {
+              onAddToCart(product, qty);
+              onClose();
+            }
+          }}
+          className={`mt-4 sm:mt-5 h-13 sm:h-14 w-full rounded-2xl flex items-center justify-center gap-2.5
+                     transition-all font-bold text-sm sm:text-base uppercase cursor-pointer select-none ${
+                       isOutOfStock
+                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                         : "bg-[#101C38] hover:bg-[#152554] text-white active:scale-[0.98] shadow-md"
+                     }`}
+        >
+          <ShoppingCartIcon className="w-5 h-5 text-white" />
+          <span>{isOutOfStock ? "SOLD OUT" : "ADD TO CART"}</span>
+        </button>
       </div>
     </div>
   );

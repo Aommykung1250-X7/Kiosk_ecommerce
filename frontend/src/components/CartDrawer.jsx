@@ -1,57 +1,35 @@
 // src/components/CartDrawer.jsx
 import { useState, useEffect } from "react";
-import { XMarkIcon, MinusIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { ShoppingCartIcon, ShoppingBagIcon } from "@heroicons/react/24/solid";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { ShoppingBagIcon } from "@heroicons/react/24/solid";
 import { notify } from "./notify";
 
 function CategoryPlaceholder({ category }) {
-  const getIcon = () => {
-    switch (category) {
-      case "drinks":
-        return (
-          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9V5.25c0-.414.168-.75.375-.75h3.75c.207 0 .375.336.375.75V9m-4.5 0h4.5m-4.5 0a3 3 0 0 1-3-3V3.75c0-.414.168-.75.375-.75h6.75c.207 0 .375.336.375.75V6a3 3 0 0 1-3 3M3.75 21h16.5M12 9v12m-5.25-6h10.5" />
-          </svg>
-        );
-      case "snacks":
-        return (
-          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
-          </svg>
-        );
-      case "instant":
-        return (
-          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-          </svg>
-        );
-      case "stationery":
-        return (
-          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-          </svg>
-        );
-      default:
-        return (
-          <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-          </svg>
-        );
-    }
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center gap-0.5 opacity-60">
-      {getIcon()}
-      <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{category || "Product"}</span>
+    <div className="flex flex-col items-center justify-center gap-0.5 opacity-40">
+      <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+      </svg>
+      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
     </div>
   );
 }
 
-export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, onClearCart, onCheckout }) {
+export default function CartDrawer({
+  isOpen,
+  onClose,
+  cart,
+  onUpdateQuantity,
+  onRemoveItem,
+  onClearCart,
+  onCheckout
+}) {
   const [deliveryOption, setDeliveryOption] = useState("pickup");
   const [shippingOption, setShippingOption] = useState("combined");
-  const [shippingSettings, setShippingSettings] = useState({ baseShippingFee: 20, additionalSplitShippingFee: 20 });
+  const [shippingSettings, setShippingSettings] = useState({
+    baseShippingFee: 20,
+    additionalSplitShippingFee: 20
+  });
 
   useEffect(() => {
     fetch("/api/settings/shipping")
@@ -67,14 +45,18 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
   if (!isOpen) return null;
 
   const { items = [], totalPrice = 0, totalItems = 0 } = cart || {};
-  const hasInStock = items.some(item => item.product && item.product.status === "In Stock");
-  const hasPreOrder = items.some(item => item.product && item.product.status === "Pre-Order");
+  const hasInStock = items.some((item) => item.product && item.product.status === "In Stock");
+  const hasPreOrder = items.some((item) => item.product && item.product.status === "Pre-Order");
   const isMixed = hasInStock && hasPreOrder;
 
   let shippingFee = 0;
   if (deliveryOption === "delivery") {
     if (isMixed && shippingOption === "split") {
-      shippingFee = shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee);
+      shippingFee =
+        shippingSettings.baseShippingFee +
+        (shippingSettings.additionalSplitShippingFee !== undefined
+          ? shippingSettings.additionalSplitShippingFee
+          : shippingSettings.baseShippingFee);
     } else {
       shippingFee = shippingSettings.baseShippingFee;
     }
@@ -82,219 +64,253 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
 
   return (
     <div
-      className="absolute inset-0 z-50 bg-[#FAF9F6] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['Prompt'] overflow-hidden"
+      className="fixed inset-0 z-50 bg-[#F2F2F2] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['Prompt'] overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Premium Fullscreen Header */}
-      <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between shadow-sm shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-extrabold text-[#2B2B2B]">ตะกร้าสินค้าของคุณ</h2>
-            {totalItems > 0 && (
-              <span className="bg-[#F8C032] text-[#2B2B2B] text-xs font-extrabold px-2.5 py-0.5 rounded-full shadow-sm">
-                {totalItems} รายการ
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-gray-400">รายการพัสดุและค่าจัดส่งคำนวณตามมาตรฐานตู้สินค้า Kiosk</p>
+      {/* 1. Header: Dark Navy with DITC logo and Shopping basket title */}
+      <header className="w-full bg-[#0E1B3E] px-6 py-4 sm:py-5 flex items-center justify-between shrink-0 shadow-md select-none z-10">
+        {/* Left: DITC Logo */}
+        <div className="flex items-center gap-3 shrink-0">
+          <img
+            src="/ditc_logo.png"
+            alt="DITC"
+            className="h-9 sm:h-10 w-auto object-contain mix-blend-screen"
+          />
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 rounded-full hover:bg-gray-100 border border-gray-100 transition-colors cursor-pointer"
-        >
-          <XMarkIcon className="w-5 h-5 text-gray-500" />
-        </button>
-      </div>
+        {/* Center / Right: Title, Badge & Subtitle */}
+        <div className="flex flex-col items-end leading-tight">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Shopping basket
+            </h1>
+            <span className="bg-[#FABE2C] text-black text-xs font-bold px-3 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+              {totalItems} ITEM
+            </span>
+          </div>
+          <p className="text-[10px] sm:text-[11px] text-white/70 font-normal mt-0.5">
+            Verify the accuracy and quantity of the items before proceeding with payment.
+          </p>
+        </div>
+      </header>
 
-      {/* Cart Content Body */}
-      <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden min-h-0">
+      {/* 2. Cart Content Body */}
+      <main className="flex-1 flex flex-col p-4 sm:p-6 gap-4 overflow-y-auto min-h-0">
         {totalItems === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100 p-8">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100 p-8 shadow-xs">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
               <ShoppingBagIcon className="w-10 h-10" />
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-gray-700">ไม่มีสินค้าในตะกร้า</h3>
-              <p className="text-sm text-gray-400 mt-1">กรุณาเลือกหยิบสินค้าจากหน้าร้านเพื่อดำเนินการต่อ</p>
+              <h3 className="text-lg font-bold text-gray-800">ไม่มีสินค้าในตะกร้า</h3>
+              <p className="text-xs text-gray-400 mt-1">กรุณาเลือกสินค้าจากหน้าร้านเพื่อดำเนินการต่อ</p>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-2 px-6 py-2.5 bg-[#101C38] text-white font-bold rounded-2xl text-sm shadow-md active:scale-95 transition-all cursor-pointer"
+            >
+              กลับไปเลือกสินค้า
+            </button>
           </div>
         ) : (
           <>
-            {/* Cart Items List (Scrollable) */}
-            <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
-              <div className="flex justify-between items-center px-1">
-                <span className="text-xs font-bold text-gray-400">รายการสินค้าในตะกร้า</span>
-                <button
-                  type="button"
-                  onClick={onClearCart}
-                  className="text-xs text-[#FF5252] hover:text-red-700 font-bold hover:underline select-none cursor-pointer"
-                >
-                  ลบสินค้าทั้งหมด
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-3.5">
-                {items.map((item) => {
-                  const { product, quantity } = item;
-
-                  return (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md transition-all duration-200"
-                    >
-                      <div className="flex items-center gap-4 min-w-0">
-                        {/* Product Image */}
-                        <div className="w-20 h-20 bg-[#F6F6F6] flex items-center justify-center p-2 rounded-2xl shrink-0 overflow-hidden">
-                          {product.image && product.image.includes(".") ? (
-                            <img
-                              src={`/uploads/products/${product.image}`}
-                              alt={product.name}
-                              className="max-w-full max-h-full w-auto h-auto object-contain rounded-xl"
-                            />
-                          ) : (
-                            <CategoryPlaceholder category={product.category} />
-                          )}
-                        </div>
-
-                        {/* Product Details */}
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <h4 className="text-base font-black text-black leading-tight truncate">
-                            {product.name}
-                          </h4>
-                          <div>
-                            {product.status === "Pre-Order" ? (
-                              <span className="bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2] text-[10px] font-black px-2.5 py-0.5 rounded-full inline-block">
-                                Pre-Order
-                              </span>
-                            ) : (
-                              <span className="bg-[#E0F2F1] text-[#00796B] text-[10px] font-black px-2.5 py-0.5 rounded-full inline-block">
-                                {product.status || "In Stock"}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-baseline gap-1.5 mt-0.5">
-                            <span className="text-lg font-black text-[#E53935]">
-                              ฿{(product.price * quantity).toFixed(0)}
-                            </span>
-                            <span className="text-[11px] font-semibold text-gray-400">
-                              (฿{product.price}/piece)
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Controls on right */}
-                      <div className="flex flex-col items-end justify-between h-20 shrink-0">
-                        {/* Trash Delete Button */}
-                        <button
-                          type="button"
-                          onClick={() => onRemoveItem(product.id)}
-                          className="p-1 hover:bg-red-50 text-[#FF5252] rounded-lg transition-colors cursor-pointer"
-                          title="Remove item"
-                        >
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
-
-                        {/* Quantity Selector */}
-                        <div className="flex items-center bg-[#F4F4F6] border border-gray-200 rounded-full h-9 px-2 shadow-inner gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onUpdateQuantity(product.id, quantity - 1)}
-                            className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-black font-bold text-base cursor-pointer active:scale-90"
-                          >
-                            -
-                          </button>
-                          <span className="w-5 text-center text-sm font-black text-black">
-                            {quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const limit = product.purchaseLimit || product.purchase_limit;
-                              if (limit && quantity >= limit) {
-                                notify.warning(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
-                                return;
-                              }
-                              onUpdateQuantity(product.id, quantity + 1);
-                            }}
-                            className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-black font-bold text-base cursor-pointer active:scale-90"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            {/* Top Row: Items label + Clear Cart */}
+            <div className="flex justify-between items-center px-1 select-none shrink-0">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Items in the shopping cart
+              </span>
+              <button
+                type="button"
+                onClick={onClearCart}
+                className="text-xs text-[#E53935] hover:text-red-700 font-bold hover:underline select-none cursor-pointer transition-colors"
+              >
+                ลบสินค้าทั้งหมด
+              </button>
             </div>
 
-            {/* Unified Single Order Summary Section */}
-            <div className="w-full bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between shrink-0 gap-4 animate-in slide-in-from-bottom duration-300">
-              <div className="flex flex-col gap-3">
-                <h3 className="text-base font-black text-[#2B2B2B] border-b border-gray-50 pb-2">สรุปยอดชำระเงิน</h3>
+            {/* Cart Items List: Shows 3 items at a time and scrollable */}
+            <div className="flex flex-col gap-3 max-h-[345px] sm:max-h-[360px] overflow-y-auto pr-1.5 pb-1 scroll-smooth shrink-0">
+              {items.map((item) => {
+                const { product, quantity } = item;
+                const isOutOfStock = product.status === "In Stock" && product.quantity <= 0;
 
-                {/* รูปแบบการรับสินค้า (Delivery Method Selection) */}
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">รูปแบบการรับสินค้า</span>
-                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                return (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between p-3.5 sm:p-4 bg-white border border-gray-100 rounded-[22px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] hover:shadow-md transition-all gap-3.5 shrink-0"
+                  >
+                    {/* Left: Product Image */}
+                    <div className="w-18 h-18 bg-[#F2F2F2] flex items-center justify-center p-1.5 rounded-2xl shrink-0 overflow-hidden select-none">
+                      {product.image && product.image.includes(".") ? (
+                        <img
+                          src={`/uploads/products/${product.image}`}
+                          alt={product.name}
+                          className="max-w-full max-h-full w-auto h-auto object-contain"
+                        />
+                      ) : (
+                        <CategoryPlaceholder category={product.category} />
+                      )}
+                    </div>
+
+                    {/* Middle: Details */}
+                    <div className="flex-1 flex flex-col justify-between min-w-0 self-stretch py-0.5">
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">
+                          {product.name}
+                        </h3>
+                        <div className="mt-1">
+                          {isOutOfStock ? (
+                            <span className="bg-[#F85153] text-white text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
+                              SOLD OUT
+                            </span>
+                          ) : product.status === "Pre-Order" ? (
+                            <span className="bg-[#F5A623] text-white text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
+                              PRE-ORDER
+                            </span>
+                          ) : (
+                            <span className="bg-[#1CD0A2] text-white text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
+                              In-stock
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Price & unit price */}
+                      <div className="flex items-baseline gap-1.5 mt-1.5">
+                        <span className="text-base sm:text-lg font-bold text-[#E53935] tracking-tight">
+                          ฿{(product.price * quantity).toLocaleString("th-TH", {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                        <span className="text-[11px] text-gray-400 font-normal">
+                          (฿{product.price}/piece)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Trash Icon & Dark Navy Stepper */}
+                    <div className="flex flex-col items-end justify-between self-stretch py-0.5 shrink-0">
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={() => onRemoveItem(product.id)}
+                        className="p-1 text-red-500 hover:text-red-700 rounded-lg transition-colors cursor-pointer"
+                        title="ลบรายการนี้"
+                      >
+                        <TrashIcon className="w-4.5 h-4.5" />
+                      </button>
+
+                      {/* Dark Navy Stepper Pill matching mockup */}
+                      <div className="flex items-center bg-[#101C38] text-white rounded-full px-2.5 py-1 shadow-xs gap-2.5 select-none">
+                        <button
+                          type="button"
+                          onClick={() => onUpdateQuantity(product.id, quantity - 1)}
+                          className="text-white hover:opacity-75 font-bold text-sm cursor-pointer active:scale-90 px-0.5"
+                        >
+                          −
+                        </button>
+                        <span className="text-white text-xs font-bold min-w-3 text-center">
+                          {quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const limit = product.purchaseLimit || product.purchase_limit;
+                            if (limit && quantity >= limit) {
+                              notify.warning(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${limit} ชิ้นต่อรายการ`);
+                              return;
+                            }
+                            onUpdateQuantity(product.id, quantity + 1);
+                          }}
+                          className="text-white hover:opacity-75 font-bold text-sm cursor-pointer active:scale-90 px-0.5"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 3. Order Summary Card matching mockup */}
+            <div className="w-full bg-white p-5 sm:p-6 rounded-[28px] sm:rounded-[32px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.06)] flex flex-col gap-3.5 mt-auto select-none shrink-0 animate-in slide-in-from-bottom duration-300">
+              <div className="flex flex-col gap-3">
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+                  Order Summary
+                </h2>
+
+                {/* Delivery Method Segmented Bar */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-500">
+                    รูปแบบสินค้า
+                  </span>
+                  <div className="flex items-center bg-[#F2F2F2] p-1.5 rounded-2xl gap-2">
                     <button
                       type="button"
                       onClick={() => setDeliveryOption("pickup")}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         deliveryOption === "pickup"
-                          ? "bg-white text-[#2B2B2B] shadow-sm border border-gray-200/40"
-                          : "text-gray-400 hover:text-gray-600"
+                          ? "bg-white text-gray-900 shadow-xs"
+                          : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
-                      🏪 รับสินค้าเองที่นี่
+                      <span>🛍️</span>
+                      <span>รับสินค้าเองที่นี่</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeliveryOption("delivery")}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         deliveryOption === "delivery"
-                          ? "bg-white text-[#2B2B2B] shadow-sm border border-gray-200/40"
-                          : "text-gray-400 hover:text-gray-600"
+                          ? "bg-white text-gray-900 shadow-xs"
+                          : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
-                      🚚 จัดส่งพัสดุ
+                      <span>🚚</span>
+                      <span>จัดส่งพัสดุ</span>
                     </button>
                   </div>
                 </div>
 
-                {/* แยกจัดส่งสำหรับออเดอร์ผสม (Split Shipping Selector) */}
+                {/* Split Shipping Option if Mixed Pre-Order */}
                 {deliveryOption === "delivery" && isMixed && (
-                  <div className="flex flex-col gap-2 bg-[#F8C032]/5 p-4 rounded-2xl border border-[#F8C032]/10 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <span className="text-xs font-bold text-[#A24B2C] uppercase tracking-wide">ตัวเลือกจัดส่งสินค้าผสม (มีสินค้า PRE-ORDER)</span>
-                    <div className="flex flex-col gap-2 mt-1">
+                  <div className="flex flex-col gap-2 bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200/60 animate-in fade-in duration-200">
+                    <span className="text-xs font-bold text-[#A24B2C] uppercase tracking-wide">
+                      ตัวเลือกจัดส่งสินค้าผสม (มีสินค้า PRE-ORDER)
+                    </span>
+                    <div className="flex flex-col gap-2 mt-0.5">
                       <label className="flex items-start gap-2.5 cursor-pointer select-none">
                         <input
                           type="radio"
                           name="shipping_option"
                           checked={shippingOption === "combined"}
                           onChange={() => setShippingOption("combined")}
-                          className="mt-1 accent-[#A24B2C]"
+                          className="mt-1 accent-[#101C38]"
                         />
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-[#2B2B2B]">จัดส่งพร้อมกันทั้งหมด</span>
-                          <span className="text-[10px] text-gray-400">รอส่งรอบเดียวเมื่อสินค้า Pre-Order ครบ (ค่าส่งปกติ ฿{shippingSettings.baseShippingFee.toLocaleString('th-TH')})</span>
+                          <span className="text-xs font-bold text-gray-800">จัดส่งพร้อมกันทั้งหมด</span>
+                          <span className="text-[10px] text-gray-500">
+                            รอส่งรอบเดียวเมื่อสินค้า Pre-Order ครบ (ค่าส่งปกติ ฿{shippingSettings.baseShippingFee})
+                          </span>
                         </div>
                       </label>
 
-                      <label className="flex items-start gap-2.5 cursor-pointer select-none border-t border-gray-100 pt-2 mt-1">
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none border-t border-amber-200/50 pt-2">
                         <input
                           type="radio"
                           name="shipping_option"
                           checked={shippingOption === "split"}
                           onChange={() => setShippingOption("split")}
-                          className="mt-1 accent-[#A24B2C]"
+                          className="mt-1 accent-[#101C38]"
                         />
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-[#2B2B2B]">แยกจัดส่งสินค้า (บวกค่าส่งเพิ่ม)</span>
-                          <span className="text-[10px] text-gray-400">ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{(shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee)).toLocaleString('th-TH')})</span>
+                          <span className="text-xs font-bold text-gray-800">แยกจัดส่งสินค้า (บวกค่าส่งเพิ่ม)</span>
+                          <span className="text-[10px] text-gray-500">
+                            ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee)})
+                          </span>
                         </div>
                       </label>
                     </div>
@@ -302,18 +318,22 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                 )}
 
                 {/* Cost Breakdown Rows */}
-                <div className="flex flex-col gap-2.5 text-sm">
-                  <div className="flex justify-between items-center text-gray-400 font-semibold">
+                <div className="flex flex-col gap-2 pt-1 text-xs sm:text-sm">
+                  <div className="flex justify-between items-center text-gray-500 font-normal">
                     <span>จำนวนรายการทั้งหมด</span>
-                    <span className="font-bold text-[#2B2B2B]">{totalItems} ชิ้น</span>
+                    <span className="font-bold text-gray-800">{totalItems} รายการ</span>
                   </div>
-                  <div className="flex justify-between items-center text-gray-400 font-semibold">
-                    <span>วิธีกระจายสินค้า</span>
-                    <span className="font-bold text-[#2B2B2B]">
-                      {deliveryOption === "pickup" ? "🏪 รับสินค้าเองที่นี่" : (shippingOption === "split" && isMixed ? "🚚 จัดส่งพัสดุ (แยกส่ง)" : "🚚 จัดส่งพัสดุ")}
+                  <div className="flex justify-between items-center text-gray-500 font-normal">
+                    <span>การจัดส่ง</span>
+                    <span className="font-bold text-gray-800">
+                      {deliveryOption === "pickup"
+                        ? "รับสินค้าเองที่นี่"
+                        : shippingOption === "split" && isMixed
+                        ? "จัดส่งพัสดุ (แยกส่ง)"
+                        : "จัดส่งพัสดุ"}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center text-gray-400 font-semibold">
+                  <div className="flex justify-between items-center text-gray-500 font-normal">
                     <span>ค่าบริการจัดส่ง</span>
                     {shippingFee > 0 ? (
                       <span className="font-bold text-[#E53935]">฿{shippingFee}</span>
@@ -321,49 +341,59 @@ export default function CartDrawer({ isOpen, onClose, cart, onUpdateQuantity, on
                       <span className="font-bold text-[#00796B]">ฟรี (฿0)</span>
                     )}
                   </div>
-                  <div className="flex justify-between items-center text-gray-400 font-semibold">
-                    <span>การชำระเงิน</span>
-                    <span className="font-medium text-[#2B2B2B]">PromptPay Dynamic QR</span>
-                  </div>
                 </div>
 
-                <hr className="border-gray-100 my-1" />
+                <hr className="border-gray-200 my-1" />
 
-                {/* Grand Total display */}
-                <div className="flex justify-between items-end">
-                  <span className="text-sm font-bold text-gray-400 uppercase tracking-wide">ยอดรวมสุทธิ</span>
-                  <span className="text-3xl font-black text-[#E53935] leading-none">
-                    ฿{(totalPrice + shippingFee).toLocaleString('th-TH')}
+                {/* Grand Total Row */}
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-sm sm:text-base font-bold text-gray-700">
+                    ยอดรวมสุทธิ
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-black text-[#E53935] tracking-tight">
+                    ฿{(totalPrice + shippingFee).toLocaleString("th-TH")}
                   </span>
                 </div>
               </div>
 
-              {/* Checkout / Clear Action buttons */}
-              <div className="flex flex-col gap-3 mt-1">
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2.5 mt-2">
+                {/* 1. Proceed with payment button matching mockup */}
                 <button
                   type="button"
                   onClick={() => {
                     onCheckout(shippingFee, deliveryOption, shippingOption);
                     onClose();
                   }}
-                  className="h-14 w-full rounded-2xl bg-[#F8C032] hover:bg-[#F0B420] active:scale-95
-                             flex items-center justify-center gap-2.5 transition-all duration-150 shadow-md hover:shadow-lg font-bold text-base text-[#2B2B2B] cursor-pointer border-2 border-black"
+                  className="h-14 sm:h-15 w-full rounded-2xl bg-[#FABE2C] hover:bg-[#F5B41C] active:scale-[0.98]
+                             flex items-center justify-center gap-2.5 transition-all shadow-[0_10px_28px_rgba(245,180,28,0.4)] hover:shadow-[0_14px_32px_rgba(245,180,28,0.55)] font-bold text-base sm:text-lg text-gray-900 cursor-pointer select-none"
                 >
-                  <ShoppingCartIcon className="w-5 h-5 shrink-0" />
-                  <span>ดำเนินการชำระเงิน</span>
+                  {/* Scan / Barcode Frame Icon */}
+                  <svg className="w-6 h-6 text-gray-900 stroke-[2.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                    <path d="M3 17v2a2 2 0 0 0 2 2h2" />
+                    <line x1="8" y1="8" x2="8" y2="16" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="16" y1="8" x2="16" y2="16" />
+                  </svg>
+                  <span>Proceed with payment</span>
                 </button>
+
+                {/* 2. Continue shopping button matching mockup */}
                 <button
                   type="button"
                   onClick={onClose}
-                  className="h-12 w-full rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-500 font-bold text-sm transition-all active:scale-95 border border-gray-100/50 cursor-pointer flex items-center justify-center"
+                  className="h-13 sm:h-14 w-full rounded-2xl bg-white hover:bg-gray-50 text-gray-700 font-bold text-sm sm:text-base transition-all active:scale-[0.98] border-2 border-gray-200 cursor-pointer flex items-center justify-center shadow-xs select-none"
                 >
-                  เลือกซื้อสินค้าต่อ
+                  Continue shopping
                 </button>
               </div>
             </div>
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }

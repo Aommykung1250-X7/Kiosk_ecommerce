@@ -7,6 +7,7 @@ import {
   SparklesIcon
 } from "@heroicons/react/24/outline";
 import { notify } from "../notify";
+import CustomDropdown from "./CustomDropdown";
 
 export default function FeaturedProductModal({
   isOpen,
@@ -217,21 +218,22 @@ export default function FeaturedProductModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-500">หมวดหมู่:</span>
-            <select
+            <span className="text-xs font-bold text-gray-500 shrink-0">หมวดหมู่:</span>
+            <CustomDropdown
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-gray-100 border border-transparent rounded-xl text-xs font-semibold text-gray-700 outline-none cursor-pointer"
-            >
-              <option value="all">ทั้งหมด</option>
-              {categories
-                .filter((c) => c !== "all")
-                .map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-            </select>
+              onChange={(val) => setSelectedCategory(val)}
+              className="w-40"
+              size="sm"
+              options={[
+                { value: "all", label: "ทั้งหมด" },
+                ...categories
+                  .filter((c) => c !== "all")
+                  .map((cat) => ({
+                    value: cat,
+                    label: cat
+                  }))
+              ]}
+            />
           </div>
         </div>
 

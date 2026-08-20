@@ -42,11 +42,20 @@ class ProductRepository {
       const queryParams = [];
 
       if (category && category !== "all") {
-        if (category === "promotion") {
+        const catList = typeof category === "string"
+          ? category.split(",").map(c => c.trim()).filter(Boolean)
+          : (Array.isArray(category) ? category.map(c => String(c).trim()).filter(Boolean) : [String(category).trim()]);
+
+        const hasPromo = catList.includes("promotion");
+        const nonPromoCats = catList.filter(c => c !== "promotion" && c !== "hot" && c !== "all");
+
+        if (nonPromoCats.length > 0) {
+          queryParams.push(nonPromoCats);
+          whereConditions.push(`p.category_id = ANY($${queryParams.length})`);
+        }
+
+        if (hasPromo) {
           whereConditions.push(`p.promotion = true`);
-        } else {
-          queryParams.push(category);
-          whereConditions.push(`p.category_id = $${queryParams.length}`);
         }
       }
 
