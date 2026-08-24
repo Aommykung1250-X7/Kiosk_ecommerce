@@ -131,10 +131,10 @@ export default function CartDrawer({
 
             {/* Cart Items List: Shows 4 items by default, or 3 items when split-shipping options are visible */}
             <div
-              className={`w-full max-w-[569.39px] mx-auto flex flex-col gap-3 overflow-y-auto pr-1 pb-1 scroll-smooth shrink-0 transition-all duration-300 ${
+              className={`w-full max-w-[569.39px] mx-auto flex flex-col gap-3.5 overflow-y-auto pr-1 pb-1 scroll-smooth shrink-0 transition-all duration-300 ${
                 deliveryOption === "delivery" && isMixed
-                  ? "max-h-[365px]"
-                  : "max-h-[488px]"
+                  ? "max-h-[430px] sm:max-h-[450px]"
+                  : "max-h-[580px] sm:max-h-[600px]"
               }`}
             >
               {items.map((item) => {
@@ -144,10 +144,10 @@ export default function CartDrawer({
                 return (
                   <div
                     key={product.id}
-                    className="w-full max-w-[569.39px] h-[112.87px] flex items-center justify-between p-3.5 bg-white border border-gray-100 rounded-[28px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] hover:shadow-md transition-all gap-3.5 shrink-0 mx-auto"
+                    className="w-full max-w-[569.39px] min-h-[132px] sm:min-h-[140px] flex items-center justify-between p-4 sm:p-4.5 bg-white border border-gray-100 rounded-[10px] shadow-[0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all gap-4 shrink-0 mx-auto"
                   >
-                    {/* Left: Product Image */}
-                    <div className="w-18 h-18 bg-[#F2F2F2] flex items-center justify-center p-1.5 rounded-[14px] shrink-0 overflow-hidden select-none">
+                    {/* Left: Larger Product Image */}
+                    <div className="w-24 h-24 sm:w-26 sm:h-26 bg-[#F4F5F7] flex items-center justify-center p-2 rounded-[8px] shrink-0 overflow-hidden select-none">
                       {product.image && product.image.includes(".") ? (
                         <img
                           src={`/uploads/products/${product.image}`}
@@ -160,22 +160,22 @@ export default function CartDrawer({
                     </div>
 
                     {/* Middle: Details */}
-                    <div className="flex-1 flex flex-col justify-between min-w-0 self-stretch py-0.5">
+                    <div className="flex-1 flex flex-col justify-between min-w-0 self-stretch py-1">
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">
+                        <h3 className="text-base sm:text-lg font-extrabold text-gray-900 leading-snug line-clamp-1">
                           {product.name}
                         </h3>
                         <div className="mt-1">
                           {isOutOfStock ? (
-                            <span className="bg-[#F85153] text-white text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
+                            <span className="bg-[#F85153] text-white text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
                               SOLD OUT
                             </span>
                           ) : product.status === "Pre-Order" ? (
-                            <span className="bg-[#F5A623] text-white text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
+                            <span className="bg-[#F5A623] text-white text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
                               PRE-ORDER
                             </span>
                           ) : (
-                            <span className="bg-[#1CD0A2] text-white text-[9px] font-bold px-2 py-0.5 rounded-full inline-block">
+                            <span className="bg-[#1CD0A2] text-white text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
                               In-stock
                             </span>
                           )}
@@ -183,41 +183,41 @@ export default function CartDrawer({
                       </div>
 
                       {/* Price & unit price */}
-                      <div className="flex items-baseline gap-1.5 mt-1.5">
-                        <span className="text-base sm:text-lg font-bold text-[#E53935] tracking-tight">
+                      <div className="flex items-baseline gap-2 mt-2">
+                        <span className="text-xl sm:text-2xl font-black text-[#E53935] tracking-tight">
                           ฿{(product.price * quantity).toLocaleString("th-TH", {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 2,
                           })}
                         </span>
-                        <span className="text-[11px] text-gray-400 font-normal">
+                        <span className="text-xs sm:text-sm text-gray-400 font-medium">
                           (฿{product.price}/piece)
                         </span>
                       </div>
                     </div>
 
-                    {/* Right: Trash Icon & Dark Navy Stepper */}
-                    <div className="flex flex-col items-end justify-between self-stretch py-0.5 shrink-0">
+                    {/* Right: Trash Icon & Larger Stepper */}
+                    <div className="flex flex-col items-end justify-between self-stretch py-1 shrink-0">
                       {/* Delete button */}
                       <button
                         type="button"
                         onClick={() => onRemoveItem(product.id)}
-                        className="p-1 text-red-500 hover:text-red-700 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                         title="ลบรายการนี้"
                       >
-                        <TrashIcon className="w-4.5 h-4.5" />
+                        <TrashIcon className="w-5 h-5" />
                       </button>
 
-                      {/* Dark Navy Stepper Pill matching mockup */}
-                      <div className="flex items-center bg-[#101C38] text-white rounded-full px-2.5 py-1 shadow-xs gap-2.5 select-none">
+                      {/* Longer & Wider Dark Navy Stepper Pill */}
+                      <div className="flex items-center justify-between bg-[#101C38] text-white rounded-full w-[130px] sm:w-[145px] h-10 px-3 shadow-xs select-none">
                         <button
                           type="button"
                           onClick={() => onUpdateQuantity(product.id, quantity - 1)}
-                          className="text-white hover:opacity-75 font-bold text-sm cursor-pointer active:scale-90 px-0.5"
+                          className="w-7 h-7 flex items-center justify-center rounded-full text-white hover:bg-white/20 font-black text-lg cursor-pointer active:scale-90 transition-all"
                         >
                           −
                         </button>
-                        <span className="text-white text-xs font-bold min-w-3 text-center">
+                        <span className="text-white text-sm sm:text-base font-black min-w-5 text-center">
                           {quantity}
                         </span>
                         <button
@@ -230,7 +230,7 @@ export default function CartDrawer({
                             }
                             onUpdateQuantity(product.id, quantity + 1);
                           }}
-                          className="text-white hover:opacity-75 font-bold text-sm cursor-pointer active:scale-90 px-0.5"
+                          className="w-7 h-7 flex items-center justify-center rounded-full text-white hover:bg-white/20 font-black text-lg cursor-pointer active:scale-90 transition-all"
                         >
                           +
                         </button>

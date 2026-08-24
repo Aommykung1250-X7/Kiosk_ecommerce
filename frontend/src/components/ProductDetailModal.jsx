@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { TagIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
+import { notify } from "./notify";
 
 function CategoryPlaceholder({ category }) {
   return (
@@ -34,7 +35,7 @@ export default function ProductDetailModal({
   const { name, price, image, images, promotion, status, quantity, category, views, description } = product;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
   const isMostViewed = (views || 0) > 0;
-  const purchaseLimit = product.purchaseLimit || product.purchase_limit;
+  const purchaseLimit = Number(product.purchaseLimit || product.purchase_limit) || 0;
 
   const imagesList = Array.isArray(images) && images.length > 0
     ? images
@@ -124,6 +125,13 @@ export default function ProductDetailModal({
 
         {/* 1. Main Product Image Box */}
         <div className="w-full aspect-[4/3] bg-[#F4F5F7] rounded-[28px] relative flex items-center justify-center p-6 overflow-hidden select-none">
+          {/* Purchase Limit Badge on top-left */}
+          {purchaseLimit > 0 && (
+            <div className="absolute top-3.5 left-3.5 z-10 bg-[#E53935] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-xs tracking-wide flex items-center gap-1">
+              <span>จำกัด {purchaseLimit} ชิ้น</span>
+            </div>
+          )}
+
           {/* Badges */}
           {isOutOfStock ? (
             <div className="absolute top-3.5 right-3.5 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
@@ -206,22 +214,28 @@ export default function ProductDetailModal({
               })}
             </span>
 
-            {/* Stepper Button */}
-            <div className="bg-[#FABE2C] text-black rounded-full px-3.5 py-1 flex items-center gap-3.5 shadow-xs">
+            {/* Stepper Button (Longer & Wider) */}
+            <div className="bg-[#FABE2C] text-black rounded-full w-[130px] sm:w-[145px] h-10 px-3 flex items-center justify-between shadow-xs select-none">
               <button
                 type="button"
                 onClick={() => setQty((prev) => Math.max(1, prev - 1))}
-                className="text-base font-bold px-0.5 hover:opacity-70 active:scale-90 transition-all cursor-pointer select-none"
+                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-black/10 text-lg font-black active:scale-90 transition-all cursor-pointer select-none"
               >
                 −
               </button>
-              <span className="text-sm font-bold min-w-3 text-center">
+              <span className="text-sm sm:text-base font-black min-w-5 text-center">
                 {qty}
               </span>
               <button
                 type="button"
-                onClick={() => setQty((prev) => (purchaseLimit ? Math.min(purchaseLimit, prev + 1) : prev + 1))}
-                className="text-base font-bold px-0.5 hover:opacity-70 active:scale-90 transition-all cursor-pointer select-none"
+                onClick={() => {
+                  if (purchaseLimit > 0 && qty >= purchaseLimit) {
+                    notify.warning(`ขออภัย สินค้านี้จำกัดการซื้อไม่เกิน ${purchaseLimit} ชิ้นต่อรายการ`);
+                    return;
+                  }
+                  setQty((prev) => prev + 1);
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-black/10 text-lg font-black active:scale-90 transition-all cursor-pointer select-none"
               >
                 +
               </button>
@@ -230,6 +244,12 @@ export default function ProductDetailModal({
 
           {/* Description & Additional Info Section */}
           <div className="flex flex-col gap-1.5 mt-3">
+            {purchaseLimit > 0 && (
+              <div className="text-xs font-bold text-[#D32F2F] bg-[#FFEBEE] px-3.5 py-2 rounded-xl border border-[#FFCDD2]/70 flex items-center gap-2 shadow-2xs w-fit">
+                <span className="text-sm">⚠️</span>
+                <span>จำกัดการซื้อไม่เกิน {purchaseLimit} ชิ้นต่อรายการ</span>
+              </div>
+            )}
             {description && (
               <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-normal">
                 {description}
