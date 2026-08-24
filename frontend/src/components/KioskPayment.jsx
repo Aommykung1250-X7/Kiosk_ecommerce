@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { CheckCircleIcon, ArrowPathIcon, EnvelopeIcon, PhoneIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { notify } from "./notify";
 
-export default function KioskPayment({ orderId, totalPrice, qrPayload, onPaymentSuccess, onCancel }) {
+export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryOption, onPaymentSuccess, onCancel }) {
   const [paymentStatus, setPaymentStatus] = useState("pending");
   const [countdown, setCountdown] = useState(60); // 1 minute (60 seconds)
   const [payTimerSeconds, setPayTimerSeconds] = useState(300); // 5 minutes (300 seconds)
@@ -340,20 +340,22 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, onPayment
                   </span>
                 </div>
 
-                {/* Mobile Delivery QR Code Card */}
-                <div className="w-full flex flex-col items-center gap-2 bg-gradient-to-br from-[#FFF9E6] to-[#FFF3CC] p-3.5 rounded-2xl border border-[#F8C032]/40 shadow-2xs">
-                  <div className="flex items-center gap-1.5 text-[#8A6200]">
-                    <span className="text-xs font-black text-center leading-tight">
-                      📱 สามารถสแกน QR Code เพื่อกรอกข้อมูลสำหรับการจัดส่งสินค้า
+                {/* Mobile Delivery QR Code Card (Show only for delivery orders) */}
+                {deliveryOption === "delivery" && (
+                  <div className="w-full flex flex-col items-center gap-2 bg-gradient-to-br from-[#FFF9E6] to-[#FFF3CC] p-3.5 rounded-2xl border border-[#F8C032]/40 shadow-2xs">
+                    <div className="flex items-center gap-1.5 text-[#8A6200]">
+                      <span className="text-xs font-black text-center leading-tight">
+                        📱 สามารถสแกน QR Code เพื่อกรอกข้อมูลสำหรับการจัดส่งสินค้า
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-white rounded-xl shadow-2xs border border-[#F8C032]/30">
+                      <QRCodeSVG value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={135} level="M" />
+                    </div>
+                    <span className="text-[10px] text-gray-500 text-center font-medium">
+                      สแกนด้วยกล้องมือถือ เพื่อระบุชื่อและที่อยู่จัดส่งสินค้า (หรือกดลิงก์ในอีเมล)
                     </span>
                   </div>
-                  <div className="p-2.5 bg-white rounded-xl shadow-2xs border border-[#F8C032]/30">
-                    <QRCodeSVG value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={135} level="M" />
-                  </div>
-                  <span className="text-[10px] text-gray-500 text-center font-medium">
-                    สแกนด้วยกล้องมือถือ เพื่อระบุชื่อและที่อยู่จัดส่งสินค้า (หรือกดลิงก์ในอีเมล)
-                  </span>
-                </div>
+                )}
               </div>
 
               {/* Auto Close Info */}
