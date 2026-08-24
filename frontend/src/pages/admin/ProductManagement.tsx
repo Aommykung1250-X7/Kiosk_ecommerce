@@ -1,0 +1,856 @@
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
+import {
+  AlertTriangle,
+  Eye,
+  Package,
+  PackageX,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Tag,
+  Trash2,
+  Users,
+} from "lucide-react";
+import type {
+  Category,
+  KioskStats,
+  Product,
+  ProductFormState,
+} from "../../types/admin";
+import { notify, confirmDialog } from "../../components/notify";
+import { AdminLayout } from "../../components/admin/AdminLayout";
+import type { SessionUser } from "../../components/admin/AdminSidebar";
+import {
+  Badge,
+  Button,
+  Card,
+  CategoryTag,
+  EmptyState,
+  ErrorBanner,
+  FilterChips,
+  IconButton,
+  LoadingState,
+  LOW_STOCK_THRESHOLD,
+  SearchInput,
+  Select,
+  StatCard,
+  StockBar,
+  TBody,
+  Table,
+  TableShell,
+  Td,
+  Th,
+  THead,
+  Toggle,
+  Tr,
+  UnderlineTabs,
+  formatBahtShort,
+  formatCount,
+  formatThaiDate,
+  resolveUploadUrl,
+  type TabItem,
+} from "../../components/admin/ui";
+import {
+  ProductFormModal,
+  MAX_PRODUCT_IMAGES,
+} from "../../components/admin/products/ProductFormModal";
+import { CategoryManagerModal } from "../../components/admin/products/CategoryManagerModal";
+import { StaffPanel } from "../../components/admin/products/StaffPanel";
+import { StoreSettingsPanel } from "../../components/admin/products/StoreSettingsPanel";
+
+type PageTab = "products" | "users" | "settings";
+type StockFilter = "all" | "in_stock" | "pre_order" | "low_stock" | "out_of_stock" | "promotion";
+
+const PAGE_TABS: TabItem<PageTab>[] = [
+  { key: "products", label: "รายการสินค้า" },
+  { key: "users", label: "พนักงานและสิทธิ์" },
+  { key: "settings", label: "ตั้งค่าร้าน" },
+];
+
+const EMPTY_FORM: ProductFormState = {
+  name: "",
+  description: "",
+  additional_info: "",
+  price: 0,
+  stock: 0,
+  category: "",
+  image: "",
+  images: [],
+  promotion: false,
+  pickupLocation: "",
+  status: "In Stock",
+  preorderReleaseDate: "",
+  purchaseLimit: "",
+};
+
+/** จำนวนคงเหลือของสินค้า — backend ส่งมาทั้ง stock และ quantity แล้วแต่ endpoint */
+function stockOf(product: Product): number {
+  return product.stock ?? product.quantity ?? 0;
+}
+
+/** ย่อรูปก่อนอัปโหลด เพื่อไม่ให้ไฟล์จากกล้องมือถือกินแบนด์วิดท์ของตู้ */
+function resizeImage(file: File, maxWidth = 600, maxHeight = 600): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const image = new Image();
+      image.onload = () => {
+        let { width, height } = image;
+
+        if (width > height && width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else if (height >= width && height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: file.type }));
+            } else {
+              reject(new Error("แปลงรูปภาพไม่สำเร็จ"));
+            }
+          },
+          file.type || "image/jpeg",
+          0.85,
+        );
+      };
+      image.onerror = () => reject(new Error("อ่านไฟล์รูปภาพไม่ได้"));
+      image.src = String(event.target?.result ?? "");
+    };
+    reader.onerror = () => reject(new Error("อ่านไฟล์รูปภาพไม่ได้"));
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function ProductManagement() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab") as PageTab | null;
+  const activeTab: PageTab =
+    tabParam === "users" || tabParam === "settings" ? tabParam : "products";
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [kioskStats, setKioskStats] = useState<KioskStats>({ wakeups: 0, totalViews: 0 });
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
+  const [uploading, setUploading] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  /* ------------------------------------------------------------- โหลดข้อมูล */
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await fetch("/api/kiosk/stats", { credentials: "include" });
+      if (response.ok) setKioskStats(await response.json());
+    } catch (loadError) {
+      console.error("Error loading kiosk stats:", loadError);
+    }
+  }, []);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/products");
+      const data = await response.json();
+      if (!response.ok) throw new Error("ไม่สามารถเรียกรายการสินค้าได้");
+      setProducts(data);
+      setError("");
+      void fetchStats();
+    } catch (loadError) {
+      setError((loadError as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchStats]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await fetch("/api/categories");
+      if (response.ok) setCategories(await response.json());
+    } catch (loadError) {
+      console.error("Error fetching categories:", loadError);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (raw) setCurrentUser(JSON.parse(raw) as SessionUser);
+    } catch {
+      // ไม่มีข้อมูลผู้ใช้ใน localStorage ก็ยังแสดงหน้าได้ตามปกติ
+    }
+    void fetchProducts();
+    void fetchCategories();
+    void fetchStats();
+  }, [fetchProducts, fetchCategories, fetchStats]);
+
+  /* ------------------------------------------------------------- ตัวกรอง */
+
+  const outOfStockCount = products.filter((product) => stockOf(product) <= 0).length;
+  const lowStockCount = products.filter((product) => {
+    const quantity = stockOf(product);
+    return quantity > 0 && quantity <= LOW_STOCK_THRESHOLD;
+  }).length;
+  const promotionCount = products.filter((product) => product.promotion).length;
+  const preOrderCount = products.filter((product) => product.status === "Pre-Order").length;
+  const inStockCount = products.filter(
+    (product) => product.status === "In Stock" && stockOf(product) > 0,
+  ).length;
+
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return products.filter((product) => {
+      if (query) {
+        const haystack = [
+          product.name,
+          product.description ?? "",
+          product.category ?? "",
+          product.pickupLocation ?? product.pickup_location ?? "",
+          String(product.id),
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+
+      if (categoryFilter !== "all" && product.category !== categoryFilter) return false;
+
+      const quantity = stockOf(product);
+      switch (stockFilter) {
+        case "in_stock":
+          return product.status === "In Stock" && quantity > 0;
+        case "pre_order":
+          return product.status === "Pre-Order";
+        case "low_stock":
+          return quantity > 0 && quantity <= LOW_STOCK_THRESHOLD;
+        case "out_of_stock":
+          return quantity <= 0;
+        case "promotion":
+          return Boolean(product.promotion);
+        default:
+          return true;
+      }
+    });
+  }, [products, search, categoryFilter, stockFilter]);
+
+  const filtersActive =
+    search.trim() !== "" || categoryFilter !== "all" || stockFilter !== "all";
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("all");
+    setStockFilter("all");
+  };
+
+  /* --------------------------------------------------------------- ฟอร์ม */
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM, category: categories[0]?.id ?? "" });
+    setFormOpen(true);
+  };
+
+  const openEdit = (product: Product) => {
+    const images =
+      product.images && product.images.length > 0
+        ? product.images
+        : product.image
+          ? [product.image]
+          : [];
+
+    setEditingId(product.id);
+    setForm({
+      name: product.name,
+      description: product.description ?? "",
+      additional_info: product.additional_info ?? product.additionalInfo ?? "",
+      price: product.price,
+      stock: stockOf(product),
+      category: product.category ?? "",
+      image: product.image ?? "",
+      images: images.slice(0, MAX_PRODUCT_IMAGES),
+      promotion: Boolean(product.promotion),
+      pickupLocation: product.pickupLocation ?? product.pickup_location ?? "",
+      status: product.status ?? "In Stock",
+      preorderReleaseDate:
+        product.preorderReleaseDate ?? product.preorder_release_date ?? "",
+      purchaseLimit: product.purchaseLimit ?? product.purchase_limit ?? "",
+    });
+    setFormOpen(true);
+  };
+
+  const handleUploadImages = async (files: File[]) => {
+    const current = form.images ?? [];
+    const remaining = MAX_PRODUCT_IMAGES - current.length;
+    if (remaining <= 0) {
+      notify.warning(`เพิ่มรูปได้สูงสุด ${MAX_PRODUCT_IMAGES} รูป ลบรูปเดิมก่อนเพิ่มรูปใหม่`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const body = new FormData();
+      for (const file of files.slice(0, remaining)) {
+        body.append("images", await resizeImage(file));
+      }
+
+      const response = await fetch("/api/products/upload", {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "อัปโหลดรูปภาพไม่สำเร็จ");
+
+      const uploaded: string[] = data.images ?? [data.image];
+      const merged = [...current, ...uploaded].slice(0, MAX_PRODUCT_IMAGES);
+      setForm((previous) => ({ ...previous, image: merged[0] ?? "", images: merged }));
+    } catch (uploadError) {
+      notify.error((uploadError as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setForm((previous) => {
+      const images = (previous.images ?? []).filter((_, position) => position !== index);
+      return { ...previous, image: images[0] ?? "", images };
+    });
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const images = form.images ?? [];
+    if (images.length === 0) {
+      notify.warning("เพิ่มรูปสินค้าอย่างน้อย 1 รูปก่อนบันทึก");
+      return;
+    }
+    if (!form.category) {
+      notify.warning("เลือกหมวดหมู่ก่อนบันทึก");
+      return;
+    }
+
+    const payload = {
+      ...form,
+      image: images[0],
+      images: images.slice(0, MAX_PRODUCT_IMAGES),
+      price: parseFloat(String(form.price)),
+      stock: parseInt(String(form.stock), 10),
+    };
+
+    try {
+      const response = await fetch(
+        editingId ? `/api/products/${editingId}` : "/api/products",
+        {
+          method: editingId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "บันทึกสินค้าไม่สำเร็จ");
+
+      notify.success(editingId ? "บันทึกการแก้ไขแล้ว" : "เพิ่มสินค้าแล้ว");
+      setFormOpen(false);
+      void fetchProducts();
+    } catch (submitError) {
+      notify.error((submitError as Error).message);
+    }
+  };
+
+  const handleDelete = async (product: Product) => {
+    const confirmed = await confirmDialog({
+      title: "ลบสินค้าชิ้นนี้?",
+      message: `"${product.name}" และรูปภาพทั้งหมดจะถูกลบออกจากระบบ`,
+      confirmText: "ลบสินค้า",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/products/${product.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "ลบสินค้าไม่สำเร็จ");
+
+      notify.success("ลบสินค้าแล้ว");
+      void fetchProducts();
+    } catch (deleteError) {
+      notify.error((deleteError as Error).message);
+    }
+  };
+
+  /**
+   * สลับการแสดงในหมวดโปรโมชั่นจากในตารางโดยตรง
+   * ส่งข้อมูลสินค้าทั้งชุดกลับไปเพราะ PUT /api/products/:id เขียนทับทุกฟิลด์
+   */
+  const handleTogglePromotion = async (product: Product, next: boolean) => {
+    setTogglingId(product.id);
+    const images =
+      product.images && product.images.length > 0
+        ? product.images
+        : product.image
+          ? [product.image]
+          : [];
+
+    try {
+      const response = await fetch(`/api/products/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: product.name,
+          description: product.description ?? "",
+          additional_info: product.additional_info ?? product.additionalInfo ?? "",
+          price: product.price,
+          stock: stockOf(product),
+          category: product.category,
+          image: images[0] ?? product.image,
+          images,
+          promotion: next,
+          pickupLocation: product.pickupLocation ?? product.pickup_location ?? "",
+          status: product.status ?? "In Stock",
+          preorderReleaseDate:
+            product.preorderReleaseDate ?? product.preorder_release_date ?? null,
+          purchaseLimit: product.purchaseLimit ?? product.purchase_limit ?? null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "เปลี่ยนสถานะโปรโมชั่นไม่สำเร็จ");
+
+      setProducts((previous) =>
+        previous.map((item) =>
+          item.id === product.id ? { ...item, promotion: next } : item,
+        ),
+      );
+    } catch (toggleError) {
+      notify.error((toggleError as Error).message);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  /* ---------------------------------------------------------- หมวดหมู่ */
+
+  const handleCreateCategory = async (id: string, name: string) => {
+    if (categories.some((category) => category.id === id)) {
+      notify.warning("มีคีย์หมวดหมู่นี้อยู่แล้ว");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id, name }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "บันทึกหมวดหมู่ไม่สำเร็จ");
+
+      await fetchCategories();
+      notify.success(`เพิ่มหมวดหมู่ "${data.name}" แล้ว`);
+    } catch (categoryError) {
+      notify.error((categoryError as Error).message);
+    }
+  };
+
+  const handleRenameCategory = async (id: string, name: string) => {
+    if (!name) {
+      notify.warning("ชื่อหมวดหมู่ว่างไม่ได้");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "แก้ไขหมวดหมู่ไม่สำเร็จ");
+
+      await fetchCategories();
+      void fetchProducts();
+    } catch (categoryError) {
+      notify.error((categoryError as Error).message);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    const name = categories.find((category) => category.id === id)?.name ?? id;
+    const confirmed = await confirmDialog({
+      title: "ลบหมวดหมู่สินค้า?",
+      message: `หมวดหมู่ "${name}" จะหายไปจากตัวกรองและฟอร์มสินค้า`,
+      confirmText: "ลบหมวดหมู่",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "ลบหมวดหมู่ไม่สำเร็จ");
+
+      await fetchCategories();
+      if (form.category === id) setForm((previous) => ({ ...previous, category: "" }));
+      if (categoryFilter === id) setCategoryFilter("all");
+      notify.success(`ลบหมวดหมู่ "${name}" แล้ว`);
+    } catch (categoryError) {
+      notify.error((categoryError as Error).message);
+    }
+  };
+
+  /* ------------------------------------------------------------- แสดงผล */
+
+  const categoryName = (id: string | null | undefined) =>
+    categories.find((category) => category.id === id)?.name ?? id ?? "ไม่ระบุ";
+
+  return (
+    <AdminLayout
+      title="สินค้า"
+      description="คลังสินค้าที่แสดงบนตู้ พร้อมสต็อก ราคา และสิทธิ์การเข้าถึงระบบ"
+      actions={
+        activeTab === "products" ? (
+          <>
+            <Button icon={RefreshCw} onClick={() => void fetchProducts()}>
+              รีเฟรช
+            </Button>
+            <Button variant="primary" icon={Plus} onClick={openCreate}>
+              เพิ่มสินค้า
+            </Button>
+          </>
+        ) : undefined
+      }
+    >
+      {/* การ์ดสรุป */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          emphasis
+          label="สินค้าทั้งหมด"
+          value={formatCount(products.length)}
+          unit="รายการ"
+          icon={Package}
+          hint={`${formatCount(inStockCount)} รายการพร้อมขายอยู่ตอนนี้`}
+        />
+        <StatCard
+          label="ผู้เข้าใช้งานตู้"
+          value={formatCount(kioskStats.wakeups)}
+          unit="ครั้ง"
+          icon={Users}
+          accent="accent"
+          hint="จำนวนครั้งที่ตู้ถูกแตะเริ่มใช้งาน"
+        />
+        <StatCard
+          label="ยอดเข้าชมสินค้าสะสม"
+          value={formatCount(kioskStats.totalViews)}
+          unit="ครั้ง"
+          icon={Eye}
+          accent="success"
+          hint="รวมทุกรายการในคลัง"
+        />
+        <StatCard
+          label="หมดสต็อก"
+          value={formatCount(outOfStockCount)}
+          unit="รายการ"
+          icon={PackageX}
+          accent="danger"
+          hint={outOfStockCount > 0 ? "ต้องเติมของก่อนลูกค้ากดสั่ง" : "ไม่มีรายการที่หมด"}
+        />
+        <StatCard
+          label={`ใกล้หมด (เหลือ ≤ ${LOW_STOCK_THRESHOLD})`}
+          value={formatCount(lowStockCount)}
+          unit="รายการ"
+          icon={AlertTriangle}
+          accent="warning"
+          hint={lowStockCount > 0 ? "เตรียมของรอบถัดไปไว้ล่วงหน้า" : "ระดับสต็อกปกติ"}
+        />
+      </div>
+
+      <UnderlineTabs
+        items={PAGE_TABS}
+        value={activeTab}
+        onChange={(key) => setSearchParams(key === "products" ? {} : { tab: key })}
+      />
+
+      {activeTab === "products" && (
+        <>
+          <Card className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <SearchInput
+                className="flex-1"
+                value={search}
+                onChange={setSearch}
+                placeholder="ค้นหาชื่อสินค้า รหัส หมวดหมู่ หรือจุดรับของ"
+                aria-label="ค้นหาสินค้า"
+              />
+              <Select
+                className="sm:w-56"
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                options={[
+                  { value: "all", label: "ทุกหมวดหมู่", count: products.length },
+                  ...categories.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                    count: products.filter((product) => product.category === category.id)
+                      .length,
+                  })),
+                ]}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-bo-line pt-4">
+              <FilterChips<StockFilter>
+                value={stockFilter}
+                onChange={setStockFilter}
+                items={[
+                  { key: "all", label: "ทั้งหมด", count: products.length },
+                  { key: "in_stock", label: "พร้อมขาย", count: inStockCount },
+                  { key: "pre_order", label: "พรีออเดอร์", count: preOrderCount },
+                  { key: "low_stock", label: "ใกล้หมด", count: lowStockCount },
+                  { key: "out_of_stock", label: "หมดสต็อก", count: outOfStockCount },
+                  { key: "promotion", label: "โปรโมชั่น", count: promotionCount },
+                ]}
+              />
+
+              {filtersActive && (
+                <Button size="sm" variant="ghost" onClick={clearFilters}>
+                  ล้างตัวกรอง
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {error && <ErrorBanner message={error} />}
+
+          <TableShell>
+            {loading ? (
+              <LoadingState label="กำลังโหลดรายการสินค้า" />
+            ) : filteredProducts.length === 0 ? (
+              <EmptyState
+                icon={Package}
+                title={filtersActive ? "ไม่มีสินค้าที่ตรงกับตัวกรอง" : "ยังไม่มีสินค้าในคลัง"}
+                description={
+                  filtersActive
+                    ? "ลองค้นด้วยคำอื่น หรือล้างตัวกรองเพื่อดูรายการทั้งหมด"
+                    : "เพิ่มสินค้าชิ้นแรกเพื่อให้ขึ้นแสดงบนหน้าตู้"
+                }
+                action={
+                  filtersActive ? (
+                    <Button onClick={clearFilters}>ล้างตัวกรอง</Button>
+                  ) : (
+                    <Button variant="primary" icon={Plus} onClick={openCreate}>
+                      เพิ่มสินค้า
+                    </Button>
+                  )
+                }
+              />
+            ) : (
+              <Table>
+                <THead>
+                  <Th>สินค้า</Th>
+                  <Th>รหัส</Th>
+                  <Th>หมวดหมู่</Th>
+                  <Th align="right">ราคา</Th>
+                  <Th>คงเหลือ</Th>
+                  <Th>สถานะ</Th>
+                  <Th align="center">โปรโมชั่น</Th>
+                  <Th align="right">ยอดเข้าชม</Th>
+                  <Th align="right">จัดการ</Th>
+                </THead>
+
+                <TBody>
+                  {filteredProducts.map((product) => {
+                    const quantity = stockOf(product);
+                    const isPreOrder = product.status === "Pre-Order";
+                    const releaseDate =
+                      product.preorderReleaseDate ?? product.preorder_release_date;
+                    const limit = product.purchaseLimit ?? product.purchase_limit;
+                    const cover = resolveUploadUrl(product.image, "products");
+
+                    return (
+                      <Tr key={product.id}>
+                        <Td>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-bo-line bg-slate-100">
+                              {cover ? (
+                                <img
+                                  src={cover}
+                                  alt=""
+                                  loading="lazy"
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-400 uppercase">
+                                  {(product.category ?? "prd").slice(0, 3)}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-bo-text">
+                                {product.name}
+                              </p>
+                              {(isPreOrder && releaseDate) || limit ? (
+                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                  {isPreOrder && releaseDate && (
+                                    <Badge tone="preorder" size="sm">
+                                      พร้อมส่ง {formatThaiDate(releaseDate)}
+                                    </Badge>
+                                  )}
+                                  {limit ? (
+                                    <Badge tone="preorder" size="sm">
+                                      จำกัด {limit} ชิ้น
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </Td>
+
+                        <Td className="font-bo-mono text-[13px] text-bo-muted">
+                          #{String(product.id).padStart(4, "0")}
+                        </Td>
+
+                        <Td>
+                          <CategoryTag>{categoryName(product.category)}</CategoryTag>
+                        </Td>
+
+                        <Td align="right" className="bo-nums font-semibold">
+                          {formatBahtShort(product.price)}
+                        </Td>
+
+                        <Td>
+                          <StockBar stock={quantity} isPreOrder={isPreOrder} />
+                        </Td>
+
+                        <Td>
+                          {isPreOrder ? (
+                            <Badge tone="preorder" dot pulse>
+                              Pre-order
+                            </Badge>
+                          ) : quantity <= 0 ? (
+                            <Badge tone="danger" dot>
+                              หมดสต็อก
+                            </Badge>
+                          ) : quantity <= LOW_STOCK_THRESHOLD ? (
+                            <Badge tone="warning" dot>
+                              ใกล้หมด
+                            </Badge>
+                          ) : (
+                            <Badge tone="success" dot>
+                              พร้อมขาย
+                            </Badge>
+                          )}
+                        </Td>
+
+                        <Td align="center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Toggle
+                              checked={Boolean(product.promotion)}
+                              disabled={togglingId === product.id}
+                              onChange={(next) => void handleTogglePromotion(product, next)}
+                              label={`${product.promotion ? "เอาออกจาก" : "แสดงใน"}หมวดโปรโมชั่น: ${product.name}`}
+                            />
+                            {product.promotion && (
+                              <Tag className="h-3.5 w-3.5 text-bo-accent" />
+                            )}
+                          </div>
+                        </Td>
+
+                        <Td align="right" className="bo-nums text-sm text-bo-muted">
+                          {formatCount(product.views)}
+                        </Td>
+
+                        <Td align="right">
+                          <div className="flex items-center justify-end gap-1">
+                            <IconButton
+                              icon={Pencil}
+                              label={`แก้ไข ${product.name}`}
+                              onClick={() => openEdit(product)}
+                            />
+                            <IconButton
+                              icon={Trash2}
+                              tone="danger"
+                              label={`ลบ ${product.name}`}
+                              onClick={() => void handleDelete(product)}
+                            />
+                          </div>
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                </TBody>
+              </Table>
+            )}
+          </TableShell>
+
+          {!loading && filteredProducts.length > 0 && (
+            <p className="text-xs text-bo-muted">
+              แสดง {formatCount(filteredProducts.length)} จากทั้งหมด{" "}
+              {formatCount(products.length)} รายการ
+            </p>
+          )}
+        </>
+      )}
+
+      {activeTab === "users" && <StaffPanel currentUserId={currentUser?.id} />}
+
+      {activeTab === "settings" && <StoreSettingsPanel onStatsReset={fetchStats} />}
+
+      <ProductFormModal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        onSubmit={handleSubmit}
+        form={form}
+        setForm={setForm}
+        categories={categories}
+        editing={editingId !== null}
+        uploading={uploading}
+        onUploadImages={(files) => void handleUploadImages(files)}
+        onRemoveImage={handleRemoveImage}
+        onManageCategories={() => setCategoryManagerOpen(true)}
+      />
+
+      <CategoryManagerModal
+        open={categoryManagerOpen}
+        onClose={() => setCategoryManagerOpen(false)}
+        categories={categories}
+        products={products}
+        onCreate={handleCreateCategory}
+        onRename={handleRenameCategory}
+        onDelete={handleDeleteCategory}
+      />
+    </AdminLayout>
+  );
+}

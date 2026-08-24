@@ -97,12 +97,19 @@ export default function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/mobile/delivery" element={<MobileDelivery />} />
 
+          {/* ทางลัดชื่อสั้นของหลังบ้าน ชี้ไปที่เส้นทางจริงใต้ /dashboard */}
+          <Route path="/orders" element={<Navigate to="/dashboard/orders" replace />} />
+          <Route path="/products" element={<Navigate to="/dashboard/products" replace />} />
+          <Route path="/screensavers" element={<Navigate to="/dashboard/screensavers" replace />} />
+          <Route path="/reports" element={<Navigate to="/dashboard/reports" replace />} />
+
           {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (Staff & Admin) */}
           <Route element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}>
             <Route path="/dashboard/orders" element={<OrderQueue />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/dashboard" element={<Navigate to="/dashboard/products" replace />} />
             <Route path="/dashboard/products" element={<ProductManagement />} />
             <Route path="/dashboard/screensavers" element={<ScreensaverManagement />} />
             <Route path="/dashboard/reports" element={<ReportManagement />} />
