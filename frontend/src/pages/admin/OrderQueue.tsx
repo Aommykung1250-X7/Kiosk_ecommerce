@@ -360,7 +360,7 @@ export default function OrderQueue() {
       }
     >
       <Card className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
           <SearchInput
             className="flex-1"
             value={search}
@@ -369,7 +369,15 @@ export default function OrderQueue() {
             aria-label="ค้นหาคำสั่งซื้อ"
           />
 
-          <div className="flex flex-wrap items-center gap-2">
+          {/* ช่องวันที่อยู่บน ปุ่มลัดอยู่ล่าง — กดลัดแล้วเห็นวันที่ด้านบนเปลี่ยนตามทันที */}
+          <div className="flex flex-col gap-2">
+            <TextInput
+              type="date"
+              aria-label="เลือกวันที่"
+              value={selectedDate}
+              onChange={(event) => setSelectedDate(event.target.value)}
+            />
+
             <SegmentedControl<DatePreset | "custom">
               value={datePreset}
               onChange={(key) =>
@@ -386,14 +394,6 @@ export default function OrderQueue() {
                 { key: "yesterday", label: "เมื่อวาน" },
                 { key: "all", label: "ทุกวัน" },
               ]}
-            />
-
-            <TextInput
-              type="date"
-              aria-label="เลือกวันที่"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              className="w-[152px]"
             />
           </div>
         </div>

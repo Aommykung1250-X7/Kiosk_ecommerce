@@ -2,7 +2,14 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "./cn";
 
-type Accent = "neutral" | "accent" | "success" | "warning" | "danger" | "preorder";
+type Accent =
+  | "neutral"
+  | "accent"
+  | "success"
+  | "warning"
+  | "danger"
+  | "preorder"
+  | "lowstock";
 
 const ACCENT_ICON: Record<Accent, string> = {
   neutral: "bg-slate-100 text-slate-500",
@@ -10,7 +17,8 @@ const ACCENT_ICON: Record<Accent, string> = {
   success: "bg-emerald-50 text-emerald-600",
   warning: "bg-amber-50 text-amber-600",
   danger: "bg-rose-50 text-rose-600",
-  preorder: "bg-bo-pink-soft text-bo-pink",
+  preorder: "bg-bo-preorder-soft text-amber-700",
+  lowstock: "bg-bo-lowstock-soft text-bo-lowstock",
 };
 
 const ACCENT_VALUE: Record<Accent, string> = {
@@ -19,7 +27,8 @@ const ACCENT_VALUE: Record<Accent, string> = {
   success: "text-emerald-600",
   warning: "text-amber-600",
   danger: "text-rose-600",
-  preorder: "text-bo-pink",
+  preorder: "text-amber-600",
+  lowstock: "text-bo-lowstock",
 };
 
 interface StatCardProps {

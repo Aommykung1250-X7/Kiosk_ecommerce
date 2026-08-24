@@ -164,7 +164,8 @@ export type StageTone =
   | "warning"
   | "danger"
   | "success"
-  | "preorder";
+  | "preorder"
+  | "lowstock";
 
 export interface OrderStage {
   key: OrderStageKey;

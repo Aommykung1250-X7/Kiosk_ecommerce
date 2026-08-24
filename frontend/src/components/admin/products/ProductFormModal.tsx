@@ -380,7 +380,7 @@ export function ProductFormModal({
                     )}
                   </Field>
 
-                  <p className="rounded-xl border border-bo-line bg-bo-pink-soft/60 px-4 py-3 text-[11px] leading-relaxed text-bo-text">
+                  <p className="rounded-xl border border-bo-line bg-bo-preorder-soft/60 px-4 py-3 text-[11px] leading-relaxed text-bo-text">
                     เมื่อถึงวันที่พร้อมจัดส่ง ระบบจะเปลี่ยนสินค้าเป็น In-stock ให้อัตโนมัติ
                   </p>
                 </>

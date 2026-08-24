@@ -35,7 +35,7 @@ import {
   SearchInput,
   Select,
   StatCard,
-  StockBar,
+  StockCell,
   TBody,
   Table,
   TableShell,
@@ -590,7 +590,7 @@ export default function ProductManagement() {
           value={formatCount(lowStockCount)}
           unit="รายการ"
           icon={AlertTriangle}
-          accent="warning"
+          accent="lowstock"
           hint={lowStockCount > 0 ? "เตรียมของรอบถัดไปไว้ล่วงหน้า" : "ระดับสต็อกปกติ"}
         />
       </div>
@@ -681,7 +681,8 @@ export default function ProductManagement() {
                   <Th>รหัส</Th>
                   <Th>หมวดหมู่</Th>
                   <Th align="right">ราคา</Th>
-                  <Th>คงเหลือ</Th>
+                  {/* เว้นช่องซ้ายเพิ่ม ไม่ให้ตัวเลขราคาที่ชิดขวาไปติดกับจำนวนคงเหลือที่ชิดซ้าย */}
+                  <Th className="pl-8">คงเหลือ</Th>
                   <Th>สถานะ</Th>
                   <Th align="center">โปรโมชั่น</Th>
                   <Th align="right">ยอดเข้าชม</Th>
@@ -750,8 +751,8 @@ export default function ProductManagement() {
                           {formatBahtShort(product.price)}
                         </Td>
 
-                        <Td>
-                          <StockBar stock={quantity} isPreOrder={isPreOrder} />
+                        <Td className="pl-8">
+                          <StockCell stock={quantity} isPreOrder={isPreOrder} />
                         </Td>
 
                         <Td>
@@ -764,7 +765,7 @@ export default function ProductManagement() {
                               หมดสต็อก
                             </Badge>
                           ) : quantity <= LOW_STOCK_THRESHOLD ? (
-                            <Badge tone="warning" dot>
+                            <Badge tone="lowstock" dot>
                               ใกล้หมด
                             </Badge>
                           ) : (

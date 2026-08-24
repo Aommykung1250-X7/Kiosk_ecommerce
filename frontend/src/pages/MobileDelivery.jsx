@@ -846,7 +846,7 @@ export default function MobileDelivery() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-[#E65100] flex items-center gap-1.5">
                           <SparklesIcon className="w-4 h-4 text-[#E65100]" />
-                          {isMixed ? "⏳ พัสดุ 2: สินค้าพรีออเดอร์" : "📦 พัสดุสินค้าพรีออเดอร์ (Pre-Order)"}
+                          {isMixed ? "⏳ พัสดุ 2: สินค้าพรีออเดอร์" : "📦 พัสดุสินค้าพรีออเดอร์"}
                         </span>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
                           order?.fulfillmentStatusPreorder === "fulfilled" || order?.fulfillmentStatus === "fulfilled"
