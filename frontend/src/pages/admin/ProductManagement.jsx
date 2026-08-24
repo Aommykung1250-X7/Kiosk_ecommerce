@@ -12,6 +12,8 @@ import {
   FunnelIcon,
   ArrowPathIcon
 } from "@heroicons/react/24/outline";
+import { SparklesIcon } from "@heroicons/react/24/solid";
+import { removeBackground } from "@imgly/background-removal";
 import { notify, confirmDialog } from "../../components/notify";
 import AdminNavbar from "../../components/admin/AdminNavbar";
 import CustomDropdown from "../../components/admin/CustomDropdown";
@@ -20,7 +22,7 @@ import CustomDropdown from "../../components/admin/CustomDropdown";
 
 // IMAGES removed, uploads only
 
-const resizeImage = (file, maxWidth = 600, maxHeight = 600) => {
+const resizeImage = (file, maxWidth = 800, maxHeight = 800) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -72,6 +74,147 @@ const resizeImage = (file, maxWidth = 600, maxHeight = 600) => {
   });
 };
 
+/**
+ * Smart Instant Flood-fill Background Removal (Zero-latency fallback)
+ */
+const removeSolidBackground = (imageSource) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+
+    let urlToRevoke = null;
+    if (typeof imageSource === "string") {
+      img.src = imageSource;
+    } else {
+      urlToRevoke = URL.createObjectURL(imageSource);
+      img.src = urlToRevoke;
+    }
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Sample 8 edge points to determine background color
+        let sampleR = 0, sampleG = 0, sampleB = 0, sampleCount = 0;
+        const samplePoints = [
+          [0, 0], [width - 1, 0], [0, height - 1], [width - 1, height - 1],
+          [Math.floor(width / 2), 0], [Math.floor(width / 2), height - 1],
+          [0, Math.floor(height / 2)], [width - 1, Math.floor(height / 2)]
+        ];
+
+        for (const [sx, sy] of samplePoints) {
+          const idx = (sy * width + sx) * 4;
+          sampleR += data[idx];
+          sampleG += data[idx + 1];
+          sampleB += data[idx + 2];
+          sampleCount++;
+        }
+
+        const bgR = sampleR / sampleCount;
+        const bgG = sampleG / sampleCount;
+        const bgB = sampleB / sampleCount;
+
+        const tolerance = 48;
+        const visited = new Uint8Array(width * height);
+        const queue = [];
+
+        for (let x = 0; x < width; x++) {
+          queue.push(x, 0);
+          queue.push(x, height - 1);
+          visited[0 * width + x] = 1;
+          visited[(height - 1) * width + x] = 1;
+        }
+        for (let y = 0; y < height; y++) {
+          queue.push(0, y);
+          queue.push(width - 1, y);
+          visited[y * width + 0] = 1;
+          visited[y * width + (width - 1)] = 1;
+        }
+
+        let qHead = 0;
+        while (qHead < queue.length) {
+          const x = queue[qHead++];
+          const y = queue[qHead++];
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+
+          const dist = Math.sqrt(
+            Math.pow(r - bgR, 2) + Math.pow(g - bgG, 2) + Math.pow(b - bgB, 2)
+          );
+
+          if (dist < tolerance || (r > 240 && g > 240 && b > 240)) {
+            data[idx + 3] = 0; // Alpha 0
+
+            const neighbors = [
+              [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]
+            ];
+
+            for (const [nx, ny] of neighbors) {
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const nIdx = ny * width + nx;
+                if (!visited[nIdx]) {
+                  visited[nIdx] = 1;
+                  queue.push(nx, ny);
+                }
+              }
+            }
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        canvas.toBlob((blob) => {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          resolve(blob);
+        }, "image/png");
+      } catch (err) {
+        if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+      resolve(null);
+    };
+  });
+};
+
+/**
+ * Combined Background Removal Runner
+ */
+const processBackgroundRemoval = async (imageSource) => {
+  try {
+    const blob = await removeBackground(imageSource, {
+      model: "isnet_fp16",
+      publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
+      debug: false
+    });
+    if (blob && blob.size > 100) return blob;
+  } catch (aiErr) {
+    console.warn("AI removeBackground failed, using fallback:", aiErr);
+  }
+
+  try {
+    const fallbackBlob = await removeSolidBackground(imageSource);
+    if (fallbackBlob) return fallbackBlob;
+  } catch (fallbackErr) {
+    console.error("Fallback removeSolidBackground error:", fallbackErr);
+  }
+
+  return null;
+};
+
 export default function ProductManagement() {
   const [categories, setCategories] = useState([]);
 
@@ -88,6 +231,9 @@ export default function ProductManagement() {
   // State สำหรับควบคุม Modal ฟอร์ม
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null); // NULL = สร้างใหม่, มีค่า = แก้ไขตาม ID นั้น
+  const [autoRemoveBg, setAutoRemoveBg] = useState(true);
+  const [isProcessingBg, setIsProcessingBg] = useState(false);
+  const [bgProcessingStatus, setBgProcessingStatus] = useState("");
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -617,9 +763,35 @@ export default function ProductManagement() {
 
     const filesToUpload = files.slice(0, remainingSlots);
     const formData = new FormData();
-    for (const f of filesToUpload) {
-      const resized = await resizeImage(f, 600, 600);
-      formData.append("images", resized);
+
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const f = filesToUpload[i];
+      let processedFile = await resizeImage(f, 800, 800);
+
+      // ถ้าเปิดตัวเลือกลบพื้นหลังอัตโนมัติไว้
+      if (autoRemoveBg) {
+        try {
+          setIsProcessingBg(true);
+          setBgProcessingStatus(`กำลังลบพื้นหลังรูปภาพ (${i + 1}/${filesToUpload.length})...`);
+          notify.info("🤖 AI กำลังตัดพื้นหลังรูปภาพอัตโนมัติ...");
+
+          const transparentBlob = await processBackgroundRemoval(processedFile);
+          if (transparentBlob) {
+            processedFile = new File(
+              [transparentBlob],
+              f.name.replace(/\.[^/.]+$/, "") + "_nobg.png",
+              { type: "image/png", lastModified: Date.now() }
+            );
+          }
+        } catch (bgErr) {
+          console.error("AI Background removal error:", bgErr);
+        } finally {
+          setIsProcessingBg(false);
+          setBgProcessingStatus("");
+        }
+      }
+
+      formData.append("images", processedFile);
     }
 
     try {
@@ -639,8 +811,59 @@ export default function ProductManagement() {
         image: updatedImages[0] || "",
         images: updatedImages
       }));
+
+      notify.success("อัปโหลดรูปภาพสินค้าสำเร็จ!");
     } catch (err) {
       notify.error(err.message);
+    }
+  };
+
+  const handleRemoveBgForImage = async (indexToCut) => {
+    const currentImages = Array.isArray(form.images) ? [...form.images] : [];
+    const targetFilename = currentImages[indexToCut];
+    if (!targetFilename) return;
+
+    try {
+      setIsProcessingBg(true);
+      setBgProcessingStatus(`กำลังลบพื้นหลังรูปที่ ${indexToCut + 1}...`);
+      notify.info(`🤖 กำลังตัดพื้นหลังรูปที่ ${indexToCut + 1}...`);
+
+      const fullUrl = targetFilename.startsWith("/") || targetFilename.startsWith("http")
+        ? targetFilename
+        : `/uploads/products/${targetFilename}`;
+
+      const transparentBlob = await processBackgroundRemoval(fullUrl);
+      if (!transparentBlob) throw new Error("ไม่สามารถตัดพื้นหลังรูปภาพได้");
+
+      const file = new File([transparentBlob], `nobg_${Date.now()}.png`, { type: "image/png" });
+
+      const formData = new FormData();
+      formData.append("images", file);
+
+      const uploadRes = await fetch("/api/products/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error || "เกิดข้อผิดพลาดในการอัปโหลด");
+
+      const newUploadedName = uploadData.images?.[0] || uploadData.image;
+      currentImages[indexToCut] = newUploadedName;
+
+      setForm(prev => ({
+        ...prev,
+        image: currentImages[0] || "",
+        images: [...currentImages]
+      }));
+
+      notify.success("ตัดพื้นหลังรูปภาพสำเร็จเรียบร้อย!");
+    } catch (err) {
+      console.error(err);
+      notify.error("ไม่สามารถตัดพื้นหลังได้: " + err.message);
+    } finally {
+      setIsProcessingBg(false);
+      setBgProcessingStatus("");
     }
   };
 
@@ -1664,47 +1887,86 @@ export default function ProductManagement() {
                   </div>
                 )}
 
-                <div className="col-span-2 flex flex-col gap-2.5 bg-gray-50 p-4.5 rounded-2xl border border-gray-150">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-700">รูปภาพสินค้า (อัปโหลดได้สูงสุด 5 รูป)</span>
-                    <span className="text-[11px] font-bold text-gray-400">
-                      {(form.images || []).length} / 5 รูป
-                    </span>
+                <div className="col-span-2 flex flex-col gap-3 bg-gray-50 p-4.5 rounded-2xl border border-gray-150">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-800">รูปภาพสินค้า (สูงสุด 5 รูป)</span>
+                      <span className="text-[11px] font-bold text-gray-400">
+                        {(form.images || []).length} / 5 รูป
+                      </span>
+                    </div>
+
+                    {/* AI Background Removal Toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none bg-amber-100/60 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-300/80 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={autoRemoveBg}
+                        onChange={(e) => setAutoRemoveBg(e.target.checked)}
+                        className="accent-[#FF9800] w-3.5 h-3.5 cursor-pointer rounded"
+                      />
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                        <SparklesIcon className="w-4 h-4 text-amber-600 animate-pulse" />
+                        <span>ลบพื้นหลังรูปแรกอัตโนมัติด้วย AI</span>
+                      </div>
+                    </label>
                   </div>
+
+                  {/* Processing Overlay if AI is running */}
+                  {isProcessingBg && (
+                    <div className="flex items-center gap-2.5 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs font-bold text-amber-900 animate-pulse">
+                      <ArrowPathIcon className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
+                      <span>{bgProcessingStatus || "กำลังประมวลผลลบพื้นหลังด้วย AI..."}</span>
+                    </div>
+                  )}
 
                   {/* Thumbnail gallery list */}
                   <div className="flex flex-wrap gap-3 my-1">
                     {(form.images || []).map((imgFilename, idx) => (
-                      <div key={idx} className="relative w-20 h-20 bg-white border border-gray-250 rounded-xl overflow-hidden shadow-sm group">
+                      <div key={idx} className="relative w-24 h-24 bg-white border border-gray-250 rounded-xl overflow-hidden shadow-sm group">
                         <img 
                           src={imgFilename.startsWith("/") || imgFilename.startsWith("http") ? imgFilename : `/uploads/products/${imgFilename}`} 
                           alt={`Product preview ${idx + 1}`} 
-                          className="w-full h-full object-cover" 
+                          className="w-full h-full object-contain p-1" 
                         />
                         {idx === 0 && (
-                          <span className="absolute bottom-1 left-1 right-1 bg-amber-500/90 text-white text-[9px] font-bold py-0.5 text-center rounded">
+                          <span className="absolute top-1 left-1 bg-amber-500/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs">
                             รูปหลัก
                           </span>
                         )}
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(idx)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow hover:bg-red-600 transition-colors"
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow hover:bg-red-600 transition-colors cursor-pointer z-10"
                           title="ลบรูปนี้"
                         >
                           ✕
+                        </button>
+                        
+                        {/* Cut Background Button for individual image */}
+                        <button
+                          type="button"
+                          disabled={isProcessingBg}
+                          onClick={() => handleRemoveBgForImage(idx)}
+                          className="absolute bottom-1 left-1 right-1 bg-[#101C38]/90 hover:bg-[#101C38] text-[#FABE2C] text-[8.5px] font-bold py-0.5 rounded flex items-center justify-center gap-1 shadow transition-all cursor-pointer opacity-90 group-hover:opacity-100 disabled:opacity-50"
+                          title="กดเพื่อลบพื้นหลังรูปนี้ด้วย AI"
+                        >
+                          <SparklesIcon className="w-2.5 h-2.5" />
+                          <span>ตัดพื้นหลัง</span>
                         </button>
                       </div>
                     ))}
 
                     {(form.images || []).length < 5 && (
-                      <label className="w-20 h-20 border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all gap-1">
+                      <label className={`w-24 h-24 border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-50 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all gap-1 ${
+                        isProcessingBg ? "opacity-50 pointer-events-none" : ""
+                      }`}>
                         <PlusIcon className="w-6 h-6 text-amber-500" />
                         <span className="text-[10px] font-bold text-amber-700">เพิ่มรูป</span>
                         <input
                           type="file"
                           accept="image/*"
                           multiple
+                          disabled={isProcessingBg}
                           onChange={handleMultipleFilesChange}
                           className="hidden"
                         />
@@ -1712,7 +1974,7 @@ export default function ProductManagement() {
                     )}
                   </div>
                   <p className="text-[10px] text-gray-400 font-medium">
-                    * รูปแรกในอัลบั้มจะถูกใช้เป็นรูปภาพหลักบนหน้าจอ Kiosk
+                    * รูปแรกในอัลบั้มจะถูกใช้เป็นรูปภาพหลักบนหน้าจอ Kiosk (สามารถกดปุ่ม <strong className="text-gray-600 font-bold">✨ ตัดพื้นหลัง</strong> บนรูปเพื่อลบพื้นหลังซ้ำได้)
                   </p>
                 </div>
 
