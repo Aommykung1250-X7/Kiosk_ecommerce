@@ -1,5 +1,49 @@
 // backend/src/controllers/productController.js
 import productService from "../services/productService.js";
+import { MAX_DISCOUNT_PERCENT } from "../services/promotionService.js";
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * ตรวจส่วนลดที่ตั้งไว้ที่ตัวสินค้า รองรับทั้งลดเป็นเปอร์เซ็นต์และลดเป็นจำนวนเงิน
+ * @param {object} body
+ * @returns {string|null} ข้อความ error หรือ null ถ้าผ่าน
+ */
+function validatePromotionFields(body) {
+  const { promotion, promotionType, promotionValue, promotionStartDate, promotionEndDate } = body;
+  if (!promotion) return null;
+
+  const type = promotionType === "amount" ? "amount" : "percent";
+  const value = Number(promotionValue);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return type === "amount"
+      ? "ส่วนลดต้องมากกว่า 0 บาท"
+      : "เปอร์เซ็นต์ส่วนลดต้องมากกว่า 0";
+  }
+
+  if (type === "percent") {
+    if (value > MAX_DISCOUNT_PERCENT) {
+      return `เปอร์เซ็นต์ส่วนลดของสินค้าต้องอยู่ระหว่าง 1 ถึง ${MAX_DISCOUNT_PERCENT}`;
+    }
+  } else {
+    const price = Number(body.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      return "ต้องระบุราคาสินค้าก่อนจึงจะตั้งส่วนลดเป็นจำนวนเงินได้";
+    }
+    if (value >= price) {
+      return `ส่วนลดต้องน้อยกว่าราคาสินค้า (${price} บาท)`;
+    }
+  }
+
+  const start = (promotionStartDate || "").trim();
+  const end = (promotionEndDate || "").trim();
+  if (start && !DATE_PATTERN.test(start)) return "รูปแบบวันเริ่มต้องเป็น YYYY-MM-DD";
+  if (end && !DATE_PATTERN.test(end)) return "รูปแบบวันสิ้นสุดต้องเป็น YYYY-MM-DD";
+  if (start && end && end < start) return "วันสิ้นสุดต้องไม่ก่อนวันเริ่ม";
+
+  return null;
+}
 
 class ProductController {
   /**
@@ -9,7 +53,7 @@ class ProductController {
    */
   async getProducts(req, res) {
     try {
-      const { category, search } = req.query;
+      const { category, search, pricing } = req.query;
 
       // Basic input validation/safety
       if (category !== undefined && typeof category !== "string") {
@@ -19,8 +63,12 @@ class ProductController {
         return res.status(400).json({ error: "Query parameter 'search' must be a string." });
       }
 
+      // pricing=original คืนราคาเต็มจาก DB ไม่หักส่วนลด
+      // หน้าแอดมินต้องใช้ตัวนี้ เพราะฟอร์มแก้ไขสินค้าเขียนราคาที่โหลดมากลับลง DB
+      const applyPromotion = pricing !== "original";
+
       // Business logic delegation
-      const products = await productService.getProducts(category, search);
+      const products = await productService.getProducts(category, search, applyPromotion);
 
       // Return success response
       return res.json(products);
@@ -35,6 +83,9 @@ class ProductController {
    */
   async createProduct(req, res) {
     try {
+      const invalid = validatePromotionFields(req.body);
+      if (invalid) return res.status(400).json({ error: invalid });
+
       const product = await productService.createProduct(req.body);
       return res.status(201).json(product);
     } catch (error) {
@@ -49,6 +100,9 @@ class ProductController {
   async updateProduct(req, res) {
     try {
       const { id } = req.params;
+      const invalid = validatePromotionFields(req.body);
+      if (invalid) return res.status(400).json({ error: invalid });
+
       const product = await productService.updateProduct(parseInt(id, 10), req.body);
       if (!product) {
         return res.status(404).json({ error: "Product not found" });

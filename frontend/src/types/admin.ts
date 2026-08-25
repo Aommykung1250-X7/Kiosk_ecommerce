@@ -8,6 +8,9 @@
 
 export type ProductStatus = "In Stock" | "Pre-Order";
 
+/** ส่วนลดของสินค้า — ลดเป็นเปอร์เซ็นต์ หรือลดเป็นจำนวนเงินบาท */
+export type DiscountType = "percent" | "amount";
+
 export interface Category {
   id: string;
   name: string;
@@ -35,6 +38,22 @@ export interface Product {
   purchaseLimit?: number | null;
   purchase_limit?: number | null;
   views?: number;
+  /** ราคาเต็มก่อนหักส่วนลดโปรโมชั่น — backend ส่งมาคู่กับ price เสมอ */
+  originalPrice?: number;
+  /** ชนิดส่วนลดที่มีผลอยู่จริง (null = ไม่ลด) */
+  discountType?: DiscountType | null;
+  /** ค่าส่วนลดที่มีผลอยู่จริง — เป็น % หรือจำนวนบาท ตาม discountType */
+  discountValue?: number;
+  /** ส่วนลดที่ได้จริงคิดเป็นบาท (originalPrice - price) */
+  discountAmount?: number;
+  /** ชนิดส่วนลดที่แอดมินตั้งไว้ที่สินค้าชิ้นนี้ */
+  promotionType?: DiscountType;
+  /** ค่าส่วนลดที่แอดมินตั้งไว้ (คนละตัวกับ discountValue ที่เป็นผลลัพธ์) */
+  promotionValue?: number;
+  /** YYYY-MM-DD — ว่าง = เริ่มทันที */
+  promotionStartDate?: string;
+  /** YYYY-MM-DD — ว่าง = ไม่หมดอายุ */
+  promotionEndDate?: string;
 }
 
 /** ค่าที่ผูกกับฟอร์มเพิ่ม/แก้ไขสินค้า (เก็บเป็น string ระหว่างพิมพ์) */
@@ -49,6 +68,10 @@ export interface ProductFormState {
   image: string;
   images: string[];
   promotion: boolean;
+  promotionType: DiscountType;
+  promotionValue: number | string;
+  promotionStartDate: string;
+  promotionEndDate: string;
   pickupLocation: string;
   status: ProductStatus;
   preorderReleaseDate: string;

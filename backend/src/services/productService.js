@@ -27,8 +27,8 @@ class ProductService {
    * @param {string} [search]
    * @returns {Promise<Array>}
    */
-  async getProducts(category, search) {
-    return await productRepository.getProducts({ category, search });
+  async getProducts(category, search, applyPromotion = true) {
+    return await productRepository.getProducts({ category, search, applyPromotion });
   }
 
   /**

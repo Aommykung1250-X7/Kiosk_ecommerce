@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Plus, Settings2, Star, X } from "lucide-react";
-import type { Category, ProductFormState, ProductStatus } from "../../../types/admin";
+import type { Category, DiscountType, ProductFormState, ProductStatus } from "../../../types/admin";
 import {
   Button,
   Checkbox,
@@ -147,15 +147,92 @@ export function ProductFormModal({
                 )}
               </Field>
 
-              <div className="rounded-xl border border-bo-line bg-slate-50/70 px-4 py-3.5">
+              <div className="flex flex-col gap-4 rounded-xl border border-bo-line bg-slate-50/70 px-4 py-3.5">
                 <Checkbox
                   checked={form.promotion}
                   onChange={(next) =>
                     setForm((previous) => ({ ...previous, promotion: next }))
                   }
-                  label="แสดงในหมวดโปรโมชั่น"
-                  description="สินค้าจะขึ้นในแถบโปรโมชั่นหน้าแรกของตู้"
+                  label="เปิดโปรโมชั่นของสินค้าชิ้นนี้"
+                  description="ลดราคาเฉพาะชิ้นนี้ และขึ้นในแถบโปรโมชั่นหน้าแรกของตู้"
                 />
+
+                {form.promotion && (
+                  <div className="flex flex-col gap-4">
+                    <Field label="รูปแบบส่วนลด">
+                      {(id) => (
+                        <RadioGroup<DiscountType>
+                          name="form-promotion-type"
+                          labelledBy={id}
+                          value={form.promotionType}
+                          options={[
+                            { value: "percent", label: "ลดเป็นเปอร์เซ็นต์" },
+                            { value: "amount", label: "ลดเป็นจำนวนเงิน" },
+                          ]}
+                          onChange={(next) =>
+                            setForm((previous) => ({ ...previous, promotionType: next }))
+                          }
+                          className="pt-1"
+                        />
+                      )}
+                    </Field>
+
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field
+                        label={form.promotionType === "amount" ? "ลดกี่บาท" : "ลดกี่เปอร์เซ็นต์"}
+                        required
+                      >
+                        {(id) => (
+                          <NumberInput
+                            id={id}
+                            prefix={form.promotionType === "amount" ? "฿" : undefined}
+                            suffix={form.promotionType === "amount" ? undefined : "%"}
+                            min={1}
+                            max={form.promotionType === "amount" ? undefined : 90}
+                            step={1}
+                            value={form.promotionValue}
+                            onChange={(event) =>
+                              setForm((previous) => ({
+                                ...previous,
+                                promotionValue: event.target.value,
+                              }))
+                            }
+                          />
+                        )}
+                      </Field>
+                      <Field label="วันเริ่ม" optionalNote="ไม่ใส่ = ทันที">
+                        {(id) => (
+                          <TextInput
+                            id={id}
+                            type="date"
+                            value={form.promotionStartDate}
+                            onChange={(event) =>
+                              setForm((previous) => ({
+                                ...previous,
+                                promotionStartDate: event.target.value,
+                              }))
+                            }
+                          />
+                        )}
+                      </Field>
+                      <Field label="วันสิ้นสุด" optionalNote="ไม่ใส่ = ไม่หมดอายุ">
+                        {(id) => (
+                          <TextInput
+                            id={id}
+                            type="date"
+                            value={form.promotionEndDate}
+                            onChange={(event) =>
+                              setForm((previous) => ({
+                                ...previous,
+                                promotionEndDate: event.target.value,
+                              }))
+                            }
+                          />
+                        )}
+                      </Field>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

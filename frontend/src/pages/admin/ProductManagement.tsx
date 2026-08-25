@@ -45,6 +45,7 @@ import {
   Toggle,
   Tr,
   UnderlineTabs,
+  formatBaht,
   formatBahtShort,
   formatCount,
   formatThaiDate,
@@ -55,6 +56,8 @@ import {
   ProductFormModal,
   MAX_PRODUCT_IMAGES,
 } from "../../components/admin/products/ProductFormModal";
+import { ProductPromotionModal } from "../../components/admin/products/ProductPromotionModal";
+import type { PromotionDraft } from "../../components/admin/products/ProductPromotionModal";
 import { CategoryManagerModal } from "../../components/admin/products/CategoryManagerModal";
 import { StaffPanel } from "../../components/admin/products/StaffPanel";
 import { StoreSettingsPanel } from "../../components/admin/products/StoreSettingsPanel";
@@ -78,6 +81,10 @@ const EMPTY_FORM: ProductFormState = {
   image: "",
   images: [],
   promotion: false,
+  promotionType: "percent",
+  promotionValue: 10,
+  promotionStartDate: "",
+  promotionEndDate: "",
   pickupLocation: "",
   status: "In Stock",
   preorderReleaseDate: "",
@@ -154,6 +161,7 @@ export default function ProductManagement() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
   const [uploading, setUploading] = useState(false);
+  const [promotionTarget, setPromotionTarget] = useState<Product | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
   /* ------------------------------------------------------------- โหลดข้อมูล */
@@ -169,7 +177,9 @@ export default function ProductManagement() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const response = await fetch("/api/products");
+      // pricing=original — หน้านี้เขียนราคาที่โหลดมากลับลง DB ตอนแก้ไข/สลับโปรโมชั่น
+      // ถ้ารับราคาที่หักส่วนลดแล้วมา ราคาจริงของสินค้าจะถูกทับถาวร
+      const response = await fetch("/api/products?pricing=original");
       const data = await response.json();
       if (!response.ok) throw new Error("ไม่สามารถเรียกรายการสินค้าได้");
       setProducts(data);
@@ -289,6 +299,10 @@ export default function ProductManagement() {
       image: product.image ?? "",
       images: images.slice(0, MAX_PRODUCT_IMAGES),
       promotion: Boolean(product.promotion),
+      promotionType: product.promotionType === "amount" ? "amount" : "percent",
+      promotionValue: product.promotionValue || 10,
+      promotionStartDate: product.promotionStartDate ?? "",
+      promotionEndDate: product.promotionEndDate ?? "",
       pickupLocation: product.pickupLocation ?? product.pickup_location ?? "",
       status: product.status ?? "In Stock",
       preorderReleaseDate:
@@ -405,10 +419,14 @@ export default function ProductManagement() {
   };
 
   /**
-   * สลับการแสดงในหมวดโปรโมชั่นจากในตารางโดยตรง
+   * บันทึกสถานะโปรโมชั่นของสินค้าชิ้นเดียว
    * ส่งข้อมูลสินค้าทั้งชุดกลับไปเพราะ PUT /api/products/:id เขียนทับทุกฟิลด์
    */
-  const handleTogglePromotion = async (product: Product, next: boolean) => {
+  const savePromotion = async (
+    product: Product,
+    next: boolean,
+    draft: PromotionDraft | null,
+  ) => {
     setTogglingId(product.id);
     const images =
       product.images && product.images.length > 0
@@ -426,12 +444,16 @@ export default function ProductManagement() {
           name: product.name,
           description: product.description ?? "",
           additional_info: product.additional_info ?? product.additionalInfo ?? "",
-          price: product.price,
+          price: product.originalPrice ?? product.price,
           stock: stockOf(product),
           category: product.category,
           image: images[0] ?? product.image,
           images,
           promotion: next,
+          promotionType: draft ? draft.promotionType : "percent",
+          promotionValue: draft ? draft.promotionValue : 0,
+          promotionStartDate: draft ? draft.promotionStartDate : "",
+          promotionEndDate: draft ? draft.promotionEndDate : "",
           pickupLocation: product.pickupLocation ?? product.pickup_location ?? "",
           status: product.status ?? "In Stock",
           preorderReleaseDate:
@@ -442,16 +464,24 @@ export default function ProductManagement() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "เปลี่ยนสถานะโปรโมชั่นไม่สำเร็จ");
 
-      setProducts((previous) =>
-        previous.map((item) =>
-          item.id === product.id ? { ...item, promotion: next } : item,
-        ),
-      );
+      setPromotionTarget(null);
+      notify.success(next ? "เปิดโปรโมชั่นแล้ว" : "ปิดโปรโมชั่นแล้ว");
+      // ราคาหลังลดคำนวณที่ backend จึงต้องโหลดใหม่แทนการแก้ state ในเครื่อง
+      void fetchProducts();
     } catch (toggleError) {
       notify.error((toggleError as Error).message);
     } finally {
       setTogglingId(null);
     }
+  };
+
+  /** เปิดสวิตช์ = ถามส่วนลดก่อน / ปิดสวิตช์ = ล้างส่วนลดทิ้งได้เลย */
+  const handleTogglePromotion = (product: Product, next: boolean) => {
+    if (next) {
+      setPromotionTarget(product);
+      return;
+    }
+    void savePromotion(product, false, null);
   };
 
   /* ---------------------------------------------------------- หมวดหมู่ */
@@ -677,14 +707,16 @@ export default function ProductManagement() {
             ) : (
               <Table>
                 <THead>
-                  <Th>สินค้า</Th>
-                  <Th>รหัส</Th>
+                  {/* ตรึงความกว้างคอลัมน์ชื่อสินค้าไว้ ชื่อยาวๆ จะถูกตัดด้วย truncate
+                      แทนที่จะดันคอลัมน์ที่เหลือไปกองอยู่ขอบขวาจนตัวหนังสือตกบรรทัด */}
+                  <Th className="w-[260px]">สินค้า</Th>
                   <Th>หมวดหมู่</Th>
                   <Th align="right">ราคา</Th>
                   {/* เว้นช่องซ้ายเพิ่ม ไม่ให้ตัวเลขราคาที่ชิดขวาไปติดกับจำนวนคงเหลือที่ชิดซ้าย */}
                   <Th className="pl-8">คงเหลือ</Th>
                   <Th>สถานะ</Th>
                   <Th align="center">โปรโมชั่น</Th>
+                  <Th align="center">ส่วนลด</Th>
                   <Th align="right">ยอดเข้าชม</Th>
                   <Th align="right">จัดการ</Th>
                 </THead>
@@ -700,7 +732,7 @@ export default function ProductManagement() {
 
                     return (
                       <Tr key={product.id}>
-                        <Td>
+                        <Td className="max-w-[260px]">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-bo-line bg-slate-100">
                               {cover ? (
@@ -737,10 +769,6 @@ export default function ProductManagement() {
                               ) : null}
                             </div>
                           </div>
-                        </Td>
-
-                        <Td className="font-bo-mono text-[13px] text-bo-muted">
-                          #{String(product.id).padStart(4, "0")}
                         </Td>
 
                         <Td>
@@ -780,13 +808,30 @@ export default function ProductManagement() {
                             <Toggle
                               checked={Boolean(product.promotion)}
                               disabled={togglingId === product.id}
-                              onChange={(next) => void handleTogglePromotion(product, next)}
-                              label={`${product.promotion ? "เอาออกจาก" : "แสดงใน"}หมวดโปรโมชั่น: ${product.name}`}
+                              onChange={(next) => handleTogglePromotion(product, next)}
+                              label={`${product.promotion ? "ปิด" : "เปิด"}โปรโมชั่นของ ${product.name}`}
                             />
                             {product.promotion && (
                               <Tag className="h-3.5 w-3.5 text-bo-accent" />
                             )}
                           </div>
+                        </Td>
+
+                        <Td align="center">
+                          {product.discountType ? (
+                            <span className="inline-flex flex-col items-center gap-0.5">
+                              <span className="bo-nums text-sm font-medium text-bo-lowstock">
+                                {product.discountType === "amount"
+                                  ? `-${formatBahtShort(product.discountValue)}`
+                                  : `-${product.discountValue}%`}
+                              </span>
+                              <span className="bo-nums text-[10px] text-bo-muted">
+                                -{formatBaht(product.discountAmount)}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-sm text-bo-muted">—</span>
+                          )}
                         </Td>
 
                         <Td align="right" className="bo-nums text-sm text-bo-muted">
@@ -841,6 +886,15 @@ export default function ProductManagement() {
         onUploadImages={(files) => void handleUploadImages(files)}
         onRemoveImage={handleRemoveImage}
         onManageCategories={() => setCategoryManagerOpen(true)}
+      />
+
+      <ProductPromotionModal
+        product={promotionTarget}
+        saving={togglingId === promotionTarget?.id}
+        onCancel={() => setPromotionTarget(null)}
+        onConfirm={(draft) => {
+          if (promotionTarget) void savePromotion(promotionTarget, true, draft);
+        }}
       />
 
       <CategoryManagerModal

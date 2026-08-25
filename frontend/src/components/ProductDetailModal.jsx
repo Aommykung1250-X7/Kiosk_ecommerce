@@ -32,7 +32,14 @@ export default function ProductDetailModal({
 
   if (!product) return null;
 
-  const { name, price, image, images, promotion, status, quantity, category, views, description } = product;
+  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, images, status, quantity, category, views, description } = product;
+  // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
+  const isDiscounted = discountAmount > 0 && originalPrice > price;
+  // ลดเป็นบาทให้โชว์ "-฿50" ลดเป็นเปอร์เซ็นต์ให้โชว์ "-15%"
+  const discountLabel =
+    discountType === "amount"
+      ? `-฿${discountValue.toLocaleString("th-TH")}`
+      : `-${discountValue}%`;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
   const isMostViewed = (views || 0) > 0;
   const purchaseLimit = Number(product.purchaseLimit || product.purchase_limit) || 0;
@@ -144,7 +151,7 @@ export default function ProductDetailModal({
                 <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'DIN Pro Cond', 'DIN Condensed', 'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
               </svg>
             </div>
-          ) : promotion ? (
+          ) : isDiscounted ? (
             <div className="absolute top-3.5 right-3.5 z-10 bg-[#FF6B00] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
               <TagIcon className="w-3 h-3 text-white" />
               <span>PROMO</span>
@@ -207,11 +214,28 @@ export default function ProductDetailModal({
 
           {/* Price & Quantity Stepper Row */}
           <div className="flex items-center justify-between mt-3.5 select-none">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-              ฿{(price || 0).toLocaleString("th-TH", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+            <span className="flex flex-col min-w-0">
+              <span className="flex items-baseline gap-2">
+                <span className={`text-xl sm:text-2xl font-bold tracking-tight ${isDiscounted ? "text-[#E01E5A]" : "text-gray-900"}`}>
+                  ฿{(price || 0).toLocaleString("th-TH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                {isDiscounted && (
+                  <span className="text-sm text-gray-400 line-through">
+                    ฿{originalPrice.toLocaleString("th-TH", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                )}
+              </span>
+              {isDiscounted && (
+                <span className="self-start mt-1 bg-[#E01E5A] text-white text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide">
+                  {discountLabel}
+                </span>
+              )}
             </span>
 
             {/* Stepper Button (Longer & Wider) */}

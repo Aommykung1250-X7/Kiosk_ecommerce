@@ -1,5 +1,6 @@
 // backend/src/repositories/orderRepository.js
 import pool from "../data/db.js";
+import { computePricing } from "../services/promotionService.js";
 
 class OrderRepository {
   constructor() {
@@ -77,12 +78,14 @@ class OrderRepository {
         id: row.id,
         quantity: row.quantity,
         price: parseFloat(row.unit_price),
+        originalPrice: parseFloat(row.original_unit_price ?? row.unit_price),
         fulfillmentStatus: row.fulfillment_status || "pending",
         fulfilledAt: row.fulfilled_at,
         product: {
           id: row.product_id,
           name: row.product_name,
           price: parseFloat(row.unit_price),
+          originalPrice: parseFloat(row.original_unit_price ?? row.unit_price),
           status: row.product_status || "In Stock",
           image: row.image,
           imageUrl: row.image,
@@ -135,6 +138,7 @@ class OrderRepository {
       items,
       shipments,
       totalPrice: parseFloat(row.total_amount),
+      discountTotal: parseFloat(row.discount_total || 0),
       status: row.payment_status === "paid" ? "success" : row.payment_status,
       customerName: row.customer_name,
       customerPhone: row.customer_phone,
@@ -157,6 +161,43 @@ class OrderRepository {
   }
 
   /**
+   * คิดราคาต่อชิ้นของทุกรายการใหม่จาก products.price ในฐานข้อมูล บวกส่วนลดที่ใช้อยู่ ณ ตอนสั่ง
+   * ถ้าหาสินค้าใน DB ไม่เจอ (เช่นถูกลบไปแล้ว) จะ fallback ไปใช้ราคาที่ส่งมาแทน
+   * @param {Array} items รายการจากตะกร้า
+   * @returns {Promise<Array<{item: object, productId: number|null, quantity: number, unitPrice: number, originalUnitPrice: number}>>}
+   */
+  async resolveItemPricing(items) {
+    const ids = items
+      .map(item => parseInt(item.product?.id || item.id || item.product_id, 10))
+      .filter(id => Number.isInteger(id));
+
+    const productMap = new Map();
+    if (ids.length > 0) {
+      const res = await pool.query(
+        "SELECT id, price, promotion, discount_type, discount_value, discount_start_date, discount_end_date FROM products WHERE id = ANY($1)",
+        [ids]
+      );
+      res.rows.forEach(row => productMap.set(row.id, row));
+    }
+
+    return items.map(item => {
+      const rawId = parseInt(item.product?.id || item.id || item.product_id, 10);
+      const productId = Number.isInteger(rawId) ? rawId : null;
+      const quantity = parseInt(item.quantity || item.qty || 1, 10);
+      const dbRow = productId !== null ? productMap.get(productId) : null;
+
+      if (!dbRow) {
+        const fallback = parseFloat(item.product?.price || item.price || 0) || 0;
+        console.warn(`[OrderRepository] Product ${productId} not found — ใช้ราคาที่ client ส่งมา (${fallback})`);
+        return { item, productId, quantity, unitPrice: fallback, originalUnitPrice: fallback };
+      }
+
+      const { price, originalPrice } = computePricing(parseFloat(dbRow.price), dbRow);
+      return { item, productId, quantity, unitPrice: price, originalUnitPrice: originalPrice };
+    });
+  }
+
+  /**
    * Create a new order in PostgreSQL (บันทึก orders + order_items)
    */
   async create(items, totalPrice, deliveryOption = "pickup", shippingOption = "combined") {
@@ -167,34 +208,48 @@ class OrderRepository {
     const instockStatus = hasInStock ? 'pending' : 'none';
     const preorderStatus = hasPreOrder ? 'pending' : 'none';
 
+    // คิดราคาต่อชิ้นใหม่จากฐานข้อมูล + ส่วนลดที่ใช้อยู่จริง ไม่เชื่อราคาที่ client ส่งมา
+    const priced = await this.resolveItemPricing(items);
+    const itemsSubtotal = priced.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+    const discountTotal = priced.reduce((sum, i) => sum + (i.originalUnitPrice - i.unitPrice) * i.quantity, 0);
+
+    // ค่าจัดส่งยังคิดฝั่ง client อยู่ — ดึงกลับมาจากส่วนต่างของยอดรวมที่ส่งมา
+    const shippingFee = Math.max(0, Math.round((totalPrice - itemsSubtotal) * 100) / 100);
+    const serverTotal = Math.round((itemsSubtotal + shippingFee) * 100) / 100;
+
+    if (Math.abs(serverTotal - totalPrice) > 0.01) {
+      console.warn(
+        `[OrderRepository] Client total ${totalPrice} != server total ${serverTotal} ` +
+        `(subtotal ${itemsSubtotal}, shipping ${shippingFee}) — ใช้ยอดที่ server คำนวณ`
+      );
+    }
+
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
       // 1. Insert into orders
       const orderQuery = `
-        INSERT INTO orders (order_uuid, total_amount, payment_status, fulfillment_status_instock, fulfillment_status_preorder, delivery_option, shipping_option)
-        VALUES ($1, $2, 'pending', $3, $4, $5, $6)
+        INSERT INTO orders (order_uuid, total_amount, discount_total, payment_status, fulfillment_status_instock, fulfillment_status_preorder, delivery_option, shipping_option)
+        VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7)
         RETURNING *
       `;
-      const orderRes = await client.query(orderQuery, [orderId, totalPrice, instockStatus, preorderStatus, deliveryOption, shippingOption]);
+      const orderRes = await client.query(orderQuery, [orderId, serverTotal, Math.round(discountTotal * 100) / 100, instockStatus, preorderStatus, deliveryOption, shippingOption]);
       const newOrder = orderRes.rows[0];
 
       // 2. Insert into order_items
       const mappedItemsForReturn = [];
-      for (const item of items) {
-        const pId = item.product?.id || item.id || item.product_id;
+      for (const priceInfo of priced) {
+        const { item, productId: pId, unitPrice: pPrice, originalUnitPrice, quantity: pQty } = priceInfo;
         const pName = item.product?.name || item.name || "สินค้า";
-        const pPrice = parseFloat(item.product?.price || item.price || 0);
-        const pQty = parseInt(item.quantity || item.qty || 1, 10);
         const pStatus = item.product?.status || item.status || "In Stock";
 
         const itemQuery = `
-          INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, product_status)
-          VALUES ($1, $2, $3, $4, $5, $6)
+          INSERT INTO order_items (order_id, product_id, product_name, unit_price, original_unit_price, quantity, product_status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING *
         `;
-        const itemRes = await client.query(itemQuery, [newOrder.id, pId ? parseInt(pId, 10) : null, pName, pPrice, pQty, pStatus]);
+        const itemRes = await client.query(itemQuery, [newOrder.id, pId, pName, pPrice, originalUnitPrice, pQty, pStatus]);
         const insertedItem = itemRes.rows[0];
 
         mappedItemsForReturn.push({
@@ -205,6 +260,7 @@ class OrderRepository {
             id: insertedItem.product_id,
             name: insertedItem.product_name,
             price: parseFloat(insertedItem.unit_price),
+            originalPrice: parseFloat(insertedItem.original_unit_price ?? insertedItem.unit_price),
             status: insertedItem.product_status,
             image: item.product?.image || item.product?.imageUrl || item.image,
             imageUrl: item.product?.image || item.product?.imageUrl || item.image,
