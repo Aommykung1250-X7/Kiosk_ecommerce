@@ -26,6 +26,7 @@ import {
   Button,
   Card,
   CardHeader,
+  DatePicker,
   EmptyState,
   ErrorBanner,
   LoadingState,
@@ -206,27 +207,28 @@ export default function ReportManagement() {
           ).map((key) => ({ key, label: PRESET_LABEL[key] }))}
         />
 
-        <div className="flex items-center gap-2">
-          <TextInput
-            type="date"
+        <div className="flex flex-wrap items-center gap-2">
+          <DatePicker
             aria-label="วันที่เริ่มต้น"
             value={startDate}
-            onChange={(event) => {
-              setStartDate(event.target.value);
+            maxDate={endDate || new Date().toISOString().split("T")[0]}
+            onChange={(val) => {
+              setStartDate(val);
               setDatePreset("custom");
             }}
-            className="w-[152px]"
+            className="w-[170px]"
           />
-          <span className="text-xs text-bo-muted">ถึง</span>
-          <TextInput
-            type="date"
+          <span className="text-xs text-bo-muted font-medium">ถึง</span>
+          <DatePicker
             aria-label="วันที่สิ้นสุด"
             value={endDate}
-            onChange={(event) => {
-              setEndDate(event.target.value);
+            minDate={startDate}
+            maxDate={new Date().toISOString().split("T")[0]}
+            onChange={(val) => {
+              setEndDate(val);
               setDatePreset("custom");
             }}
-            className="w-[152px]"
+            className="w-[170px]"
           />
         </div>
       </Card>

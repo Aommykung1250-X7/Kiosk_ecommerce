@@ -215,7 +215,7 @@ export default function ProductDetailModal({
           {/* Price & Quantity Stepper Row */}
           <div className="flex items-center justify-between mt-3.5 select-none">
             <span className="flex flex-col min-w-0">
-              <span className="flex items-baseline gap-2">
+              <span className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xl sm:text-2xl font-bold tracking-tight ${isDiscounted ? "text-[#E01E5A]" : "text-gray-900"}`}>
                   ฿{(price || 0).toLocaleString("th-TH", {
                     minimumFractionDigits: 2,
@@ -230,12 +230,12 @@ export default function ProductDetailModal({
                     })}
                   </span>
                 )}
+                {isDiscounted && (
+                  <span className="bg-[#E01E5A] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full tracking-wide shadow-xs">
+                    ลด {discountLabel}
+                  </span>
+                )}
               </span>
-              {isDiscounted && (
-                <span className="self-start mt-1 bg-[#E01E5A] text-white text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide">
-                  {discountLabel}
-                </span>
-              )}
             </span>
 
             {/* Stepper Button (Longer & Wider) */}

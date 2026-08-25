@@ -66,17 +66,21 @@ export function toDateKey(value) {
  * @returns {{type: "percent"|"amount", value: number}|null}
  */
 export function resolveProductDiscount(row, now = new Date()) {
-  if (!row || row.promotion !== true) return null;
+  if (!row) return null;
+  const isPromoActive = row.promotion === true || row.promotion === "true" || row.promotion === 1;
+  if (!isPromoActive) return null;
 
-  const value = parseFloat(row.discount_value);
+  const rawVal = row.discount_value ?? row.discountValue ?? row.promotionValue ?? row.promotion_value;
+  const value = parseFloat(rawVal);
   if (!Number.isFinite(value) || value <= 0) return null;
 
-  const type = row.discount_type === "amount" ? "amount" : "percent";
+  const rawType = row.discount_type ?? row.discountType ?? row.promotionType ?? row.promotion_type;
+  const type = rawType === "amount" ? "amount" : "percent";
 
-  const withinSchedule = isWithinSchedule(
-    { startDate: toDateKey(row.discount_start_date), endDate: toDateKey(row.discount_end_date) },
-    now
-  );
+  const startDate = toDateKey(row.discount_start_date ?? row.discountStartDate ?? row.promotionStartDate ?? row.promotion_start_date);
+  const endDate = toDateKey(row.discount_end_date ?? row.discountEndDate ?? row.promotionEndDate ?? row.promotion_end_date);
+
+  const withinSchedule = isWithinSchedule({ startDate, endDate }, now);
   if (!withinSchedule) return null;
 
   return { type, value };

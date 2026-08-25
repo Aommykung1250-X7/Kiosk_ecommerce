@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Card,
+  DatePicker,
   EmptyState,
   ErrorBanner,
   FilterChips,
@@ -370,12 +371,10 @@ export default function OrderQueue() {
           />
 
           {/* ช่องวันที่อยู่บน ปุ่มลัดอยู่ล่าง — กดลัดแล้วเห็นวันที่ด้านบนเปลี่ยนตามทันที */}
-          <div className="flex flex-col gap-2">
-            <TextInput
-              type="date"
-              aria-label="เลือกวันที่"
+          <div className="flex flex-col gap-2 min-w-[220px]">
+            <DatePicker
               value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
+              onChange={setSelectedDate}
             />
 
             <SegmentedControl<DatePreset | "custom">

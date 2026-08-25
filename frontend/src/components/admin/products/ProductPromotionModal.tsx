@@ -3,6 +3,7 @@ import type { DiscountType, Product } from "../../../types/admin";
 import { notify } from "../../notify";
 import {
   Button,
+  DatePicker,
   Field,
   Modal,
   NumberInput,
@@ -170,23 +171,21 @@ export function ProductPromotionModal({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="วันเริ่ม" optionalNote="ไม่ใส่ = เริ่มทันที">
-            {(id) => (
-              <TextInput
-                id={id}
-                type="date"
+          <Field label="วันเริ่มโปรโมชั่น" optionalNote="ไม่ใส่ = เริ่มทันที">
+            {() => (
+              <DatePicker
                 value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
+                minDate={new Date().toISOString().split("T")[0]}
+                onChange={setStartDate}
               />
             )}
           </Field>
-          <Field label="วันสิ้นสุด" optionalNote="ไม่ใส่ = ไม่หมดอายุ">
-            {(id) => (
-              <TextInput
-                id={id}
-                type="date"
+          <Field label="วันสิ้นสุดโปรโมชั่น" optionalNote="ไม่ใส่ = ไม่หมดอายุ">
+            {() => (
+              <DatePicker
                 value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
+                minDate={startDate || new Date().toISOString().split("T")[0]}
+                onChange={setEndDate}
               />
             )}
           </Field>

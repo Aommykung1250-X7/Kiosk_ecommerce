@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { Plus, Settings2, Star, X } from "lucide-react";
+import { Loader2, Plus, Settings2, Sparkles, Star, X } from "lucide-react";
 import type { Category, DiscountType, ProductFormState, ProductStatus } from "../../../types/admin";
 import {
   Button,
   Checkbox,
+  DatePicker,
   Field,
   Modal,
   NumberInput,
@@ -40,6 +41,10 @@ interface ProductFormModalProps {
   onUploadImages: (files: File[]) => void;
   onRemoveImage: (index: number) => void;
   onManageCategories: () => void;
+  autoRemoveBg?: boolean;
+  onToggleAutoRemoveBg?: (next: boolean) => void;
+  onProcessBgRemoval?: (index: number) => void;
+  processingBgIndex?: number | null;
 }
 
 /**
@@ -60,6 +65,10 @@ export function ProductFormModal({
   onUploadImages,
   onRemoveImage,
   onManageCategories,
+  autoRemoveBg = true,
+  onToggleAutoRemoveBg,
+  onProcessBgRemoval,
+  processingBgIndex = null,
 }: ProductFormModalProps) {
   const [tab, setTab] = useState<FormTab>("general");
   const images = form.images ?? [];
@@ -200,31 +209,29 @@ export function ProductFormModal({
                           />
                         )}
                       </Field>
-                      <Field label="วันเริ่ม" optionalNote="ไม่ใส่ = ทันที">
-                        {(id) => (
-                          <TextInput
-                            id={id}
-                            type="date"
+                      <Field label="วันเริ่มโปรโมชั่น" optionalNote="ไม่ใส่ = ทันที">
+                        {() => (
+                          <DatePicker
                             value={form.promotionStartDate}
-                            onChange={(event) =>
+                            minDate={new Date().toISOString().split("T")[0]}
+                            onChange={(value) =>
                               setForm((previous) => ({
                                 ...previous,
-                                promotionStartDate: event.target.value,
+                                promotionStartDate: value,
                               }))
                             }
                           />
                         )}
                       </Field>
-                      <Field label="วันสิ้นสุด" optionalNote="ไม่ใส่ = ไม่หมดอายุ">
-                        {(id) => (
-                          <TextInput
-                            id={id}
-                            type="date"
+                      <Field label="วันสิ้นสุดโปรโมชั่น" optionalNote="ไม่ใส่ = ไม่หมดอายุ">
+                        {() => (
+                          <DatePicker
                             value={form.promotionEndDate}
-                            onChange={(event) =>
+                            minDate={form.promotionStartDate || new Date().toISOString().split("T")[0]}
+                            onChange={(value) =>
                               setForm((previous) => ({
                                 ...previous,
-                                promotionEndDate: event.target.value,
+                                promotionEndDate: value,
                               }))
                             }
                           />
@@ -280,10 +287,24 @@ export function ProductFormModal({
               </Field>
 
               <div className="flex flex-col gap-2.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs font-medium text-bo-text">
-                    รูปภาพสินค้า<span className="ml-0.5 text-rose-500">*</span>
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-bo-text">
+                      รูปภาพสินค้า<span className="ml-0.5 text-rose-500">*</span>
+                    </span>
+                    {onToggleAutoRemoveBg && (
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs select-none bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/90 px-2.5 py-1 rounded-lg transition-colors font-medium">
+                        <input
+                          type="checkbox"
+                          checked={autoRemoveBg}
+                          onChange={(e) => onToggleAutoRemoveBg(e.target.checked)}
+                          className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                        />
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-500/30" />
+                        <span>ลบพื้นหลังอัตโนมัติ</span>
+                      </label>
+                    )}
+                  </div>
                   <span className="bo-nums text-[11px] text-bo-muted">
                     {images.length} / {MAX_PRODUCT_IMAGES} รูป
                   </span>
@@ -300,6 +321,27 @@ export function ProductFormModal({
                         alt={`รูปสินค้าที่ ${index + 1}`}
                         className="h-full w-full object-cover"
                       />
+
+                      {onProcessBgRemoval && (
+                        <button
+                          type="button"
+                          disabled={processingBgIndex === index}
+                          onClick={() => onProcessBgRemoval(index)}
+                          aria-label={`ตัดพื้นหลังรูปที่ ${index + 1}`}
+                          title="ตัดพื้นหลังด้วย AI"
+                          className="absolute top-1 left-1 flex h-5 items-center gap-1 rounded-md bg-amber-500/90 hover:bg-amber-600 text-white px-1.5 shadow-sm transition-all text-[9px] font-bold active:scale-95 disabled:opacity-50"
+                        >
+                          {processingBgIndex === index ? (
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Sparkles className="h-2.5 w-2.5" />
+                              <span>ตัดรูป</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+
                       {index === 0 && (
                         <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-bo-ink/80 py-0.5 text-[9px] font-semibold text-white">
                           <Star className="h-2.5 w-2.5" />
@@ -437,20 +479,19 @@ export function ProductFormModal({
               {form.status === "Pre-Order" && (
                 <>
                   <Field
-                    label="วันที่สินค้าพร้อมจัดส่ง"
+                    label="วันที่สินค้าพร้อมจัดส่ง (Pre-Order Release Date)"
                     required
                     hint="ลูกค้าจะเห็นวันที่นี้บนหน้าสินค้า"
                   >
-                    {(id) => (
-                      <TextInput
-                        id={id}
-                        type="date"
-                        required
+                    {() => (
+                      <DatePicker
                         value={form.preorderReleaseDate.substring(0, 10)}
-                        onChange={(event) =>
+                        required
+                        minDate={new Date().toISOString().split("T")[0]}
+                        onChange={(value) =>
                           setForm((previous) => ({
                             ...previous,
-                            preorderReleaseDate: event.target.value,
+                            preorderReleaseDate: value,
                           }))
                         }
                       />

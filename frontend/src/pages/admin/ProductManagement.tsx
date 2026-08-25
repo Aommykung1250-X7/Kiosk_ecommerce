@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
+import { removeBackground } from "@imgly/background-removal";
 import {
   AlertTriangle,
   Eye,
@@ -138,6 +139,151 @@ function resizeImage(file: File, maxWidth = 600, maxHeight = 600): Promise<File>
   });
 }
 
+/**
+ * Smart Instant Flood-fill Background Removal (Zero-latency fallback)
+ */
+const removeSolidBackground = (imageSource: File | Blob | string): Promise<Blob | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+
+    let urlToRevoke: string | null = null;
+    if (typeof imageSource === "string") {
+      img.src = imageSource;
+    } else {
+      urlToRevoke = URL.createObjectURL(imageSource);
+      img.src = urlToRevoke;
+    }
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          return resolve(null);
+        }
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        let sampleR = 0, sampleG = 0, sampleB = 0, sampleCount = 0;
+        const samplePoints = [
+          [0, 0], [width - 1, 0], [0, height - 1], [width - 1, height - 1],
+          [Math.floor(width / 2), 0], [Math.floor(width / 2), height - 1],
+          [0, Math.floor(height / 2)], [width - 1, Math.floor(height / 2)]
+        ];
+
+        for (const [sx, sy] of samplePoints) {
+          const idx = (sy * width + sx) * 4;
+          sampleR += data[idx];
+          sampleG += data[idx + 1];
+          sampleB += data[idx + 2];
+          sampleCount++;
+        }
+
+        const bgR = sampleR / sampleCount;
+        const bgG = sampleG / sampleCount;
+        const bgB = sampleB / sampleCount;
+
+        const tolerance = 48;
+        const visited = new Uint8Array(width * height);
+        const queue: number[] = [];
+
+        for (let x = 0; x < width; x++) {
+          queue.push(x, 0);
+          queue.push(x, height - 1);
+          visited[0 * width + x] = 1;
+          visited[(height - 1) * width + x] = 1;
+        }
+        for (let y = 0; y < height; y++) {
+          queue.push(0, y);
+          queue.push(width - 1, y);
+          visited[y * width + 0] = 1;
+          visited[y * width + (width - 1)] = 1;
+        }
+
+        let head = 0;
+        while (head < queue.length) {
+          const cx = queue[head++];
+          const cy = queue[head++];
+          const idx = (cy * width + cx) * 4;
+
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+
+          const diff = Math.sqrt((r - bgR) ** 2 + (g - bgG) ** 2 + (b - bgB) ** 2);
+
+          if (diff < tolerance) {
+            data[idx + 3] = 0;
+
+            const neighbors = [
+              [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+            ];
+
+            for (const [nx, ny] of neighbors) {
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const nPos = ny * width + nx;
+                if (!visited[nPos]) {
+                  visited[nPos] = 1;
+                  queue.push(nx, ny);
+                }
+              }
+            }
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+
+        canvas.toBlob((blob) => {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          resolve(blob);
+        }, "image/png");
+      } catch (err) {
+        if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+      resolve(null);
+    };
+  });
+};
+
+/**
+ * Dual-Engine Background Removal AI Runner
+ */
+const processBackgroundRemoval = async (imageSource: File | Blob | string): Promise<Blob | null> => {
+  try {
+    const blob = await removeBackground(imageSource, {
+      model: "isnet_fp16",
+      publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
+      debug: false
+    });
+    if (blob && blob.size > 100) return blob;
+  } catch (aiErr) {
+    console.warn("AI removeBackground failed, using fallback:", aiErr);
+  }
+
+  try {
+    const fallbackBlob = await removeSolidBackground(imageSource);
+    if (fallbackBlob) return fallbackBlob;
+  } catch (fallbackErr) {
+    console.error("Fallback removeSolidBackground error:", fallbackErr);
+  }
+
+  return null;
+};
+
 export default function ProductManagement() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab") as PageTab | null;
@@ -161,6 +307,8 @@ export default function ProductManagement() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
   const [uploading, setUploading] = useState(false);
+  const [autoRemoveBg, setAutoRemoveBg] = useState(true);
+  const [processingBgIndex, setProcessingBgIndex] = useState<number | null>(null);
   const [promotionTarget, setPromotionTarget] = useState<Product | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
@@ -324,7 +472,22 @@ export default function ProductManagement() {
     try {
       const body = new FormData();
       for (const file of files.slice(0, remaining)) {
-        body.append("images", await resizeImage(file));
+        let processedFile = await resizeImage(file);
+
+        if (autoRemoveBg) {
+          try {
+            notify.info("กำลังตัดพื้นหลังรูปภาพด้วย AI...");
+            const bgBlob = await processBackgroundRemoval(processedFile);
+            if (bgBlob) {
+              const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+              processedFile = new File([bgBlob], `${fileNameWithoutExt}_nobg.png`, { type: "image/png" });
+            }
+          } catch (bgErr) {
+            console.warn("Auto background removal failed, using original:", bgErr);
+          }
+        }
+
+        body.append("images", processedFile);
       }
 
       const response = await fetch("/api/products/upload", {
@@ -338,10 +501,55 @@ export default function ProductManagement() {
       const uploaded: string[] = data.images ?? [data.image];
       const merged = [...current, ...uploaded].slice(0, MAX_PRODUCT_IMAGES);
       setForm((previous) => ({ ...previous, image: merged[0] ?? "", images: merged }));
+      if (autoRemoveBg) notify.success("อัปโหลดและตัดพื้นหลังเรียบร้อยแล้ว");
     } catch (uploadError) {
       notify.error((uploadError as Error).message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleProcessSingleBg = async (index: number) => {
+    const currentImages = form.images ?? [];
+    const filename = currentImages[index];
+    if (!filename) return;
+
+    const imageUrl = resolveUploadUrl(filename, "products");
+    if (!imageUrl) return;
+
+    setProcessingBgIndex(index);
+    try {
+      notify.info(`กำลังตัดพื้นหลังรูปที่ ${index + 1}...`);
+      const bgBlob = await processBackgroundRemoval(imageUrl);
+      if (!bgBlob) throw new Error("ไม่สามารถตัดพื้นหลังรูปภาพนี้ได้");
+
+      const body = new FormData();
+      const newFile = new File([bgBlob], `bg_removed_${Date.now()}.png`, { type: "image/png" });
+      body.append("images", newFile);
+
+      const response = await fetch("/api/products/upload", {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "อัปโหลดรูปภาพใหม่ไม่สำเร็จ");
+
+      const newUploadedName = data.images?.[0] || data.image;
+      const updatedImages = [...currentImages];
+      updatedImages[index] = newUploadedName;
+
+      setForm((previous) => ({
+        ...previous,
+        image: updatedImages[0] ?? "",
+        images: updatedImages,
+      }));
+
+      notify.success(`ตัดพื้นหลังรูปที่ ${index + 1} เรียบร้อยแล้ว`);
+    } catch (err) {
+      notify.error((err as Error).message);
+    } finally {
+      setProcessingBgIndex(null);
     }
   };
 
@@ -450,10 +658,10 @@ export default function ProductManagement() {
           image: images[0] ?? product.image,
           images,
           promotion: next,
-          promotionType: draft ? draft.promotionType : "percent",
-          promotionValue: draft ? draft.promotionValue : 0,
-          promotionStartDate: draft ? draft.promotionStartDate : "",
-          promotionEndDate: draft ? draft.promotionEndDate : "",
+          promotionType: draft ? draft.promotionType : (product.promotionType ?? "percent"),
+          promotionValue: draft ? draft.promotionValue : (product.promotionValue || product.discountValue || 10),
+          promotionStartDate: draft ? draft.promotionStartDate : (product.promotionStartDate ?? ""),
+          promotionEndDate: draft ? draft.promotionEndDate : (product.promotionEndDate ?? ""),
           pickupLocation: product.pickupLocation ?? product.pickup_location ?? "",
           status: product.status ?? "In Stock",
           preorderReleaseDate:
@@ -886,6 +1094,10 @@ export default function ProductManagement() {
         onUploadImages={(files) => void handleUploadImages(files)}
         onRemoveImage={handleRemoveImage}
         onManageCategories={() => setCategoryManagerOpen(true)}
+        autoRemoveBg={autoRemoveBg}
+        onToggleAutoRemoveBg={setAutoRemoveBg}
+        onProcessBgRemoval={(index) => void handleProcessSingleBg(index)}
+        processingBgIndex={processingBgIndex}
       />
 
       <ProductPromotionModal

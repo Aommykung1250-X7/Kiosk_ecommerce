@@ -97,12 +97,6 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
           {name}
         </h3>
 
-        {isDiscounted && (
-          <span className="self-start mt-1 bg-[#E01E5A] text-white text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide">
-            {discountLabel}
-          </span>
-        )}
-
         {/* Price & Stock Row */}
         <div className="flex items-center justify-between mt-1 pt-0.5">
           <span className="flex items-baseline gap-1.5 min-w-0">
