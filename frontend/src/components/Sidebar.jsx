@@ -22,7 +22,7 @@ export default function Sidebar({
       })
       .catch((err) => console.error("Error fetching contact settings in Sidebar:", err));
 
-    fetch("/api/categories")
+    fetch("/api/categories?hasProducts=true")
       .then((res) => (res.ok ? res.json() : []))
       .then((categoriesData) => {
         const rawCategories = Array.isArray(categoriesData) ? categoriesData : [];

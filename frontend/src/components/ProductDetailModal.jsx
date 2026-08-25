@@ -232,7 +232,7 @@ export default function ProductDetailModal({
                 )}
                 {isDiscounted && (
                   <span className="bg-[#E01E5A] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full tracking-wide shadow-xs">
-                    ลด {discountLabel}
+                    {discountLabel}
                   </span>
                 )}
               </span>

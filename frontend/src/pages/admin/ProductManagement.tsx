@@ -260,25 +260,134 @@ const removeSolidBackground = (imageSource: File | Blob | string): Promise<Blob 
 };
 
 /**
- * Dual-Engine Background Removal AI Runner
+ * สแกนหาขอบวัตถุและตัดส่วนเกิน (Crop) พร้อมจัดกึ่งกลาง (Center) บนภาพโปร่งใส
+ */
+const cropAndCenterImage = (imageSource: Blob | File | string, paddingPercent = 0.08): Promise<Blob | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+
+    let urlToRevoke: string | null = null;
+    if (typeof imageSource === "string") {
+      img.src = imageSource;
+    } else {
+      urlToRevoke = URL.createObjectURL(imageSource);
+      img.src = urlToRevoke;
+    }
+
+    img.onload = () => {
+      try {
+        const srcCanvas = document.createElement("canvas");
+        srcCanvas.width = img.width;
+        srcCanvas.height = img.height;
+        const srcCtx = srcCanvas.getContext("2d", { willReadFrequently: true });
+        if (!srcCtx) {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          return resolve(null);
+        }
+
+        srcCtx.drawImage(img, 0, 0);
+        const imgData = srcCtx.getImageData(0, 0, img.width, img.height);
+        const data = imgData.data;
+        const w = img.width;
+        const h = img.height;
+
+        let minX = w, minY = h, maxX = -1, maxY = -1;
+
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const alpha = data[(y * w + x) * 4 + 3];
+            if (alpha > 15) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+
+        if (maxX < minX || maxY < minY) {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          return resolve(null);
+        }
+
+        const cropWidth = maxX - minX + 1;
+        const cropHeight = maxY - minY + 1;
+
+        const maxDim = Math.max(cropWidth, cropHeight);
+        const padding = Math.round(maxDim * paddingPercent);
+        const targetSize = maxDim + padding * 2;
+
+        const outCanvas = document.createElement("canvas");
+        outCanvas.width = targetSize;
+        outCanvas.height = targetSize;
+        const outCtx = outCanvas.getContext("2d");
+        if (!outCtx) {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          return resolve(null);
+        }
+
+        const destX = Math.round((targetSize - cropWidth) / 2);
+        const destY = Math.round((targetSize - cropHeight) / 2);
+
+        outCtx.drawImage(
+          srcCanvas,
+          minX, minY, cropWidth, cropHeight,
+          destX, destY, cropWidth, cropHeight
+        );
+
+        outCanvas.toBlob((blob) => {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          resolve(blob);
+        }, "image/png");
+      } catch (err) {
+        console.error("cropAndCenterImage error:", err);
+        if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+      resolve(null);
+    };
+  });
+};
+
+/**
+ * Dual-Engine Background Removal AI Runner with Auto Crop & Center
  */
 const processBackgroundRemoval = async (imageSource: File | Blob | string): Promise<Blob | null> => {
+  let resultBlob: Blob | null = null;
   try {
     const blob = await removeBackground(imageSource, {
       model: "isnet_fp16",
       publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
       debug: false
     });
-    if (blob && blob.size > 100) return blob;
+    if (blob && blob.size > 100) resultBlob = blob;
   } catch (aiErr) {
     console.warn("AI removeBackground failed, using fallback:", aiErr);
   }
 
-  try {
-    const fallbackBlob = await removeSolidBackground(imageSource);
-    if (fallbackBlob) return fallbackBlob;
-  } catch (fallbackErr) {
-    console.error("Fallback removeSolidBackground error:", fallbackErr);
+  if (!resultBlob) {
+    try {
+      const fallbackBlob = await removeSolidBackground(imageSource);
+      if (fallbackBlob) resultBlob = fallbackBlob;
+    } catch (fallbackErr) {
+      console.error("Fallback removeSolidBackground error:", fallbackErr);
+    }
+  }
+
+  // Auto-Crop & Center non-transparent product object
+  if (resultBlob) {
+    try {
+      const croppedBlob = await cropAndCenterImage(resultBlob);
+      if (croppedBlob) return croppedBlob;
+    } catch (cropErr) {
+      console.warn("cropAndCenterImage failed, using original uncropped blob:", cropErr);
+    }
+    return resultBlob;
   }
 
   return null;

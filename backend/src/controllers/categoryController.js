@@ -7,7 +7,22 @@ class CategoryController {
    */
   async getCategories(req, res) {
     try {
-      const result = await pool.query("SELECT * FROM categories ORDER BY created_at ASC");
+      const { hasProducts } = req.query;
+      let queryText = "SELECT * FROM categories ORDER BY created_at ASC";
+
+      if (hasProducts === "true") {
+        queryText = `
+          SELECT DISTINCT c.* 
+          FROM categories c
+          WHERE EXISTS (
+            SELECT 1 FROM products p 
+            WHERE p.category_id = c.id
+          )
+          ORDER BY c.created_at ASC
+        `;
+      }
+
+      const result = await pool.query(queryText);
       return res.json(result.rows);
     } catch (err) {
       console.error("Error in getCategories:", err);

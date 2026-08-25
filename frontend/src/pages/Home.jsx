@@ -58,7 +58,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchCart();
-    fetch("/api/categories")
+    fetch("/api/categories?hasProducts=true")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setCategoryList(data))
       .catch((err) => console.error("Error loading categories in Home:", err));
