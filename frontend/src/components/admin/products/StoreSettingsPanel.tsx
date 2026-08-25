@@ -234,7 +234,7 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
                 สินค้าพร้อมส่งกับพรีออเดอร์คนละรอบ
               </span>
             </dt>
-            <dd className="bo-nums font-semibold text-bo-pink">{formatBaht(feeValue * 2)}</dd>
+            <dd className="bo-nums font-semibold text-amber-700">{formatBaht(feeValue * 2)}</dd>
           </div>
         </dl>
 

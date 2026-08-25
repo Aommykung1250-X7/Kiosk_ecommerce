@@ -80,6 +80,12 @@ class EmailService {
 
     const itemsSubtotal = (order.items || []).reduce((acc, item) => acc + (parseFloat(item.product?.price || 0) * (item.quantity || 1)), 0);
     const shippingFee = Math.max(0, parseFloat(order.totalPrice || 0) - itemsSubtotal);
+    // ส่วนลดโปรโมชั่นที่ใช้ไปตอนสั่ง — คิดจากราคาเต็มที่บันทึกไว้คู่กับราคาที่ขายจริง
+    const discountTotal = (order.items || []).reduce(
+      (acc, item) => acc + ((parseFloat(item.product?.originalPrice ?? item.product?.price ?? 0) - parseFloat(item.product?.price || 0)) * (item.quantity || 1)),
+      0
+    );
+    const grossSubtotal = itemsSubtotal + discountTotal;
 
     // Collect unique pickup locations for in-stock items
     const pickupLocations = [...new Set(inStockItems.map(item => item.product?.pickup_location || item.product?.pickupLocation).filter(Boolean))];
@@ -438,9 +444,16 @@ class EmailService {
                 <tr>
                   <td style="font-size: 12px; color: #888888; padding: 6px 0;">ยอดรวมค่าสินค้า (Subtotal):</td>
                   <td style="font-size: 12px; color: #E5E5E5; text-align: right; padding: 6px 0;">
-                    ฿${itemsSubtotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                    ฿${grossSubtotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
+                ${discountTotal > 0 ? `
+                <tr>
+                  <td style="font-size: 12px; color: #888888; padding: 6px 0;">ส่วนลดโปรโมชั่น (Discount):</td>
+                  <td style="font-size: 12px; color: #4CD964; text-align: right; padding: 6px 0;">
+                    -฿${discountTotal.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>` : ""}
                 <tr>
                   <td style="font-size: 12px; color: #888888; padding: 6px 0;">ค่าจัดส่ง (Shipping Fee):</td>
                   <td style="font-size: 12px; color: #E5E5E5; text-align: right; padding: 6px 0;">

@@ -12,7 +12,7 @@ interface ProductPreviewCardProps {
  * ---------------------------------------------------------------------------
  * การ์ดนี้จำลองสิ่งที่ลูกค้าจะเห็นบนตู้ ขณะที่แอดมินยังกรอกฟอร์มอยู่
  * มีไว้เพื่อตอบคำถามเดียว: "กรอกแบบนี้แล้วลูกค้าเห็นอะไร"
- * สีชมพูปรากฏเฉพาะของที่ยังไม่พร้อมส่ง — พรีออเดอร์และการจำกัดสิทธิ์ซื้อ
+ * สีเหลืองปรากฏเฉพาะของที่ยังไม่พร้อมส่ง — พรีออเดอร์และการจำกัดสิทธิ์ซื้อ
  */
 export function ProductPreviewCard({ form, categories }: ProductPreviewCardProps) {
   const cover = resolveUploadUrl(form.images?.[0] ?? form.image, "products");
@@ -41,7 +41,7 @@ export function ProductPreviewCard({ form, categories }: ProductPreviewCardProps
           )}
 
           {isPreOrder && (
-            <span className="absolute top-3 right-3 rounded-full bg-bo-pink px-3 py-1 text-xs font-semibold text-white shadow-sm">
+            <span className="absolute top-3 right-3 rounded-full bg-bo-preorder px-3 py-1 text-xs font-semibold text-white shadow-sm">
               Pre-order
             </span>
           )}
@@ -65,7 +65,7 @@ export function ProductPreviewCard({ form, categories }: ProductPreviewCardProps
           </p>
 
           {form.purchaseLimit !== "" && Number(form.purchaseLimit) > 0 && (
-            <span className="mt-1 w-max rounded-full bg-bo-pink-soft px-2.5 py-1 text-[11px] font-semibold text-bo-pink">
+            <span className="mt-1 w-max rounded-full bg-bo-preorder-soft px-2.5 py-1 text-[11px] font-semibold text-amber-800">
               จำกัดการสั่งซื้อ {form.purchaseLimit} ชิ้น / รายการ
             </span>
           )}

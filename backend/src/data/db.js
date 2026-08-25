@@ -261,12 +261,14 @@ export const initDb = async () => {
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_option VARCHAR(50) DEFAULT 'combined';
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway_ref VARCHAR(255) DEFAULT NULL;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_total NUMERIC(10, 2) DEFAULT 0;
         `);
 
         // Alter order_items table
         await pool.query(`
             ALTER TABLE order_items ADD COLUMN IF NOT EXISTS fulfillment_status VARCHAR(50) DEFAULT 'pending';
             ALTER TABLE order_items ADD COLUMN IF NOT EXISTS fulfilled_at TIMESTAMP;
+            ALTER TABLE order_items ADD COLUMN IF NOT EXISTS original_unit_price NUMERIC(10, 2);
         `);
 
         // Insert default shipping settings if not exist
@@ -278,6 +280,26 @@ export const initDb = async () => {
         // Alter products table to add category_id FK
         await pool.query(`
             ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id VARCHAR(100) REFERENCES categories(id) ON DELETE SET NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_type VARCHAR(10) DEFAULT 'percent';
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_value NUMERIC(10, 2) DEFAULT 0;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_start_date DATE;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_end_date DATE;
+        `);
+
+        // Migrate products.discount_percent -> discount_type/discount_value
+        await pool.query(`
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'products' AND column_name = 'discount_percent'
+                ) THEN
+                    UPDATE products
+                    SET discount_type = 'percent', discount_value = discount_percent
+                    WHERE discount_percent > 0 AND (discount_value IS NULL OR discount_value = 0);
+                    ALTER TABLE products DROP COLUMN discount_percent;
+                END IF;
+            END $$;
         `);
 
         // Migrate products.category to products.category_id

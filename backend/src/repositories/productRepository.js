@@ -1,5 +1,6 @@
 // backend/src/repositories/productRepository.js
 import pool from "../data/db.js";
+import { computePricing, toDateKey } from "../services/promotionService.js";
 
 class ProductRepository {
   /**
@@ -31,7 +32,11 @@ class ProductRepository {
     return imagesMap;
   }
 
-  async getProducts({ category, search } = {}) {
+  /**
+   * @param {object} params
+   * @param {boolean} [params.applyPromotion=true] false = คืนราคาเต็มจาก DB (สำหรับหน้าแอดมินที่ต้องเขียนราคากลับ)
+   */
+  async getProducts({ category, search, applyPromotion = true } = {}) {
     try {
       let query = `
         SELECT DISTINCT p.* 
@@ -104,7 +109,12 @@ class ProductRepository {
           category: row.category_id,
           image: fallbackImage,
           images: imagesList.slice(0, 5),
-          price: parseFloat(row.price),
+          ...computePricing(parseFloat(row.price), row, applyPromotion),
+          // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง)
+          promotionType: row.discount_type === "amount" ? "amount" : "percent",
+          promotionValue: parseFloat(row.discount_value) || 0,
+          promotionStartDate: toDateKey(row.discount_start_date),
+          promotionEndDate: toDateKey(row.discount_end_date),
           quantity: row.stock,
           pickupLocation: row.pickup_location,
           preorderReleaseDate: row.preorder_release_date,
@@ -123,8 +133,8 @@ class ProductRepository {
    * Fetch all products from the PostgreSQL database
    * @returns {Promise<Array>}
    */
-  async getAll() {
-    return this.getProducts({ category: "all" });
+  async getAll(options = {}) {
+    return this.getProducts({ category: "all", ...options });
   }
 
   /**
@@ -153,11 +163,11 @@ class ProductRepository {
     const primaryImg = rawImages.length > 0 ? rawImages[0] : (p.image || null);
 
     const query = `
-      INSERT INTO products (name, description, price, stock, category_id, image, promotion, pickup_location, status, preorder_release_date, purchase_limit, additional_info)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      INSERT INTO products (name, description, price, stock, category_id, image, promotion, pickup_location, status, preorder_release_date, purchase_limit, additional_info, discount_type, discount_value, discount_start_date, discount_end_date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null];
+    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, p.promotionType === 'amount' ? 'amount' : 'percent', p.promotionValue || 0, p.promotionStartDate || null, p.promotionEndDate || null];
     try {
       const res = await pool.query(query, values);
       const newProduct = res.rows[0];
@@ -199,11 +209,11 @@ class ProductRepository {
 
     const query = `
       UPDATE products 
-      SET name = $1, description = $2, price = $3, stock = $4, category_id = $5, image = COALESCE($6, image), promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11, additional_info = $12
-      WHERE id = $13
+      SET name = $1, description = $2, price = $3, stock = $4, category_id = $5, image = COALESCE($6, image), promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11, additional_info = $12, discount_type = $13, discount_value = $14, discount_start_date = $15, discount_end_date = $16
+      WHERE id = $17
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, id];
+    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, p.promotionType === 'amount' ? 'amount' : 'percent', p.promotionValue || 0, p.promotionStartDate || null, p.promotionEndDate || null, id];
     try {
       const res = await pool.query(query, values);
       if (res.rows.length === 0) return null;
@@ -313,7 +323,12 @@ class ProductRepository {
       const res = await pool.query(query);
       return res.rows.map(row => ({
         ...row,
-        price: parseFloat(row.price),
+        ...computePricing(parseFloat(row.price), row),
+        // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง)
+        promotionType: row.discount_type === "amount" ? "amount" : "percent",
+        promotionValue: parseFloat(row.discount_value) || 0,
+        promotionStartDate: toDateKey(row.discount_start_date),
+        promotionEndDate: toDateKey(row.discount_end_date),
         quantity: row.stock,
         pickupLocation: row.pickup_location,
         preorderReleaseDate: row.preorder_release_date,
@@ -338,7 +353,12 @@ class ProductRepository {
       const row = res.rows[0];
       return {
         ...row,
-        price: parseFloat(row.price),
+        ...computePricing(parseFloat(row.price), row),
+        // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง)
+        promotionType: row.discount_type === "amount" ? "amount" : "percent",
+        promotionValue: parseFloat(row.discount_value) || 0,
+        promotionStartDate: toDateKey(row.discount_start_date),
+        promotionEndDate: toDateKey(row.discount_end_date),
         quantity: row.stock,
         pickupLocation: row.pickup_location,
         preorderReleaseDate: row.preorder_release_date,

@@ -12,8 +12,8 @@ export { Badge, CategoryTag } from "./Badge";
 export { Button, IconButton } from "./Button";
 export { Card, CardHeader, PageHeading } from "./Card";
 export { StatCard } from "./StatCard";
-export { StockBar } from "./StockBar";
-export { getStockLevel, LOW_STOCK_THRESHOLD, SHELF_CAPACITY } from "./stock";
+export { StockCell } from "./StockCell";
+export { getStockLevel, LOW_STOCK_THRESHOLD } from "./stock";
 export type { StockLevel } from "./stock";
 export { TableShell, Table, THead, Th, TBody, Tr, Td } from "./Table";
 export {

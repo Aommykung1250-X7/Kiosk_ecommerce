@@ -537,7 +537,7 @@ export default function ReportManagement() {
                                 product.stock <= 0
                                   ? "danger"
                                   : product.stock <= 5
-                                    ? "warning"
+                                    ? "lowstock"
                                     : "neutral"
                               }
                             >

@@ -22,9 +22,11 @@
   --color-app-bg: #F8F8F8;        /* พื้นหลังแอป (ใช้ 3 ครั้ง) */
 
   /* -------------------------------------------------------------------------
-     Back-office (Admin portal) palette — แยกจากสีแบรนด์ของตู้ Kiosk
-     หน้าตู้ยังใช้เหลือง #F8C032 เหมือนเดิม ส่วนหลังบ้านใช้ชุดสีตาม mockup:
-     กรมท่าเข้ม + ฟ้าน้ำเงินสำหรับปุ่ม/แท็บ + ชมพูสำหรับ "ของที่ยังไม่อยู่บนชั้น"
+     Back-office (Admin portal) palette — กรมท่าเข้ม + ฟ้าน้ำเงินสำหรับปุ่ม/แท็บ
+     สองสีสถานะที่ต้องจำ:
+       preorder เหลือง #F5A623 — ตรงกับแท็ก PRE-ORDER ที่ลูกค้าเห็นบนตู้เป๊ะๆ
+                                  แอดมินจะได้ไม่ต้องจำสองสีสำหรับของชิ้นเดียวกัน
+       lowstock ชมพู  #FF2E8E — "ใกล้หมด ต้องเติมก่อนลูกค้ากดสั่งไม่ได้"
   ------------------------------------------------------------------------- */
   --color-bo-ink: #171B2E;         /* พื้นแถบเมนูด้านซ้าย */
   --color-bo-ink-2: #232941;       /* พื้นเมนูที่กำลังเลือก */
@@ -36,8 +38,10 @@
   --color-bo-accent: #2B6BF0;      /* สีหลักของปุ่ม/แท็บที่เลือก */
   --color-bo-accent-hover: #1E58D8;
   --color-bo-accent-soft: #EAF1FE;
-  --color-bo-pink: #FF2E8E;        /* พรีออเดอร์ / จำกัดสิทธิ์การซื้อ เท่านั้น */
-  --color-bo-pink-soft: #FFEBF4;
+  --color-bo-preorder: #F5A623;    /* พรีออเดอร์ / จำกัดสิทธิ์การซื้อ เท่านั้น */
+  --color-bo-preorder-soft: #FEF3E2;
+  --color-bo-lowstock: #FF2E8E;    /* ใกล้หมด เท่านั้น ไม่ใช้กับคำเตือนทั่วไป */
+  --color-bo-lowstock-soft: #FFEBF4;
 
   --font-bo: "Anuphan", "Prompt", "Noto Sans Thai", sans-serif;
   --font-bo-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;

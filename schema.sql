@@ -39,6 +39,10 @@ CREATE TABLE products (
     stock INTEGER NOT NULL DEFAULT 0,
     image VARCHAR(255),
     promotion BOOLEAN DEFAULT FALSE,
+    discount_type VARCHAR(10) DEFAULT 'percent' CHECK(discount_type IN('percent', 'amount')),
+    discount_value NUMERIC(10, 2) DEFAULT 0,
+    discount_start_date DATE,
+    discount_end_date DATE,
     pickup_location VARCHAR(255),
     status VARCHAR(50) DEFAULT 'In Stock',
     views INTEGER DEFAULT 0,
@@ -105,7 +109,8 @@ CREATE TABLE orders (
     delivery_option VARCHAR(50) DEFAULT 'pickup',
     shipping_option VARCHAR(50) DEFAULT 'combined',
     payment_gateway_ref VARCHAR(255) DEFAULT NULL,
-    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL
+    customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL,
+    discount_total NUMERIC(10, 2) DEFAULT 0
 );
 
 -- 8. Order Items
@@ -115,6 +120,7 @@ CREATE TABLE order_items (
     product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
     product_name VARCHAR(255) NOT NULL,
     unit_price NUMERIC(10, 2) NOT NULL,
+    original_unit_price NUMERIC(10, 2),
     quantity INTEGER NOT NULL DEFAULT 1,
     product_status VARCHAR(50) DEFAULT 'In Stock',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
