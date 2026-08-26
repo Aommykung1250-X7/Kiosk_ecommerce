@@ -31,8 +31,8 @@ function KioskOrCheckout() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: "#161819",
-        color: "#FFFFFF",
+        backgroundColor: "#F8F8F8",
+        color: "#2B2B2B",
         fontFamily: "'Prompt', sans-serif",
         padding: "20px",
         textAlign: "center"
@@ -40,14 +40,15 @@ function KioskOrCheckout() {
         <div style={{
           width: "120px",
           height: "120px",
-          background: "linear-gradient(135deg, #FF6B00 0%, #FFA800 100%)",
+          backgroundColor: "#0E1B3E",
+          border: "3px solid #FABE2C",
           borderRadius: "50%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: "50px",
           marginBottom: "24px",
-          boxShadow: "0 8px 30px rgba(255, 107, 0, 0.4)"
+          boxShadow: "0 8px 30px rgba(14, 27, 62, 0.25)"
         }}>
           🖥️
         </div>
@@ -55,15 +56,13 @@ function KioskOrCheckout() {
           fontSize: "24px",
           fontWeight: "900",
           margin: "0 0 12px 0",
-          background: "linear-gradient(135deg, #FF6B00 0%, #FFA800 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent"
+          color: "#0E1B3E"
         }}>
           กรุณาสั่งซื้อสินค้าผ่านหน้าจอ Kiosk
         </h1>
         <p style={{
           fontSize: "14px",
-          color: "#AAAAAA",
+          color: "#6B7280",
           lineHeight: "1.6",
           maxWidth: "340px",
           margin: "0"
@@ -72,7 +71,7 @@ function KioskOrCheckout() {
         </p>
         <span style={{
           fontSize: "11px",
-          color: "#555555",
+          color: "#9CA3AF",
           marginTop: "40px"
         }}>
           DITC CAMT Kiosk e-Commerce
