@@ -1,6 +1,6 @@
 -- ล้างข้อมูลเก่าออกก่อนทำการใส่ข้อมูลตัวอย่างใหม่
 TRUNCATE TABLE products CASCADE;
-TRUNCATE TABLE users CASCADE;
+TRUNCATE TABLE users RESTART IDENTITY CASCADE;
 TRUNCATE TABLE categories CASCADE;
 
 -- ใส่ข้อมูลหมวดหมู่สินค้า 4 หมวดหมู่
@@ -59,6 +59,26 @@ SELECT setval('product_images_id_seq', (SELECT MAX(id) FROM product_images));
 
 -- ใส่ข้อมูลบัญชีผู้ใช้เริ่มต้น (รหัสผ่าน 123456)
 INSERT INTO users (username, password_hash, role, name) VALUES
-('admin', '$2b$10$bCKX1FDOYMqbA.TxZfNSa.H0TDfSM6YqgKzrQTR1rPdS.uMBSj0UO', 'admin', 'ระบบผู้ดูแลการขาย'),
-('staff1', '$2b$10$kRirdhfmxWlxsgss2ytmb.D/U.JiM9EL1Ie0vMU.eu/niw.BQsM9.', 'staff', 'พนักงานหน้าตู้ 1'),
-('staff2', '$2b$10$kRirdhfmxWlxsgss2ytmb.D/U.JiM9EL1Ie0vMU.eu/niw.BQsM9.', 'staff', 'พนักงานหน้าตู้ 2');
+('admin', '$2b$10$nMjLkA8KaMD5.E2hZvV5iO7C.zvPHICzvvO60iCWyeNFfALXqTdXS', 'admin', 'ระบบผู้ดูแลการขาย'),
+('staff1', '$2b$10$Qj2Aeb43IKAcXQmbF8iGT.MF0qAMR/JHd9u6kNn5OQj0t.LbDwxjS', 'staff', 'พนักงานหน้าตู้ 1'),
+('staff2', '$2b$10$JM93/jJKkahxscjrwNh5bOHJYIhiK9F1NZzb55no7grN2lkfYH5EG', 'staff', 'พนักงานหน้าตู้ 2');
+
+-- ค่าตั้งต้นของระบบ (เดิม initDb เป็นคนใส่ให้ตอน boot — ย้ายมาไว้ที่นี่จะได้ไม่ต้องพึ่ง initDb)
+INSERT INTO system_settings (key, value) VALUES
+('shipping_base_fee', '40.00'),
+('shipping_split_fee', '40.00'),
+('screensaver_master_enabled', 'true'),
+('screensaver_master_duration', '10'),
+('screensaver_featured_products', '[]'),
+('screensaver_main_image', 'main_screen.jpeg'),
+('popular_search_tags', '["น้ำดื่ม", "ชาเขียว", "เลย์", "KitKat", "แก้วน้ำ", "เสื้อ"]'),
+('contact_hotline', '02-123-4567 / 081-234-5678'),
+('contact_line_id', '@ditcsupport'),
+('contact_line_url', 'https://line.me/ti/p/@ditcsupport'),
+('contact_line_qr_image', ''),
+('contact_service_hours', 'เปิดบริการ 08:00 - 20:00 น.')
+ON CONFLICT (key) DO NOTHING;
+
+-- ตัวนับจำนวนครั้งที่ตู้ถูกปลุกใช้งาน (หน้ารายงานอ่านค่านี้)
+INSERT INTO kiosk_stats (key, value) VALUES ('session_wakeups', 0)
+ON CONFLICT (key) DO NOTHING;
