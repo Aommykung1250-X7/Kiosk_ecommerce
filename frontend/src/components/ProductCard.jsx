@@ -1,5 +1,4 @@
 import React from "react";
-import { TagIcon } from "@heroicons/react/24/solid";
 
 function CategoryPlaceholder({ category }) {
   return (
@@ -17,64 +16,60 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
   // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
   const isDiscounted = discountAmount > 0 && originalPrice > price;
-  // ลดเป็นบาทให้โชว์ "-฿50" ลดเป็นเปอร์เซ็นต์ให้โชว์ "-15%"
-  const discountLabel =
-    discountType === "amount"
-      ? `-฿${discountValue.toLocaleString("th-TH")}`
-      : `-${discountValue}%`;
 
-  // Subtitle category label
-  const getCategoryLabel = () => {
-    const cat = String(category || "").toLowerCase();
-    if (cat === "drinks") return "LOCAL EXPRESS";
-    if (cat === "snacks") return "LOCAL EXPRESS";
-    if (cat === "stationery") return "LOCAL EXPRESS";
-    if (cat === "souvenirs" || cat === "merchandise") return "LOCAL EXPRESS";
-    return "LOCAL EXPRESS";
+  const handleClick = () => {
+    if (!isOutOfStock && onSelectProduct) {
+      onSelectProduct(product);
+    }
   };
 
   return (
     <div
-      onClick={() => onSelectProduct(product)}
-      className="group cursor-pointer select-none flex flex-col w-full font-['DIN_Pro_Cond',_'Prompt',_sans-serif] transition-all"
+      onClick={handleClick}
+      className={`group select-none flex flex-col w-full font-['DIN_Pro_Cond',_'Prompt',_sans-serif] transition-all ${
+        isOutOfStock ? "cursor-not-allowed opacity-90" : "cursor-pointer"
+      }`}
     >
       {/* 1. Rounded Grey Image Box (มุมโค้ง 10px) */}
       <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[10px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
-        {/* Top-Right Badge matching mockup */}
-        {isOutOfStock ? (
-          <div className="absolute top-3 right-3 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
-            SOLD OUT
+        {/* Top-Left HOT NOW Badge */}
+        {isMostViewed && (
+          <div className="absolute top-2.5 left-0 z-10 bg-[#F85153] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-r-[3px] uppercase tracking-wider shadow-xs">
+            HOT NOW
           </div>
-        ) : isMostViewed ? (
-          /* Comic Speech Bubble HOT badge */
-          <div className="absolute top-3 right-3 z-10 select-none">
-            <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
-              <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'DIN Pro Cond', 'DIN Condensed', 'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
-            </svg>
-          </div>
-        ) : isDiscounted ? (
-          <div className="absolute top-3 right-3 z-10 bg-[#FF6B00] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
-            <TagIcon className="w-3 h-3 text-white" />
-            <span>PROMO</span>
-          </div>
-        ) : status === "Pre-Order" ? (
-          <div className="absolute top-3 right-3 z-10 bg-[#F5A623] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
-            PRE-ORDER
-          </div>
-        ) : (
-          <div className="absolute top-3 right-3 z-10 bg-[#1CD0A2] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
-            In-stock
+        )}
+
+        {/* Top-Right Status Badge (Hidden when sold out) */}
+        {!isOutOfStock && (
+          status === "Pre-Order" ? (
+            <div className="absolute top-2.5 right-2.5 z-10 bg-[#F5A623] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+              PRE-ORDER
+            </div>
+          ) : (
+            <div className="absolute top-2.5 right-2.5 z-10 bg-[#1CD0A2] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+              In-stock
+            </div>
+          )
+        )}
+
+        {/* Diagonal SOLD OUT Banner across the center when out of stock */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+            <div className="bg-[#EF4444] text-white text-sm sm:text-base font-black px-5 py-1.5 rounded-xl shadow-lg -rotate-12 tracking-widest uppercase border-2 border-white">
+              SOLD OUT
+            </div>
           </div>
         )}
 
         {/* Product Image */}
-        <div className={`w-full h-full flex items-center justify-center ${isOutOfStock ? "opacity-40 grayscale" : ""}`}>
+        <div className={`w-full h-full flex items-center justify-center ${isOutOfStock ? "opacity-35 grayscale" : ""}`}>
           {image && image.includes(".") ? (
             <img
               src={`/uploads/products/${image}`}
               alt={name}
-              className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-xs"
+              className={`max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-200 drop-shadow-xs ${
+                isOutOfStock ? "" : "group-hover:scale-105"
+              }`}
             />
           ) : (
             <CategoryPlaceholder category={category} />
@@ -84,11 +79,6 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
 
       {/* 2. Text Details Below Image */}
       <div className="flex flex-col mt-2 px-1 text-left">
-        {/* Subtitle */}
-        <span className="text-[10px] sm:text-[11px] font-normal text-gray-400 uppercase tracking-wider truncate">
-          {getCategoryLabel()}
-        </span>
-
         {/* Product Name */}
         <h3
           className="text-xs sm:text-[13px] font-normal text-gray-800 line-clamp-2 leading-snug mt-0.5 min-h-[2.2rem]"

@@ -144,18 +144,6 @@ export default function ProductDetailModal({
             <div className="absolute top-3.5 right-3.5 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
               SOLD OUT
             </div>
-          ) : isMostViewed ? (
-            <div className="absolute top-3.5 right-3.5 z-10 select-none">
-              <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
-                <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'DIN Pro Cond', 'DIN Condensed', 'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
-              </svg>
-            </div>
-          ) : isDiscounted ? (
-            <div className="absolute top-3.5 right-3.5 z-10 bg-[#FF6B00] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
-              <TagIcon className="w-3 h-3 text-white" />
-              <span>PROMO</span>
-            </div>
           ) : status === "Pre-Order" ? (
             <div className="absolute top-3.5 right-3.5 z-10 bg-[#F5A623] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
               PRE-ORDER

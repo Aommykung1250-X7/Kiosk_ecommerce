@@ -355,19 +355,94 @@ const cropAndCenterImage = (imageSource: Blob | File | string, paddingPercent = 
 };
 
 /**
- * Dual-Engine Background Removal AI Runner with Auto Crop & Center
+ * ทำความสะอาดขอบวัตถุและลบขอบสีขาวลอยรอบตัวสินค้า (Alpha Edge Despill & Smoothing)
+ */
+const refineAlphaMatte = (imageSource: Blob | File | string): Promise<Blob | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+
+    let urlToRevoke: string | null = null;
+    if (typeof imageSource === "string") {
+      img.src = imageSource;
+    } else {
+      urlToRevoke = URL.createObjectURL(imageSource);
+      img.src = urlToRevoke;
+    }
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          return resolve(null);
+        }
+
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const a = data[i + 3];
+          if (a > 0 && a < 235) {
+            const factor = a / 255;
+            data[i] = Math.round(data[i] * factor);
+            data[i + 1] = Math.round(data[i + 1] * factor);
+            data[i + 2] = Math.round(data[i + 2] * factor);
+            if (a < 25) {
+              data[i + 3] = 0;
+            }
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+
+        canvas.toBlob((blob) => {
+          if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+          resolve(blob);
+        }, "image/png");
+      } catch (err) {
+        console.error("refineAlphaMatte error:", err);
+        if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+      resolve(null);
+    };
+  });
+};
+
+/**
+ * High-Precision AI Background Removal Runner (Full Float32 Model + Despill & Auto Crop/Center)
  */
 const processBackgroundRemoval = async (imageSource: File | Blob | string): Promise<Blob | null> => {
   let resultBlob: Blob | null = null;
   try {
     const blob = await removeBackground(imageSource, {
-      model: "isnet_fp16",
+      model: "isnet", // High-Precision Full Float32 neural network model
+      device: "gpu",  // Hardware accelerated GPU inference
       publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
       debug: false
     });
     if (blob && blob.size > 100) resultBlob = blob;
   } catch (aiErr) {
-    console.warn("AI removeBackground failed, using fallback:", aiErr);
+    console.warn("High-precision AI removeBackground failed, retrying with fp16 fallback:", aiErr);
+    try {
+      const fallbackAiBlob = await removeBackground(imageSource, {
+        model: "isnet_fp16",
+        publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
+        debug: false
+      });
+      if (fallbackAiBlob && fallbackAiBlob.size > 100) resultBlob = fallbackAiBlob;
+    } catch (retryErr) {
+      console.warn("AI removeBackground retry failed, using flood-fill fallback:", retryErr);
+    }
   }
 
   if (!resultBlob) {
@@ -379,10 +454,12 @@ const processBackgroundRemoval = async (imageSource: File | Blob | string): Prom
     }
   }
 
-  // Auto-Crop & Center non-transparent product object
+  // Auto-Crop & Center non-transparent product object with Alpha Edge Despill
   if (resultBlob) {
     try {
-      const croppedBlob = await cropAndCenterImage(resultBlob);
+      const refinedBlob = await refineAlphaMatte(resultBlob);
+      const targetBlob = refinedBlob || resultBlob;
+      const croppedBlob = await cropAndCenterImage(targetBlob);
       if (croppedBlob) return croppedBlob;
     } catch (cropErr) {
       console.warn("cropAndCenterImage failed, using original uncropped blob:", cropErr);

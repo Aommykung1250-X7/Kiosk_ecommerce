@@ -270,42 +270,33 @@ export default function Screensaver({ onWake }) {
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 sm:gap-2.5 w-full">
+          <div className="grid grid-cols-4 gap-2.5 sm:gap-3 w-full">
             {(featuredProducts.length > 0
               ? featuredProducts
               : [1, 2, 3, 4]
             ).map((item, idx) => {
               const isObj = typeof item === "object";
               const name = isObj ? item.name : `สินค้า ${idx + 1}`;
-              const price = isObj ? parseFloat(item.price).toLocaleString("th-TH") : "20";
               const image = isObj && item.image ? item.image : "";
 
               return (
                 <div
                   key={isObj ? item.id : idx}
-                  className="bg-[#F8F9FA] rounded-[20px] p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
+                  className="aspect-square bg-[#F4F5F7] rounded-[20px] p-2.5 flex items-center justify-center shadow-xs border border-slate-200/60 overflow-hidden relative"
                 >
-                  <div className="w-full h-11 sm:h-13 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden mb-1 border border-gray-100">
-                    {image ? (
-                      image.startsWith("http") || image.startsWith("/") || image.includes(".") ? (
-                        <img
-                          src={image.startsWith("http") || image.startsWith("/") ? image : `/uploads/products/${image}`}
-                          alt={name}
-                          className="h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-xl">🛍️</span>
-                      )
+                  {image ? (
+                    image.startsWith("http") || image.startsWith("/") || image.includes(".") ? (
+                      <img
+                        src={image.startsWith("http") || image.startsWith("/") ? image : `/uploads/products/${image}`}
+                        alt={name}
+                        className="w-full h-full max-w-[90%] max-h-[90%] object-contain drop-shadow-xs transition-transform duration-200 hover:scale-105"
+                      />
                     ) : (
-                      <span className="text-xl">🛍️</span>
-                    )}
-                  </div>
-                  <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-800 line-clamp-1 w-full leading-tight">
-                    {name}
-                  </h4>
-                  <p className="text-[10px] sm:text-[11px] font-black text-[#E53935] mt-0.5">
-                    ฿{price}
-                  </p>
+                      <span className="text-2xl">🛍️</span>
+                    )
+                  ) : (
+                    <span className="text-2xl">🛍️</span>
+                  )}
                 </div>
               );
             })}
