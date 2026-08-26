@@ -361,7 +361,7 @@ export default function OrderQueue() {
       }
     >
       <Card className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <SearchInput
             className="flex-1"
             value={search}
@@ -370,11 +370,12 @@ export default function OrderQueue() {
             aria-label="ค้นหาคำสั่งซื้อ"
           />
 
-          {/* ช่องวันที่อยู่บน ปุ่มลัดอยู่ล่าง — กดลัดแล้วเห็นวันที่ด้านบนเปลี่ยนตามทันที */}
-          <div className="flex flex-col gap-2 min-w-[220px]">
+          {/* ช่องใส่วันที่อยู่ซ้าย และปุ่มเลือกวันด่วน (วันนี้, เมื่อวาน, ทุกวัน) อยู่ถัดมาขวามือในบรรทัดเดียวกัน */}
+          <div className="flex items-center flex-nowrap shrink-0 gap-2.5">
             <DatePicker
               value={selectedDate}
               onChange={setSelectedDate}
+              className="w-[155px] sm:w-[165px]"
             />
 
             <SegmentedControl<DatePreset | "custom">
