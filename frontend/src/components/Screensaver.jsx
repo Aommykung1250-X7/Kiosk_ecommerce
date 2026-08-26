@@ -1,12 +1,18 @@
 // src/components/Screensaver.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ShoppingCartIcon, QuestionMarkCircleIcon, SparklesIcon } from "@heroicons/react/24/solid";
+import { resolveUploadUrl } from "./admin/ui/format";
+
+const FEATURED_SLOTS = 4;
 
 export default function Screensaver({ onWake }) {
   const [language, setLanguage] = useState("TH");
-  const [slides, setSlides] = useState([]);
+  const [ads, setAds] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [mainImage, setMainImage] = useState("");
+  const [masterEnabled, setMasterEnabled] = useState(true);
+  const [masterDuration, setMasterDuration] = useState(10);
   const [contactInfo, setContactInfo] = useState({
     website: "www.camt.cmu.ac.th",
     facebook: "CAMT Chiang Mai University",
@@ -19,24 +25,36 @@ export default function Screensaver({ onWake }) {
       fetch("/api/screensavers/active").then((res) => (res.ok ? res.json() : [])).catch(() => []),
       fetch("/api/screensavers/config").then((res) => (res.ok ? res.json() : null)).catch(() => null),
       fetch("/api/settings/contact").then((res) => (res.ok ? res.json() : null)).catch(() => null),
-    ]).then(([ads, config, contact]) => {
-      if (Array.isArray(ads) && ads.length > 0) {
-        setSlides(ads);
+    ]).then(([adList, config, contact]) => {
+      if (Array.isArray(adList) && adList.length > 0) {
+        setAds(adList);
       }
 
-      if (config && Array.isArray(config.featuredProducts) && config.featuredProducts.length > 0) {
-        setFeaturedProducts(config.featuredProducts.slice(0, 4));
+      if (config) {
+        setMainImage(config.mainImage || "");
+        setMasterEnabled(config.masterEnabled !== false);
+        setMasterDuration(config.masterDuration || 10);
+      }
+
+      // backend เติมสินค้าขายดีให้ครบ 4 ช่องมาแล้วใน displayProducts
+      const configured =
+        (config && Array.isArray(config.displayProducts) && config.displayProducts) ||
+        (config && Array.isArray(config.featuredProducts) && config.featuredProducts) ||
+        [];
+
+      if (configured.length > 0) {
+        setFeaturedProducts(configured.slice(0, FEATURED_SLOTS));
       } else {
-        // Fallback to fetch bestsellers if no featured products configured
+        // Fallback ฝั่ง client เฉพาะกรณีเรียก config ไม่สำเร็จเลย
         fetch("/api/products/bestsellers")
           .then((res) => (res.ok ? res.json() : []))
           .then((bData) => {
             if (Array.isArray(bData) && bData.length > 0) {
-              setFeaturedProducts(bData.slice(0, 4));
+              setFeaturedProducts(bData.slice(0, FEATURED_SLOTS));
             } else {
               fetch("/api/products")
                 .then((r) => (r.ok ? r.json() : []))
-                .then((pData) => setFeaturedProducts((pData || []).slice(0, 4)))
+                .then((pData) => setFeaturedProducts((pData || []).slice(0, FEATURED_SLOTS)))
                 .catch(() => {});
             }
           })
@@ -52,6 +70,20 @@ export default function Screensaver({ onWake }) {
       }
     });
   }, []);
+
+  // รูปหลักของหน้าจอหลักเป็นสไลด์แรกของรอบ แล้วสลับไปสื่อโฆษณาต่อ
+  const slides = useMemo(() => {
+    const mainSlide =
+      masterEnabled && mainImage
+        ? [{ id: "main-screen", mediaUrl: mainImage, title: "DITC STORE", duration: masterDuration }]
+        : [];
+    return [...mainSlide, ...ads];
+  }, [masterEnabled, mainImage, masterDuration, ads]);
+
+  // กันกรณี index ค้างเกินความยาวรอบใหม่หลังโหลด config เสร็จ
+  useEffect(() => {
+    setCurrentSlideIndex(0);
+  }, [slides.length]);
 
   // Automatic Carousel timer for advertisement area
   useEffect(() => {
@@ -207,12 +239,7 @@ export default function Screensaver({ onWake }) {
             /* Active Screensaver / Promotional Ad */
             <div className="w-full h-full relative">
               <img
-                src={
-                  currentSlide.mediaUrl.startsWith("http") ||
-                  currentSlide.mediaUrl.startsWith("blob")
-                    ? currentSlide.mediaUrl
-                    : `/uploads/screensavers/${currentSlide.mediaUrl}`
-                }
+                src={resolveUploadUrl(currentSlide.mediaUrl, "screensavers") ?? ""}
                 alt={currentSlide.title || "Advertisement"}
                 className="w-full h-full object-cover transition-opacity duration-700"
               />
@@ -271,44 +298,51 @@ export default function Screensaver({ onWake }) {
           </div>
 
           <div className="grid grid-cols-4 gap-2 sm:gap-2.5 w-full">
-            {(featuredProducts.length > 0
-              ? featuredProducts
-              : [1, 2, 3, 4]
-            ).map((item, idx) => {
-              const isObj = typeof item === "object";
-              const name = isObj ? item.name : `สินค้า ${idx + 1}`;
-              const price = isObj ? parseFloat(item.price).toLocaleString("th-TH") : "20";
-              const image = isObj && item.image ? item.image : "";
+            {/* วาดครบ 4 ช่องเสมอ ไม่ให้เหลือช่องว่างเวลาเลือกสินค้าไม่ครบ */}
+            {Array.from({ length: FEATURED_SLOTS }, (_, idx) => featuredProducts[idx] ?? null).map(
+              (item, idx) => {
+                // ช่องเปล่าจะเกิดเฉพาะกรณีสินค้าในระบบมีน้อยกว่า 4 ชิ้นจริงๆ
+                if (!item) {
+                  return (
+                    <div
+                      key={`empty-${idx}`}
+                      className="bg-[#F8F9FA]/60 rounded-[20px] p-2 border border-dashed border-gray-200 flex flex-col items-center justify-center text-center min-h-[74px] sm:min-h-[84px]"
+                    >
+                      <span className="text-xl opacity-30">🛍️</span>
+                    </div>
+                  );
+                }
 
-              return (
-                <div
-                  key={isObj ? item.id : idx}
-                  className="bg-[#F8F9FA] rounded-[20px] p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
-                >
-                  <div className="w-full h-11 sm:h-13 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden mb-1 border border-gray-100">
-                    {image ? (
-                      image.startsWith("http") || image.startsWith("/") || image.includes(".") ? (
-                        <img
-                          src={image.startsWith("http") || image.startsWith("/") ? image : `/uploads/products/${image}`}
-                          alt={name}
-                          className="h-full object-contain"
-                        />
+                const name = item.name;
+                const price = parseFloat(item.price).toLocaleString("th-TH");
+                // ค่า image ที่ไม่ใช่ URL และไม่มีนามสกุลไฟล์ ถือว่าใช้ไม่ได้ (คงพฤติกรรมเดิม)
+                const rawImage = item.image || "";
+                const usableImage =
+                  rawImage.startsWith("http") || rawImage.startsWith("/") || rawImage.includes(".");
+                const imageUrl = usableImage ? resolveUploadUrl(rawImage, "products") : null;
+
+                return (
+                  <div
+                    key={item.id ?? idx}
+                    className="bg-[#F8F9FA] rounded-[20px] p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
+                  >
+                    <div className="w-full h-11 sm:h-13 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden mb-1 border border-gray-100">
+                      {imageUrl ? (
+                        <img src={imageUrl} alt={name} className="h-full object-contain" />
                       ) : (
                         <span className="text-xl">🛍️</span>
-                      )
-                    ) : (
-                      <span className="text-xl">🛍️</span>
-                    )}
+                      )}
+                    </div>
+                    <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-800 line-clamp-1 w-full leading-tight">
+                      {name}
+                    </h4>
+                    <p className="text-[10px] sm:text-[11px] font-black text-[#E53935] mt-0.5">
+                      ฿{price}
+                    </p>
                   </div>
-                  <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-800 line-clamp-1 w-full leading-tight">
-                    {name}
-                  </h4>
-                  <p className="text-[10px] sm:text-[11px] font-black text-[#E53935] mt-0.5">
-                    ฿{price}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
           </div>
         </div>
 

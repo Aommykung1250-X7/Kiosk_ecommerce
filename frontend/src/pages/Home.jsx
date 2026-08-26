@@ -124,7 +124,7 @@ export default function Home() {
   useEffect(() => {
     let idleTimer;
     // ตัวอย่าง: 30 * 1000 (30 วินาที), 60 * 1000 (1 นาที), 120 * 1000 (2 นาที)
-    const timeoutDuration = 240 * 1000; // 24 วินาที (0.4 นาที)
+    const timeoutDuration = 240 * 1000; // 240 วินาที (4 นาที)
 
     const resetTimer = () => {
       clearTimeout(idleTimer);

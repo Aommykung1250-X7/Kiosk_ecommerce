@@ -168,6 +168,7 @@ export const initDb = async () => {
             ('screensaver_master_enabled', 'true'),
             ('screensaver_master_duration', '10'),
             ('screensaver_featured_products', '[]'),
+            ('screensaver_main_image', 'main_screen.jpeg'),
             ('popular_search_tags', '["น้ำดื่ม", "ชาเขียว", "เลย์", "KitKat", "แก้วน้ำ", "เสื้อ"]'),
             ('contact_hotline', '02-123-4567 / 081-234-5678'),
             ('contact_line_id', '@ditcsupport'),

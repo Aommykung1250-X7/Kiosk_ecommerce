@@ -6,6 +6,8 @@ interface PlaylistTimelineProps {
   screensavers: Screensaver[];
   masterEnabled: boolean;
   masterDuration: number;
+  /** ชื่อไฟล์รูปหลักของหน้าจอหลัก ใช้เป็นรูปตัวอย่างของลำดับที่ 1 */
+  mainImage?: string;
 }
 
 /**
@@ -19,6 +21,7 @@ export function PlaylistTimeline({
   screensavers,
   masterEnabled,
   masterDuration,
+  mainImage,
 }: PlaylistTimelineProps) {
   const activeSlides = screensavers
     .filter((item) => item.isActive)
@@ -32,7 +35,7 @@ export function PlaylistTimeline({
             title: "หน้าจอหลัก",
             caption: "นาฬิกา + สินค้าแนะนำ",
             duration: masterDuration,
-            mediaUrl: null as string | null,
+            mediaUrl: (mainImage || null) as string | null,
             master: true,
           },
         ]
@@ -98,17 +101,17 @@ export function PlaylistTimeline({
 
               <div className={cn("flex flex-1 items-center gap-3", !isLast && "pb-4")}>
                 <div className="h-11 w-16 shrink-0 overflow-hidden rounded-lg border border-bo-line bg-slate-100">
-                  {segment.master ? (
-                    <div className="flex h-full w-full items-center justify-center bg-bo-ink">
-                      <MonitorPlay className="h-4 w-4 text-white/70" />
-                    </div>
-                  ) : cover ? (
+                  {cover ? (
                     <img
                       src={cover}
                       alt=""
                       loading="lazy"
                       className="h-full w-full object-cover"
                     />
+                  ) : segment.master ? (
+                    <div className="flex h-full w-full items-center justify-center bg-bo-ink">
+                      <MonitorPlay className="h-4 w-4 text-white/70" />
+                    </div>
                   ) : null}
                 </div>
 

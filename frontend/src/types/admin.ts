@@ -210,8 +210,13 @@ export interface Screensaver {
 export interface ScreensaverConfig {
   masterEnabled: boolean;
   masterDuration: number;
+  /** ชื่อไฟล์รูปหลักของหน้าจอหลัก (อยู่ใน uploads/screensavers) */
+  mainImage: string;
   featuredProductIds: number[];
+  /** เฉพาะสินค้าที่แอดมินเลือกเอง */
   featuredProducts: Product[];
+  /** สินค้าที่เติมสินค้าขายดีให้ครบ 4 ช่องแล้ว (ใช้บนหน้าจอตู้) */
+  displayProducts?: Product[];
 }
 
 /* --------------------------------------------------------------- Reports */

@@ -1,6 +1,10 @@
 import pool from "../data/db.js";
 import fs from "fs";
 import path from "path";
+import productService from "../services/productService.js";
+
+const FEATURED_SLOTS = 4;
+const DEFAULT_MAIN_IMAGE = "main_screen.jpeg";
 
 class ScreensaverController {
   /**
@@ -156,9 +160,11 @@ class ScreensaverController {
       const enabledRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_master_enabled'");
       const durationRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_master_duration'");
       const productsRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_featured_products'");
+      const mainImageRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_main_image'");
 
       const masterEnabled = enabledRes.rows.length > 0 ? enabledRes.rows[0].value === 'true' : true;
       const masterDuration = durationRes.rows.length > 0 ? parseInt(durationRes.rows[0].value, 10) || 10 : 10;
+      const mainImage = (mainImageRes.rows[0]?.value || "").trim() || DEFAULT_MAIN_IMAGE;
       let featuredProductIds = [];
       if (productsRes.rows.length > 0 && productsRes.rows[0].value) {
         try {
@@ -167,25 +173,40 @@ class ScreensaverController {
           featuredProductIds = [];
         }
       }
+      if (!Array.isArray(featuredProductIds)) featuredProductIds = [];
 
-      let featuredProducts = [];
-      if (Array.isArray(featuredProductIds) && featuredProductIds.length > 0) {
-        const productQuery = await pool.query(
-          "SELECT id, name, price, image, category_id AS category FROM products WHERE id = ANY($1::int[])",
-          [featuredProductIds]
-        );
-        // Order products according to featuredProductIds order
-        const map = new Map(productQuery.rows.map(p => [Number(p.id), p]));
-        featuredProducts = featuredProductIds
-          .map(id => map.get(Number(id)))
-          .filter(Boolean);
-      }
+      // ดึงสินค้าทั้งหมดที่เรียงตามยอดขายมาแล้วครั้งเดียว ใช้เป็นทั้งแหล่งของสินค้าที่แอดมิน
+      // เลือกไว้และสินค้าขายดีที่เอามาเติมช่องว่าง เพื่อให้ราคา (ที่คิดส่วนลดแล้ว) สอดคล้องกัน
+      const ranked = await productService.getBestSellers();
+      const shape = (p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image: p.image,
+        category: p.category_id ?? p.category ?? null
+      });
+
+      const byId = new Map(ranked.map(p => [Number(p.id), p]));
+      // เรียงตามลำดับที่แอดมินเลือก ตัด id ซ้ำและสินค้าที่ถูกลบไปแล้วออก
+      const featuredProducts = [...new Set(featuredProductIds.map(Number))]
+        .map(id => byId.get(id))
+        .filter(Boolean)
+        .map(shape);
+
+      // เติมช่องที่เหลือด้วยสินค้าขายดีที่ยังไม่ถูกเลือก ให้ครบ 4 ช่องเสมอ
+      const pickedIds = new Set(featuredProducts.map(p => Number(p.id)));
+      const autoFilled = ranked
+        .filter(p => !pickedIds.has(Number(p.id)))
+        .slice(0, Math.max(0, FEATURED_SLOTS - featuredProducts.length))
+        .map(shape);
 
       return res.json({
         masterEnabled,
         masterDuration,
+        mainImage,
         featuredProductIds,
-        featuredProducts
+        featuredProducts,
+        displayProducts: [...featuredProducts, ...autoFilled]
       });
     } catch (err) {
       console.error("Error in getScreensaverConfig:", err);
@@ -199,7 +220,7 @@ class ScreensaverController {
    */
   async updateScreensaverConfig(req, res) {
     try {
-      const { masterEnabled, masterDuration, featuredProductIds } = req.body;
+      const { masterEnabled, masterDuration, featuredProductIds, mainImage } = req.body;
 
       if (masterEnabled !== undefined) {
         await pool.query(
@@ -219,6 +240,14 @@ class ScreensaverController {
         await pool.query(
           "INSERT INTO system_settings (key, value) VALUES ('screensaver_featured_products', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
           [JSON.stringify(featuredProductIds)]
+        );
+      }
+
+      // ส่งค่าว่างมา = รีเซ็ตกลับไปใช้รูป default
+      if (mainImage !== undefined) {
+        await pool.query(
+          "INSERT INTO system_settings (key, value) VALUES ('screensaver_main_image', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+          [String(mainImage || "").trim()]
         );
       }
 
