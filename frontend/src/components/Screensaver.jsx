@@ -298,34 +298,33 @@ export default function Screensaver({ onWake }) {
           </div>
 
           <div className="grid grid-cols-4 gap-2.5 sm:gap-3 w-full">
-            {(featuredProducts.length > 0
-              ? featuredProducts
-              : [1, 2, 3, 4]
-            ).map((item, idx) => {
-              const isObj = typeof item === "object";
-              const name = isObj ? item.name : `สินค้า ${idx + 1}`;
-              const image = isObj && item.image ? item.image : "";
-              const usableImage =
-                image && (image.startsWith("http") || image.startsWith("/") || image.includes("."));
-              const imageUrl = usableImage ? resolveUploadUrl(image, "products") : null;
+            {Array.from({ length: FEATURED_SLOTS }, (_, idx) => featuredProducts[idx] ?? null).map(
+              (item, idx) => {
+                const isObj = Boolean(item && typeof item === "object");
+                const name = isObj ? item.name : `สินค้า ${idx + 1}`;
+                const image = isObj && item.image ? item.image : "";
+                const usableImage =
+                  image && (image.startsWith("http") || image.startsWith("/") || image.includes("."));
+                const imageUrl = usableImage ? resolveUploadUrl(image, "products") : null;
 
-              return (
-                <div
-                  key={isObj ? item.id : idx}
-                  className="aspect-square bg-[#F4F5F7] rounded-[20px] p-2.5 flex items-center justify-center shadow-xs border border-slate-200/60 overflow-hidden relative"
-                >
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={name}
-                      className="w-full h-full max-w-[90%] max-h-[90%] object-contain drop-shadow-xs transition-transform duration-200 hover:scale-105"
-                    />
-                  ) : (
-                    <span className="text-2xl">🛍️</span>
-                  )}
-                </div>
-              );
-            })}
+                return (
+                  <div
+                    key={isObj ? (item.id ?? idx) : idx}
+                    className="aspect-square bg-[#F4F5F7] rounded-[20px] p-2.5 flex items-center justify-center shadow-xs border border-slate-200/60 overflow-hidden relative"
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={name}
+                        className="w-full h-full max-w-[90%] max-h-[90%] object-contain drop-shadow-xs transition-transform duration-200 hover:scale-105"
+                      />
+                    ) : (
+                      <span className="text-2xl opacity-40">🛍️</span>
+                    )}
+                  </div>
+                );
+              }
+            )}
           </div>
         </div>
 
