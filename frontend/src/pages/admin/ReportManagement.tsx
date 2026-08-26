@@ -198,7 +198,7 @@ export default function ReportManagement() {
       }
     >
       {/* ------------------------------------------------------------ ช่วงเวลา */}
-      <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <SegmentedControl<DatePreset>
           value={datePreset}
           onChange={setDatePreset}
@@ -207,7 +207,7 @@ export default function ReportManagement() {
           ).map((key) => ({ key, label: PRESET_LABEL[key] }))}
         />
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center flex-nowrap shrink-0 gap-2">
           <DatePicker
             aria-label="วันที่เริ่มต้น"
             value={startDate}
@@ -216,9 +216,9 @@ export default function ReportManagement() {
               setStartDate(val);
               setDatePreset("custom");
             }}
-            className="w-[170px]"
+            className="w-[145px] sm:w-[160px]"
           />
-          <span className="text-xs text-bo-muted font-medium">ถึง</span>
+          <span className="text-xs text-bo-muted font-medium shrink-0 px-0.5">ถึง</span>
           <DatePicker
             aria-label="วันที่สิ้นสุด"
             value={endDate}
@@ -228,7 +228,7 @@ export default function ReportManagement() {
               setEndDate(val);
               setDatePreset("custom");
             }}
-            className="w-[170px]"
+            className="w-[145px] sm:w-[160px]"
           />
         </div>
       </Card>

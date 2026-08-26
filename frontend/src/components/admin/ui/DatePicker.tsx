@@ -20,7 +20,7 @@ export function DatePicker({
   ...props
 }: DatePickerProps) {
   return (
-    <div className="relative flex items-center w-full">
+    <div className={`relative flex items-center shrink-0 ${className.includes("w-") ? "" : "w-full"}`}>
       <div className="absolute left-3 text-amber-600 pointer-events-none flex items-center justify-center">
         <CalendarIcon className="w-4 h-4" />
       </div>
