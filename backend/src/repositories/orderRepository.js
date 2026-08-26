@@ -125,12 +125,46 @@ class OrderRepository {
   }
 
   /**
+   * บันทึกข้อมูลพัสดุของรอบจัดส่งหนึ่ง ๆ — ถ้ามีแถวของ shipment_type นั้นอยู่แล้วให้อัปเดตทับ
+   * ไม่ใช่ INSERT แถวใหม่ (กันแถวซ้ำ และกันเคสแก้เลขพัสดุแล้วแถวเก่าชนะตอนอ่าน)
+   */
+  async upsertShipment(orderDbId, shipmentType, courier, trackingNumber, stampShippedAt = true) {
+    const existing = await pool.query(
+      `SELECT id FROM order_shipments WHERE order_id = $1 AND shipment_type = $2 ORDER BY id ASC LIMIT 1`,
+      [orderDbId, shipmentType]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `UPDATE order_shipments
+            SET courier_name = $1, tracking_number = $2, status = 'shipped'
+                ${stampShippedAt ? ", shipped_at = NOW()" : ""}
+          WHERE id = $3`,
+        [courier || null, trackingNumber || null, existing.rows[0].id]
+      );
+      return;
+    }
+
+    await pool.query(
+      `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status, shipped_at)
+       VALUES ($1, $2, $3, $4, 'shipped', ${stampShippedAt ? "NOW()" : "NULL"})`,
+      [orderDbId, shipmentType, courier || null, trackingNumber || null]
+    );
+  }
+
+  /**
    * Helper เพื่อแมปคอลัมน์จาก DB เป็นออบเจกต์ที่ใช้งานในระบบ
    */
   mapOrderRow(row, items = [], shipments = []) {
-    const combinedShip = shipments.find(s => s.shipment_type === 'combined');
-    const instockShip = shipments.find(s => s.shipment_type === 'instock') || combinedShip;
-    const preorderShip = shipments.find(s => s.shipment_type === 'preorder') || combinedShip;
+    // เลือกแถวล่าสุดของแต่ละรอบ (fetchShipmentsForOrders เรียง id ASC อยู่แล้ว)
+    // เผื่อกรณีข้อมูลเก่าที่มีแถวซ้ำค้างอยู่ใน DB จะได้ไม่โดนแถวเก่าทับ
+    const pickLatest = (type) => {
+      const matches = shipments.filter(s => s.shipment_type === type);
+      return matches.length > 0 ? matches[matches.length - 1] : undefined;
+    };
+    const combinedShip = pickLatest('combined');
+    const instockShip = pickLatest('instock') || combinedShip;
+    const preorderShip = pickLatest('preorder') || combinedShip;
 
     return {
       id: row.order_uuid,
@@ -361,20 +395,12 @@ class OrderRepository {
         const c1 = updates.courier1 || updates.courier;
         const t1 = updates.trackingNumber1 || updates.trackingNumber;
         if (c1 || t1) {
-          await pool.query(
-            `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status)
-             VALUES ($1, 'instock', $2, $3, 'shipped')`,
-            [orderRow.id, c1 || null, t1 || null]
-          );
+          await this.upsertShipment(orderRow.id, 'instock', c1, t1, false);
         }
       }
 
       if (updates.courier2 || updates.trackingNumber2) {
-        await pool.query(
-          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status)
-           VALUES ($1, 'preorder', $2, $3, 'shipped')`,
-          [orderRow.id, updates.courier2 || null, updates.trackingNumber2 || null]
-        );
+        await this.upsertShipment(orderRow.id, 'preorder', updates.courier2, updates.trackingNumber2, false);
       }
 
       const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
@@ -505,11 +531,7 @@ class OrderRepository {
       const orderRow = res.rows[0];
 
       if (courier || trackingNumber) {
-        await pool.query(
-          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status, shipped_at)
-           VALUES ($1, 'instock', $2, $3, 'shipped', NOW())`,
-          [orderRow.id, courier, trackingNumber]
-        );
+        await this.upsertShipment(orderRow.id, 'instock', courier, trackingNumber);
       }
 
       const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
@@ -547,11 +569,7 @@ class OrderRepository {
       const orderRow = res.rows[0];
 
       if (courier || trackingNumber) {
-        await pool.query(
-          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status, shipped_at)
-           VALUES ($1, 'preorder', $2, $3, 'shipped', NOW())`,
-          [orderRow.id, courier, trackingNumber]
-        );
+        await this.upsertShipment(orderRow.id, 'preorder', courier, trackingNumber);
       }
 
       const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
@@ -589,11 +607,7 @@ class OrderRepository {
       );
 
       if (courier || trackingNumber) {
-        await pool.query(
-          `INSERT INTO order_shipments (order_id, shipment_type, courier_name, tracking_number, status, shipped_at)
-           VALUES ($1, 'combined', $2, $3, 'shipped', NOW())`,
-          [orderRow.id, courier, trackingNumber]
-        );
+        await this.upsertShipment(orderRow.id, 'combined', courier, trackingNumber);
       }
 
       const itemsMap = await this.fetchItemsForOrders([orderRow.id]);

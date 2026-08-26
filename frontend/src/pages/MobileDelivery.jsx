@@ -128,7 +128,7 @@ export default function MobileDelivery() {
           setHasPreOrder(preOrderExist);
           setIsMixed(inStockExist && preOrderExist);
 
-          if (hasPreOrder) {
+          if (preOrderExist) {
             const releaseDates = items
               .filter(item => item.product?.status === "Pre-Order")
               .map(item => item.product?.preorderReleaseDate || item.product?.preorder_release_date)
@@ -863,17 +863,17 @@ export default function MobileDelivery() {
                           คาดว่าจะจัดส่งตั้งแต่วันที่: <strong>{preorderShippingDate}</strong>
                         </p>
                       )}
-                      {(order?.courier2 || order?.trackingNumber2 || order?.courier1 || order?.trackingNumber1) ? (
+                      {(order?.courier2 || order?.trackingNumber2) ? (
                         <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#FFE0B2] mt-1">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-bold text-[#A34000]">ขนส่ง: {order?.courier2 || order?.courier1 || "พัสดุทั่วไป"}</span>
-                            <span className="text-sm font-black text-gray-800 tracking-wide font-mono">{order?.trackingNumber2 || order?.trackingNumber1 || "รอดำเนินการ"}</span>
+                            <span className="text-[10px] font-bold text-[#A34000]">ขนส่ง: {order?.courier2 || "พัสดุทั่วไป"}</span>
+                            <span className="text-sm font-black text-gray-800 tracking-wide font-mono">{order?.trackingNumber2 || "รอดำเนินการ"}</span>
                           </div>
-                          {(order?.trackingNumber2 || order?.trackingNumber1) && (
+                          {order?.trackingNumber2 && (
                             <button
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText(order.trackingNumber2 || order.trackingNumber1);
+                                navigator.clipboard.writeText(order.trackingNumber2);
                                 notify.success("คัดลอกเลขติดตามพัสดุ Pre-Order เรียบร้อยแล้ว");
                               }}
                               className="px-3 py-1.5 bg-[#E65100] text-white text-[11px] font-bold rounded-lg hover:bg-[#D84315] transition-colors"
