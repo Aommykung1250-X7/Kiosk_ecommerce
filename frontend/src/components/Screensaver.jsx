@@ -45,14 +45,14 @@ export default function Screensaver({ onWake }) {
       if (configured.length > 0) {
         setFeaturedProducts(configured.slice(0, FEATURED_SLOTS));
       } else {
-        // Fallback ฝั่ง client เฉพาะกรณีเรียก config ไม่สำเร็จเลย
+        // Fallback ฝั่ง client เฉพาะกรณีเรียก config ไม่สำเร็จเลย ให้ดึงสินค้าขายดี (Best Sellers) เสมอ
         fetch("/api/products/bestsellers")
           .then((res) => (res.ok ? res.json() : []))
           .then((bData) => {
             if (Array.isArray(bData) && bData.length > 0) {
               setFeaturedProducts(bData.slice(0, FEATURED_SLOTS));
             } else {
-              fetch("/api/products")
+              fetch("/api/products/bestsellers")
                 .then((r) => (r.ok ? r.json() : []))
                 .then((pData) => setFeaturedProducts((pData || []).slice(0, FEATURED_SLOTS)))
                 .catch(() => {});

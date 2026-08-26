@@ -341,7 +341,7 @@ class ProductRepository {
       const query = `
         SELECT p.*
         FROM products p
-        ORDER BY p.sold_count DESC, p.views DESC, p.id ASC
+        ORDER BY p.sold_count DESC, p.sold_revenue DESC, p.views DESC, p.id ASC
       `;
       const res = await pool.query(query);
       return res.rows.map(row => ({
