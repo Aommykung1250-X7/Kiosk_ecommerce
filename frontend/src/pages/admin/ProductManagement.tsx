@@ -1106,7 +1106,8 @@ export default function ProductManagement() {
                   <Th className="w-[260px]">สินค้า</Th>
                   <Th>หมวดหมู่</Th>
                   <Th align="right">ราคา</Th>
-                  {/* เว้นช่องซ้ายเพิ่ม ไม่ให้ตัวเลขราคาที่ชิดขวาไปติดกับจำนวนคงเหลือที่ชิดซ้าย */}
+                  <Th align="right">ขายได้</Th>
+                  {/* เว้นช่องซ้ายเพิ่ม ไม่ให้ตัวเลขที่ชิดขวาไปติดกับจำนวนคงเหลือที่ชิดซ้าย */}
                   <Th className="pl-8">คงเหลือ</Th>
                   <Th>สถานะ</Th>
                   <Th align="center">โปรโมชั่น</Th>
@@ -1171,6 +1172,10 @@ export default function ProductManagement() {
 
                         <Td align="right" className="bo-nums font-semibold">
                           {formatBahtShort(product.price)}
+                        </Td>
+
+                        <Td align="right" className="bo-nums text-sm font-medium">
+                          {formatCount(product.soldCount)}
                         </Td>
 
                         <Td className="pl-8">

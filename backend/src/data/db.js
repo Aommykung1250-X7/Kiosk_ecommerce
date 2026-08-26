@@ -138,6 +138,41 @@ export const initDb = async () => {
             ALTER TABLE products ADD COLUMN IF NOT EXISTS views INTEGER DEFAULT 0;
         `);
 
+        // ยอดขายสะสมของสินค้า — ต้องรู้ก่อนว่าเพิ่งสร้างคอลัมน์รอบนี้หรือเปล่า
+        // เพราะ initDb() รันทุกครั้งที่ boot ถ้า backfill แบบไม่มีเงื่อนไข
+        // ตัวเลขที่นับสะสมมาจะโดนเขียนทับด้วยค่าที่คำนวณใหม่ทุกครั้งที่รีสตาร์ต
+        const soldColumn = await pool.query(`
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'products' AND column_name = 'sold_count'
+        `);
+        const isNewSoldColumn = soldColumn.rows.length === 0;
+
+        await pool.query(`
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS sold_count INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS sold_revenue NUMERIC(12, 2) NOT NULL DEFAULT 0;
+        `);
+
+        // เติมยอดย้อนหลังจากออเดอร์ที่จ่ายเงินแล้ว ทำครั้งเดียวตอนสร้างคอลัมน์
+        // สูตรเดียวกับที่ getBestSellers / getProductReport ใช้ ตัวเลขจะได้ตรงกับหน้ารายงาน
+        if (isNewSoldColumn) {
+            await pool.query(`
+                UPDATE products p SET
+                    sold_count = COALESCE(agg.qty, 0),
+                    sold_revenue = COALESCE(agg.revenue, 0)
+                FROM (
+                    SELECT oi.product_id,
+                           SUM(oi.quantity)::int AS qty,
+                           SUM(oi.quantity * oi.unit_price) AS revenue
+                    FROM order_items oi
+                    JOIN orders o ON o.id = oi.order_id
+                    WHERE o.payment_status = 'paid'
+                    GROUP BY oi.product_id
+                ) AS agg
+                WHERE agg.product_id = p.id
+            `);
+            console.log("[DB] Backfilled products.sold_count / sold_revenue from paid orders.");
+        }
+
         // Create kiosk_stats table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS kiosk_stats(

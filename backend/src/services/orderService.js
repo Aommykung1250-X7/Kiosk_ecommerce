@@ -92,6 +92,22 @@ class OrderService {
     }
   }
 
+  /**
+   * ผลข้างเคียงเมื่อออเดอร์จ่ายเงินสำเร็จ: หักสต็อก + บันทึกยอดขายสะสมของสินค้า
+   * รวมไว้ที่เดียวเพราะมีสองเส้นทางที่ทำให้ออเดอร์กลายเป็นจ่ายแล้ว
+   * @param {object} order ออเดอร์ที่อ่านมาก่อนอัปเดตสถานะ (ต้องมี items)
+   */
+  async applyPaidSideEffects(order) {
+    for (const item of order.items) {
+      const productId = item.product.id;
+      const quantity = item.quantity;
+      // order_items.product_id เป็น NULL ได้ (ON DELETE SET NULL) ถ้าสินค้าถูกลบไปแล้ว
+      if (!productId) continue;
+      await productRepository.decreaseStock(productId, quantity);
+      await productRepository.recordSale(productId, quantity, item.price * quantity);
+    }
+  }
+
   async updateOrderPayment(orderId, updates) {
     // ดึงรายละเอียดออเดอร์ก่อนเพื่อดูรายการสินค้าที่ซื้อ
     const order = await orderRepository.get(orderId);
@@ -105,12 +121,8 @@ class OrderService {
     });
 
     if (updatedOrder) {
-      // หักสต็อกของสินค้าแต่ละรายการในออเดอร์
-      for (const item of order.items) {
-        const productId = item.product.id;
-        const quantity = item.quantity;
-        await productRepository.decreaseStock(productId, quantity);
-      }
+      // หักสต็อกและบันทึกยอดขายของสินค้าแต่ละรายการในออเดอร์
+      await this.applyPaidSideEffects(order);
 
       // Notify all Kiosk listeners of this order
       this.notifyKiosk(orderId, "success");
@@ -134,12 +146,8 @@ class OrderService {
     });
 
     if (updatedOrder) {
-      // หักสต็อกของสินค้าแต่ละรายการในออเดอร์
-      for (const item of order.items) {
-        const productId = item.product.id;
-        const quantity = item.quantity;
-        await productRepository.decreaseStock(productId, quantity);
-      }
+      // หักสต็อกและบันทึกยอดขายของสินค้าแต่ละรายการในออเดอร์
+      await this.applyPaidSideEffects(order);
 
       // ส่งอีเมลใบเสร็จหากมีอีเมลลูกค้าบันทึกไว้แล้ว
       if (updatedOrder.customerEmail) {
