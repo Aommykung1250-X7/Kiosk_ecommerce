@@ -94,19 +94,32 @@ export default function Home() {
         return res.json();
       })
       .then((data) => {
-        const sorted = [...data];
-        if (sorted.length > 0) {
-          let maxIndex = 0;
-          for (let i = 1; i < sorted.length; i++) {
-            if ((sorted[i].views || 0) > (sorted[maxIndex].views || 0)) {
-              maxIndex = i;
-            }
+        const sorted = [...data].sort((a, b) => {
+          // 1. สินค้าที่หมดสต็อก (Out of Stock / Sold Out) อยู่ล่างสุดเสมอ!
+          const isOutA = a.status === "In Stock" && (a.quantity === undefined || a.quantity <= 0 || a.stock <= 0);
+          const isOutB = b.status === "In Stock" && (b.quantity === undefined || b.quantity <= 0 || b.stock <= 0);
+          if (isOutA !== isOutB) {
+            return isOutA ? 1 : -1;
           }
-          if ((sorted[maxIndex].views || 0) > 0) {
-            const [mostViewed] = sorted.splice(maxIndex, 1);
-            sorted.unshift(mostViewed);
+
+          // 2. สินค้าที่มีโปรโมชัน (Promotion) อยู่ลำดับแรก
+          const isPromoA = a.promotion === true || (a.discountAmount && a.discountAmount > 0) || (a.originalPrice && a.originalPrice > a.price);
+          const isPromoB = b.promotion === true || (b.discountAmount && b.discountAmount > 0) || (b.originalPrice && b.originalPrice > b.price);
+          if (isPromoA !== isPromoB) {
+            return isPromoA ? -1 : 1;
           }
-        }
+
+          // 3. สินค้าขายดี / ยอดวิวสูง (Best Sellers / High Views) ถัดมา
+          const viewsA = a.views || 0;
+          const viewsB = b.views || 0;
+          if (viewsA !== viewsB) {
+            return viewsB - viewsA;
+          }
+
+          // 4. เรียงตาม ID สินค้า
+          return (a.id || 0) - (b.id || 0);
+        });
+
         setProducts(sorted);
         setLoading(false);
       })
@@ -324,8 +337,10 @@ export default function Home() {
     setActiveOrder(null);
     setIsCartOpen(true);
   };
-  const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-  const bottomDisplayTotal = cart.totalPrice;
+  const bottomHasPreOrder = Array.isArray(cart?.items)
+    ? cart.items.some((item) => item?.product && item.product.status === "Pre-Order")
+    : false;
+  const bottomDisplayTotal = cart?.totalPrice || 0;
 
   return (
     <div className="kiosk-app-container flex flex-col font-['DIN_Pro_Cond',_'Prompt',_sans-serif]">
@@ -367,7 +382,7 @@ export default function Home() {
                 </span>
                 <div className="flex items-center gap-2 flex-nowrap">
                   {(popularSearchTags.length > 0
-                    ? popularSearchTags
+                    ? popularSearchTags.slice(0, 4)
                     : ["น้ำดื่ม", "ชาเขียว", "นม", "kitkat"]
                   ).map((tag) => {
                     const isSelected = searchQuery === tag;

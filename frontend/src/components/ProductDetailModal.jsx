@@ -28,6 +28,7 @@ export default function ProductDetailModal({
   useEffect(() => {
     setQty(1);
     setActiveImageIndex(0);
+    setOtherPageIndex(0);
   }, [product?.id]);
 
   if (!product) return null;
@@ -50,8 +51,14 @@ export default function ProductDetailModal({
 
   const currentImg = imagesList[activeImageIndex] || image;
 
-  // Other / Next products list (excluding current product)
-  const otherProducts = allProducts.filter((p) => p.id !== product.id);
+  // Filter products in the SAME category (excluding current product)
+  const currentCat = product.category_id || product.category;
+  const sameCategoryProducts = allProducts.filter(
+    (p) => p.id !== product.id && ((p.category_id && p.category_id === currentCat) || (p.category && p.category === currentCat))
+  );
+  const otherProducts = sameCategoryProducts.length > 0
+    ? sameCategoryProducts
+    : allProducts.filter((p) => p.id !== product.id);
   const maxOtherIndex = Math.max(0, otherProducts.length - 3);
 
   const [touchStartX, setTouchStartX] = useState(null);
@@ -289,9 +296,21 @@ export default function ProductDetailModal({
           </div>
         </div>
 
-        {/* 3. Next / Other Products Smooth Sliding Carousel (สินค้าชิ้นต่อไปแบบแอนิเมชันลื่นไหล) */}
+        {/* 3. Next / Other Products Smooth Sliding Carousel (สินค้าอื่นๆ ในหมวดหมู่เดียวกัน) */}
         {otherProducts.length > 0 && (
-          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-5 select-none">
+          <div className="flex flex-col mt-4 pt-3 border-t border-gray-150 select-none">
+            <div className="flex items-center justify-between px-1 mb-1.5">
+              <span className="text-xs sm:text-sm font-bold text-gray-900 tracking-tight">
+                สินค้าอื่นๆ
+              </span>
+              {sameCategoryProducts.length > 0 && (
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-500">
+                  หมวดหมู่เดียวกัน
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
             {/* Prev Button */}
             <button
               type="button"
@@ -368,7 +387,8 @@ export default function ProductDetailModal({
               ▶
             </button>
           </div>
-        )}
+        </div>
+      )}
 
         {/* 4. Bottom Action Button: ADD TO CART */}
         <button

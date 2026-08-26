@@ -94,10 +94,16 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
   const handleSaveTags = async () => {
     setSavingTags(true);
     try {
-      const tagList = popularTags
+      const rawTags = popularTags
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean);
+
+      if (rawTags.length > 4) {
+        notify.warning("คำค้นหายอดนิยมใส่นำเสนอได้สูงสุด 4 คำเท่านั้น");
+      }
+
+      const tagList = rawTags.slice(0, 4);
 
       const response = await fetch("/api/settings/search-tags", {
         method: "POST",
@@ -108,9 +114,9 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "บันทึกคำค้นหายอดนิยมไม่สำเร็จ");
 
-      notify.success("บันทึกคำค้นหายอดนิยมแล้ว");
+      notify.success("บันทึกคำค้นหายอดนิยมแล้ว (สูงสุด 4 คำ)");
       if (Array.isArray(data.popularSearchTags)) {
-        setPopularTags(data.popularSearchTags.join(", "));
+        setPopularTags(data.popularSearchTags.slice(0, 4).join(", "));
       }
     } catch (error) {
       notify.error((error as Error).message);
@@ -193,7 +199,8 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
   const tagList = popularTags
     .split(",")
     .map((tag) => tag.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, 4);
   const feeValue = parseFloat(shippingFee) || 0;
 
   return (
@@ -247,7 +254,7 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
       <Card className="flex flex-col gap-5">
         <CardHeader
           title="คำค้นหายอดนิยม"
-          description="ปุ่มค้นหาด่วนที่ขึ้นบนหน้าค้นหาของตู้"
+          description="ปุ่มค้นหาด่วนที่ขึ้นบนหน้าค้นหาของตู้ (แสดงสูงสุด 4 คำ)"
           actions={
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-bo-accent-soft text-bo-accent">
               <Search className="h-4 w-4" />
@@ -255,7 +262,7 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
           }
         />
 
-        <Field label="คำค้นหา" hint="คั่นแต่ละคำด้วยเครื่องหมายจุลภาค">
+        <Field label="คำค้นหา" hint="คั่นแต่ละคำด้วยเครื่องหมายจุลภาค (สูงสุด 4 คำ)">
           {(id) => (
             <TextArea
               id={id}
