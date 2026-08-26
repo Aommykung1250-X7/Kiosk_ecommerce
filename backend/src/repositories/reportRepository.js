@@ -146,20 +146,41 @@ export const getSalesReport = async (startDate, endDate) => {
 };
 
 /**
- * ดึงรายงานวิเคราะห์ประสิทธิภาพสินค้า (Product Report) ด้วย SQL JOIN ตาราง order_items แบบ 100%
+ * ดึงรายงานวิเคราะห์ประสิทธิภาพสินค้า (Product Report)
+ *
+ * ยอด "ขายได้" กับ "รายได้" มีสองแหล่ง เลือกตามว่าผู้ใช้กรองช่วงวันที่ไว้หรือไม่:
+ *   - ไม่กรองวันที่ (ดูทั้งหมดตั้งแต่เริ่มระบบ) -> อ่านจากคอลัมน์ products.sold_count / sold_revenue
+ *     ที่นับสะสมไว้ตอนจ่ายเงินสำเร็จ ไม่ต้อง JOIN order_items ทั้งตาราง
+ *   - กรองช่วงวันที่ -> ต้องรวมยอดสดจาก order_items เพราะคอลัมน์สะสมเป็นยอดตลอดชีพ
+ *     ตอบคำถามเฉพาะช่วงเวลาไม่ได้
+ * ทั้งสองทางใช้นิยามเดียวกัน (ออเดอร์ที่ payment_status = 'paid') ตัวเลขจึงตรงกัน
  */
 export const getProductReport = async (startDate, endDate) => {
-    let orderDateFilter = "";
     const queryParams = [];
-
     const dateRange = prepareDateRange(startDate, endDate);
+
+    let soldColumns;
+    let orderJoins = "";
+    let groupBy = "";
+
     if (dateRange) {
-        orderDateFilter = "AND o.created_at >= $1 AND o.created_at <= $2";
         queryParams.push(dateRange.startTimestamp, dateRange.endTimestamp);
+        const orderDateFilter = "AND o.created_at >= $1 AND o.created_at <= $2";
+        soldColumns = `
+            COALESCE(SUM(CASE WHEN o.payment_status = 'paid' ${orderDateFilter} THEN oi.quantity ELSE 0 END), 0) AS units_sold,
+            COALESCE(SUM(CASE WHEN o.payment_status = 'paid' ${orderDateFilter} THEN (oi.quantity * oi.unit_price) ELSE 0 END), 0) AS total_revenue`;
+        orderJoins = `
+        LEFT JOIN order_items oi ON p.id = oi.product_id
+        LEFT JOIN orders o ON oi.order_id = o.id`;
+        groupBy = "GROUP BY p.id, p.name, c.name, p.price, p.stock, p.views, p.status, p.pickup_location";
+    } else {
+        soldColumns = `
+            p.sold_count AS units_sold,
+            p.sold_revenue AS total_revenue`;
     }
 
     const query = `
-        SELECT 
+        SELECT
             p.id,
             p.name,
             COALESCE(c.name, 'ทั่วไป') AS category,
@@ -167,14 +188,10 @@ export const getProductReport = async (startDate, endDate) => {
             p.stock,
             p.views,
             p.status,
-            COALESCE(p.pickup_location, 'หน้าร้าน') AS pickup_location,
-            COALESCE(SUM(CASE WHEN o.payment_status = 'paid' ${orderDateFilter} THEN oi.quantity ELSE 0 END), 0) AS units_sold,
-            COALESCE(SUM(CASE WHEN o.payment_status = 'paid' ${orderDateFilter} THEN (oi.quantity * oi.unit_price) ELSE 0 END), 0) AS total_revenue
+            COALESCE(p.pickup_location, 'หน้าร้าน') AS pickup_location,${soldColumns}
         FROM products p
-        LEFT JOIN categories c ON p.category_id = c.id
-        LEFT JOIN order_items oi ON p.id = oi.product_id
-        LEFT JOIN orders o ON oi.order_id = o.id
-        GROUP BY p.id, p.name, c.name, p.price, p.stock, p.views, p.status, p.pickup_location
+        LEFT JOIN categories c ON p.category_id = c.id${orderJoins}
+        ${groupBy}
         ORDER BY views DESC, p.id ASC
     `;
 

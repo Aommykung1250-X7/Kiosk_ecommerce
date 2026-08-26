@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import ProductCard from "../components/ProductCard";
@@ -11,6 +11,9 @@ import FooterBar from "../components/FooterBar";
 import SupportModal from "../components/SupportModal";
 import { ShoppingCartIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { notify } from "../components/notify";
+
+/** สินค้าหมดเมื่อเป็นของพร้อมส่งแต่สต็อกหมด — Pre-Order ไม่นับว่าหมด แม้สต็อกจะเป็น 0 */
+const isSoldOut = (p) => p.status === "In Stock" && (p.quantity ?? p.stock ?? 0) <= 0;
 
 export default function Home() {
   const [selectedCategories, setSelectedCategories] = useState(["all"]);
@@ -109,14 +112,22 @@ export default function Home() {
             return isPromoA ? -1 : 1;
           }
 
-          // 3. สินค้าขายดี / ยอดวิวสูง (Best Sellers / High Views) ถัดมา
+          // 3. สินค้าขายดี (Best Sellers) ถัดมา — ใช้ยอดขายจริงจาก products.sold_count
+          //    เกณฑ์เดียวกับป้าย HOT NOW ตัวที่ได้ป้ายจึงลอยขึ้นมาอยู่แถวบนเองโดยอัตโนมัติ
+          const soldA = a.soldCount || 0;
+          const soldB = b.soldCount || 0;
+          if (soldA !== soldB) {
+            return soldB - soldA;
+          }
+
+          // 4. ยอดขายเท่ากัน ตัดสินด้วยยอดเข้าชม
           const viewsA = a.views || 0;
           const viewsB = b.views || 0;
           if (viewsA !== viewsB) {
             return viewsB - viewsA;
           }
 
-          // 4. เรียงตาม ID สินค้า
+          // 5. เรียงตาม ID สินค้า
           return (a.id || 0) - (b.id || 0);
         });
 
@@ -132,6 +143,31 @@ export default function Home() {
   useEffect(() => {
     fetchProducts();
   }, [selectedCategories, searchQuery]);
+
+  /**
+   * ป้าย HOT NOW = สินค้าขายดีที่สุดที่ "ยังมีของ" ในร้าน
+   *
+   * คำนวณใหม่ทุกครั้งจากข้อมูลสด ไม่เก็บสถานะไว้ที่ไหน จึงได้พฤติกรรมครบทั้งสามข้อเอง:
+   *   - ตัวที่ขายดีที่สุดได้ป้าย
+   *   - ถ้าตัวนั้นของหมด ป้ายเลื่อนไปตัวขายดีรองลงมา (เพราะกรองของหมดออกก่อนเลือก)
+   *   - พอตัวเดิมเติมของแล้วยังขายดีสุด ป้ายกลับไปหาตัวเดิมเอง
+   *
+   * ใช้ products ทั้งร้าน ไม่ใช่รายการที่ถูกกรอง ป้ายจะได้ไม่ย้ายไปมาเวลาสลับหมวดหมู่
+   */
+  const hotProductId = useMemo(() => {
+    const candidates = products.filter((p) => (p.soldCount || 0) > 0 && !isSoldOut(p));
+    if (candidates.length === 0) return null;
+
+    return candidates.reduce((best, p) => {
+      const bySold = (p.soldCount || 0) - (best.soldCount || 0);
+      if (bySold !== 0) return bySold > 0 ? p : best;
+      // ยอดขายเท่ากัน ตัดสินด้วยยอดวิวแล้วค่อย id ให้ป้ายนิ่ง ไม่สลับตัวไปมาทุกครั้งที่โหลด
+      // (เกณฑ์เดียวกับ ORDER BY ของ getBestSellers ฝั่งหลังบ้าน)
+      const byViews = (p.views || 0) - (best.views || 0);
+      if (byViews !== 0) return byViews > 0 ? p : best;
+      return p.id < best.id ? p : best;
+    }).id;
+  }, [products]);
 
   // Idle detection timer - ปรับเวลารอพักหน้าจอตรงนี้ (หน่วยเป็นมิลลิวินาที ms)
   useEffect(() => {
@@ -407,9 +443,12 @@ export default function Home() {
               {/* 2. Category Title & Item Count matching mockup */}
               {(() => {
                 let filteredProducts = products;
+                // ติ๊ก HOT NOW = สินค้าที่เคยขายได้จริง เรียงขายดีมากไปน้อย
+                // ให้ตรงกับป้าย HOT NOW บนการ์ด ถ้ายังไม่มีใครซื้ออะไรเลยก็ตกไปที่ empty state
                 if (selectedCategories.includes("hot") && !isAllSelected) {
-                  filteredProducts = products.filter(p => (p.views || 0) > 0 || p.promotion);
-                  if (filteredProducts.length === 0) filteredProducts = products.slice(0, 4);
+                  filteredProducts = products
+                    .filter((p) => (p.soldCount || 0) > 0)
+                    .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0));
                 }
 
                 const isPromoSelected = selectedCategories.includes("promotion");
@@ -469,18 +508,15 @@ export default function Home() {
                           cart.totalItems > 0 ? "pb-36" : "pb-24"
                         }`}
                       >
-                        {(() => {
-                          const maxViews = filteredProducts.length > 0 ? Math.max(...filteredProducts.map(p => p.views || 0)) : 0;
-                          return filteredProducts.map((product) => (
-                            <ProductCard
-                              key={product.id}
-                              product={product}
-                              onAddToCart={handleAddToCart}
-                              onSelectProduct={handleSelectProduct}
-                              isMostViewed={maxViews > 0 && product.views === maxViews}
-                            />
-                          ));
-                        })()}
+                        {filteredProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            onAddToCart={handleAddToCart}
+                            onSelectProduct={handleSelectProduct}
+                            isHot={product.id === hotProductId}
+                          />
+                        ))}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-20 px-4 text-center select-none">

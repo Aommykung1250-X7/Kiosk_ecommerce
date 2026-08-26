@@ -76,9 +76,12 @@ class ProductRepository {
         query += " WHERE " + whereConditions.join(" AND ");
       }
 
-      query += ` ORDER BY 
+      // เรียงให้ตรงกับ comparator ฝั่งหน้าบ้าน (Home.jsx): ของหมดลงล่าง -> โปรโมชั่น ->
+      // ขายดี -> ยอดเข้าชม -> id  โดยชั้น "ขายดี" ใช้ sold_count ซึ่งเป็นเกณฑ์เดียวกับป้าย HOT NOW
+      query += ` ORDER BY
         CASE WHEN (p.status = 'In Stock' AND p.stock <= 0) THEN 1 ELSE 0 END ASC,
         CASE WHEN (p.promotion = true) THEN 0 ELSE 1 END ASC,
+        p.sold_count DESC,
         p.views DESC,
         p.id ASC`;
 
@@ -123,6 +126,8 @@ class ProductRepository {
           pickupLocation: row.pickup_location,
           preorderReleaseDate: row.preorder_release_date,
           purchaseLimit: row.purchase_limit,
+          soldCount: parseInt(row.sold_count, 10) || 0,
+          soldRevenue: parseFloat(row.sold_revenue) || 0,
           additional_info: row.additional_info,
           additionalInfo: row.additional_info
         };
@@ -284,8 +289,30 @@ class ProductRepository {
   }
 
   /**
+   * บันทึกยอดขายสะสมของสินค้าหลังออเดอร์จ่ายเงินสำเร็จ
+   * อัปเดตทั้งสองคอลัมน์ใน query เดียว จำนวนชิ้นกับยอดเงินจะได้ไม่หลุดจากกัน
+   * @param {number|string} productId
+   * @param {number} quantity จำนวนชิ้นที่ขายได้
+   * @param {number} revenue ยอดเงินของรายการนี้ (ราคาต่อชิ้นที่ขายจริง x จำนวน)
+   */
+  async recordSale(productId, quantity, revenue) {
+    const query = `
+      UPDATE products
+      SET sold_count = sold_count + $1,
+          sold_revenue = sold_revenue + $2
+      WHERE id = $3
+    `;
+    try {
+      await pool.query(query, [quantity, revenue, parseInt(productId, 10)]);
+    } catch (error) {
+      console.error(`Error recording sale for product ${productId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Increment the view counter of a product by 1
-   * @param {number|string} productId 
+   * @param {number|string} productId
    */
   async incrementViews(productId) {
     const query = `
@@ -309,20 +336,12 @@ class ProductRepository {
    */
   async getBestSellers() {
     try {
+      // อ่านจากคอลัมน์ sold_count ที่นับสะสมไว้ตอนจ่ายเงินสำเร็จ
+      // (เดิมคำนวณสดด้วย subquery แล้ว alias ทับชื่อคอลัมน์จริงจนได้คอลัมน์ชื่อซ้ำ)
       const query = `
-        SELECT 
-          p.*,
-          COALESCE(
-            (
-              SELECT SUM(oi.quantity)::int
-              FROM order_items oi
-              JOIN orders o ON o.id = oi.order_id
-              WHERE o.payment_status = 'paid' 
-                AND oi.product_id = p.id
-            ), 0
-          ) AS sold_count
+        SELECT p.*
         FROM products p
-        ORDER BY sold_count DESC, p.views DESC, p.id ASC
+        ORDER BY p.sold_count DESC, p.views DESC, p.id ASC
       `;
       const res = await pool.query(query);
       return res.rows.map(row => ({
@@ -337,7 +356,8 @@ class ProductRepository {
         pickupLocation: row.pickup_location,
         preorderReleaseDate: row.preorder_release_date,
         purchaseLimit: row.purchase_limit,
-        soldCount: parseInt(row.sold_count, 10)
+        soldCount: parseInt(row.sold_count, 10) || 0,
+        soldRevenue: parseFloat(row.sold_revenue) || 0
       }));
     } catch (error) {
       console.error("Error in ProductRepository.getBestSellers:", error);
@@ -366,7 +386,9 @@ class ProductRepository {
         quantity: row.stock,
         pickupLocation: row.pickup_location,
         preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit
+        purchaseLimit: row.purchase_limit,
+        soldCount: parseInt(row.sold_count, 10) || 0,
+        soldRevenue: parseFloat(row.sold_revenue) || 0
       };
     } catch (error) {
       console.error("Error in ProductRepository.getById:", error);

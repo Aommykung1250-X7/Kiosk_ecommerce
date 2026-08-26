@@ -38,6 +38,10 @@ export interface Product {
   purchaseLimit?: number | null;
   purchase_limit?: number | null;
   views?: number;
+  /** จำนวนชิ้นที่ขายได้สะสม นับตอนออเดอร์จ่ายเงินสำเร็จ (อ่านอย่างเดียว) */
+  soldCount?: number;
+  /** ยอดเงินที่ขายได้สะสม นับคู่กับ soldCount (อ่านอย่างเดียว) */
+  soldRevenue?: number;
   /** ราคาเต็มก่อนหักส่วนลดโปรโมชั่น — backend ส่งมาคู่กับ price เสมอ */
   originalPrice?: number;
   /** ชนิดส่วนลดที่มีผลอยู่จริง (null = ไม่ลด) */

@@ -46,6 +46,8 @@ CREATE TABLE products (
     pickup_location VARCHAR(255),
     status VARCHAR(50) DEFAULT 'In Stock',
     views INTEGER DEFAULT 0,
+    sold_count INTEGER NOT NULL DEFAULT 0,
+    sold_revenue NUMERIC(12, 2) NOT NULL DEFAULT 0,
     preorder_release_date DATE DEFAULT NULL,
     purchase_limit INTEGER DEFAULT NULL,
     additional_info TEXT,
