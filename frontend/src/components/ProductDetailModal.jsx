@@ -33,7 +33,7 @@ export default function ProductDetailModal({
 
   if (!product) return null;
 
-  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, images, status, quantity, category, views, description } = product;
+  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, images, status, quantity, category, description } = product;
   // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
   const isDiscounted = discountAmount > 0 && originalPrice > price;
   // ลดเป็นบาทให้โชว์ "-฿50" ลดเป็นเปอร์เซ็นต์ให้โชว์ "-15%"
@@ -42,7 +42,6 @@ export default function ProductDetailModal({
       ? `-฿${discountValue.toLocaleString("th-TH")}`
       : `-${discountValue}%`;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
-  const isMostViewed = (views || 0) > 0;
   const purchaseLimit = Number(product.purchaseLimit || product.purchase_limit) || 0;
 
   const imagesList = Array.isArray(images) && images.length > 0

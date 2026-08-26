@@ -76,9 +76,12 @@ class ProductRepository {
         query += " WHERE " + whereConditions.join(" AND ");
       }
 
-      query += ` ORDER BY 
+      // เรียงให้ตรงกับ comparator ฝั่งหน้าบ้าน (Home.jsx): ของหมดลงล่าง -> โปรโมชั่น ->
+      // ขายดี -> ยอดเข้าชม -> id  โดยชั้น "ขายดี" ใช้ sold_count ซึ่งเป็นเกณฑ์เดียวกับป้าย HOT NOW
+      query += ` ORDER BY
         CASE WHEN (p.status = 'In Stock' AND p.stock <= 0) THEN 1 ELSE 0 END ASC,
         CASE WHEN (p.promotion = true) THEN 0 ELSE 1 END ASC,
+        p.sold_count DESC,
         p.views DESC,
         p.id ASC`;
 

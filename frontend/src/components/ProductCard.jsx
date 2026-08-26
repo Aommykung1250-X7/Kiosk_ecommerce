@@ -11,7 +11,7 @@ function CategoryPlaceholder({ category }) {
   );
 }
 
-export default function ProductCard({ product, onAddToCart, onSelectProduct, isMostViewed }) {
+export default function ProductCard({ product, onAddToCart, onSelectProduct, isHot }) {
   const { name, price, originalPrice, discountType, discountValue, discountAmount, image, status, quantity, category } = product;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
   // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
@@ -32,8 +32,9 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
     >
       {/* 1. Rounded Grey Image Box (มุมโค้ง 10px) */}
       <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[10px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
-        {/* Top-Left HOT NOW Badge */}
-        {isMostViewed && (
+        {/* Top-Left HOT NOW Badge — สินค้าขายดีที่สุดที่ยังมีของ
+            เช็ค isOutOfStock ซ้ำอีกชั้น กันป้ายไปโผล่ซ่อนอยู่ใต้แถบ SOLD OUT */}
+        {isHot && !isOutOfStock && (
           <div className="absolute top-2.5 left-0 z-10 bg-[#F85153] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-r-[3px] uppercase tracking-wider shadow-xs">
             HOT NOW
           </div>
