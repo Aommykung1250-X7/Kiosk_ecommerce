@@ -39,7 +39,7 @@ class ProductRepository {
   async getProducts({ category, search, applyPromotion = true } = {}) {
     try {
       let query = `
-        SELECT DISTINCT p.* 
+        SELECT p.* 
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
       `;
@@ -76,7 +76,11 @@ class ProductRepository {
         query += " WHERE " + whereConditions.join(" AND ");
       }
 
-      query += " ORDER BY p.id ASC";
+      query += ` ORDER BY 
+        CASE WHEN (p.status = 'In Stock' AND p.stock <= 0) THEN 1 ELSE 0 END ASC,
+        CASE WHEN (p.promotion = true) THEN 0 ELSE 1 END ASC,
+        p.views DESC,
+        p.id ASC`;
 
       const res = await pool.query(query, queryParams);
       const productIds = res.rows.map(r => r.id);

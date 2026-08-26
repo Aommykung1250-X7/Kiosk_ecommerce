@@ -104,7 +104,7 @@ class ProductService {
     if (!Array.isArray(tags)) {
       throw new Error("Tags must be an array of strings.");
     }
-    const cleanTags = tags.map(t => String(t).trim()).filter(t => t.length > 0);
+    const cleanTags = tags.map(t => String(t).trim()).filter(t => t.length > 0).slice(0, 4);
     return await productRepository.updatePopularSearchTags(cleanTags);
   }
 }
