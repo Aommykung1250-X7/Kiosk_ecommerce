@@ -82,11 +82,11 @@ export default function SupportModal({ isOpen, onClose }) {
                 <QrCodeIcon className="w-5 h-5 text-[#00C300]" />
                 <span className="text-xs font-black uppercase tracking-wider">สแกน LINE Official</span>
               </div>
-              <div className="bg-white p-2.5 rounded-xl border border-[#5EBAA8]/30 shadow-xs mb-2">
+              <div className="bg-[#F4F5F7] p-2.5 rounded-xl border border-slate-200/60 shadow-xs mb-2">
                 {contactInfo.lineQrImage ? (
-                  <img src={contactInfo.lineQrImage} className="w-[90px] h-[90px] object-contain rounded-lg" alt="LINE QR Code" />
+                  <img src={contactInfo.lineQrImage} className="w-[90px] h-[90px] object-contain rounded-lg p-0.5 bg-[#F4F5F7]" alt="LINE QR Code" />
                 ) : (
-                  <QRCodeSVG value={contactInfo.lineUrl || "https://line.me/ti/p/@ditcsupport"} size={90} level="M" />
+                  <QRCodeSVG value={contactInfo.lineUrl || "https://line.me/ti/p/@ditcsupport"} size={90} level="M" bgColor="#F4F5F7" fgColor="#000000" />
                 )}
               </div>
               <span className="text-[11px] font-bold text-gray-700">{contactInfo.lineId}</span>

@@ -309,7 +309,7 @@ export default function ReportManagement() {
                 <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
                   <Card className="flex flex-col gap-5">
                     <CardHeader
-                      title="แนวโน้มยอดขายรายวัน"
+                      title="แนวโน้มยอดขาย"
                       description="ชี้ที่กราฟเพื่อดูยอดขายและจำนวนคำสั่งซื้อของแต่ละวัน"
                       actions={
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
