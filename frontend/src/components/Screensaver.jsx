@@ -6,7 +6,6 @@ import { resolveUploadUrl } from "./admin/ui/format";
 const FEATURED_SLOTS = 4;
 
 export default function Screensaver({ onWake }) {
-  const [language, setLanguage] = useState("TH");
   const [ads, setAds] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -117,37 +116,8 @@ export default function Screensaver({ onWake }) {
           />
         </div>
 
-        {/* Right: Language Switcher + Help Button */}
+        {/* Right: Help Button */}
         <div className="flex items-center gap-4 sm:gap-6">
-          {/* Language Switcher Pill */}
-          <div
-            className="flex items-center bg-[#101C38] rounded-full p-0.5 border border-white/15 shadow-inner select-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setLanguage("TH")}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                language === "TH"
-                  ? "bg-[#FABE2C] text-black shadow-xs"
-                  : "text-white/80 hover:text-white"
-              }`}
-            >
-              TH
-            </button>
-            <button
-              type="button"
-              onClick={() => setLanguage("EN")}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                language === "EN"
-                  ? "bg-[#FABE2C] text-black shadow-xs"
-                  : "text-white/80 hover:text-white"
-              }`}
-            >
-              EN
-            </button>
-          </div>
-
           {/* Help Button */}
           <div className="flex items-center gap-1.5 text-white/90 hover:text-white font-bold text-xs sm:text-sm tracking-wide cursor-pointer transition-colors">
             <QuestionMarkCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" />
