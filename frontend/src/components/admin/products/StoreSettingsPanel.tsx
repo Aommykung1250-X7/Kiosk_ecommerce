@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Eye, RotateCcw, Truck, Search, Phone, Trash2 } from "lucide-react";
+import { Truck, Search, Phone, Trash2 } from "lucide-react";
 import type { ContactSettings } from "../../../types/admin";
-import { notify, confirmDialog } from "../../notify";
+import { notify } from "../../notify";
 import {
   Button,
   Card,
@@ -24,7 +24,7 @@ const DEFAULT_CONTACT: ContactSettings = {
 };
 
 /** ตั้งค่าที่ส่งผลกับหน้าตู้โดยตรง — ค่าจัดส่ง คำค้นหายอดนิยม และช่องทางติดต่อ */
-export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void }) {
+export function StoreSettingsPanel() {
   const [shippingFee, setShippingFee] = useState("40");
   const [popularTags, setPopularTags] = useState("");
   const [contact, setContact] = useState<ContactSettings>(DEFAULT_CONTACT);
@@ -165,34 +165,6 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
       notify.error((error as Error).message);
     } finally {
       setUploadingQr(false);
-    }
-  };
-
-  const resetCounter = async (
-    endpoint: "reset-visitors" | "reset-product-views",
-    title: string,
-    message: string,
-  ) => {
-    const confirmed = await confirmDialog({
-      title,
-      message,
-      confirmText: "รีเซ็ตเป็น 0",
-      variant: "danger",
-    });
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(`/api/settings/${endpoint}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "รีเซ็ตไม่สำเร็จ");
-
-      notify.success("รีเซ็ตเรียบร้อย เริ่มนับใหม่จาก 0");
-      onStatsReset();
-    } catch (error) {
-      notify.error((error as Error).message);
     }
   };
 
@@ -429,42 +401,6 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
         >
           {savingContact ? "กำลังบันทึก" : "บันทึกข้อมูลการติดต่อ"}
         </Button>
-      </Card>
-
-      {/* ------------------------------------------------------- รีเซ็ตสถิติ */}
-      <Card className="flex flex-col gap-5 lg:col-span-2 xl:col-span-3">
-        <CardHeader
-          title="รีเซ็ตตัวนับสถิติ"
-          description="ตั้งค่าตัวนับกลับเป็น 0 เพื่อเริ่มเก็บสถิติรอบใหม่ ข้อมูลที่นับไว้เดิมจะหายถาวร"
-        />
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Button
-            icon={RotateCcw}
-            onClick={() =>
-              void resetCounter(
-                "reset-visitors",
-                "รีเซ็ตจำนวนผู้เข้าใช้งาน?",
-                "ตัวนับจำนวนครั้งที่ตู้ถูกแตะเริ่มใช้งานจะกลับไปเป็น 0 และย้อนกลับไม่ได้",
-              )
-            }
-          >
-            รีเซ็ตจำนวนผู้เข้าใช้งานตู้
-          </Button>
-
-          <Button
-            icon={Eye}
-            onClick={() =>
-              void resetCounter(
-                "reset-product-views",
-                "รีเซ็ตยอดการเข้าชมสินค้า?",
-                "ยอดเข้าชมของสินค้าทุกรายการจะกลับไปเป็น 0 และย้อนกลับไม่ได้",
-              )
-            }
-          >
-            รีเซ็ตยอดการเข้าชมสินค้า
-          </Button>
-        </div>
       </Card>
     </div>
   );

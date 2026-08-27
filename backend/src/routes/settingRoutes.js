@@ -57,10 +57,4 @@ router.post(
   (req, res) => settingController.uploadContactQr(req, res)
 );
 
-// POST /api/settings/reset-visitors (Admin only - Temporary)
-router.post("/settings/reset-visitors", authenticateJWT, checkRole(["admin"]), (req, res) => settingController.resetVisitorCount(req, res));
-
-// POST /api/settings/reset-product-views (Admin only - Temporary)
-router.post("/settings/reset-product-views", authenticateJWT, checkRole(["admin"]), (req, res) => settingController.resetProductViews(req, res));
-
 export default router;

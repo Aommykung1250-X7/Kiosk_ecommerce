@@ -1271,7 +1271,7 @@ export default function ProductManagement() {
 
       {activeTab === "users" && <StaffPanel currentUserId={currentUser?.id} />}
 
-      {activeTab === "settings" && <StoreSettingsPanel onStatsReset={fetchStats} />}
+      {activeTab === "settings" && <StoreSettingsPanel />}
 
       <ProductFormModal
         open={formOpen}
