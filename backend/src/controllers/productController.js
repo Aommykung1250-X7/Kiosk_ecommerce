@@ -4,6 +4,14 @@ import { MAX_DISCOUNT_PERCENT } from "../services/promotionService.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+/** วันนี้ในรูปแบบ YYYY-MM-DD ตามเวลาเครื่อง เทียบกับค่าจาก <input type="date"> ได้ตรงๆ */
+function todayKey() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 /**
  * ตรวจส่วนลดที่ตั้งไว้ที่ตัวสินค้า รองรับทั้งลดเป็นเปอร์เซ็นต์และลดเป็นจำนวนเงิน
  * @param {object} body
@@ -11,7 +19,21 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  */
 function validatePromotionFields(body) {
   const { promotion, promotionType, promotionValue, promotionStartDate, promotionEndDate } = body;
+
+  // ตรวจรูปแบบวันที่ก่อนเสมอ แม้สวิตช์โปรโมชั่นจะปิดอยู่ เพราะ repository เขียนคอลัมน์วันที่
+  // ลง DB ทุกครั้ง วันที่ผิดรูปแบบจึงหลุดไปถึง Postgres แล้วกลายเป็น 500 กลางๆ
+  const start = (promotionStartDate || "").trim();
+  const end = (promotionEndDate || "").trim();
+  if (start && !DATE_PATTERN.test(start)) return "รูปแบบวันเริ่มต้องเป็น YYYY-MM-DD";
+  if (end && !DATE_PATTERN.test(end)) return "รูปแบบวันสิ้นสุดต้องเป็น YYYY-MM-DD";
+
   if (!promotion) return null;
+
+  if (end && start && end < start) return "วันสิ้นสุดต้องไม่ก่อนวันเริ่ม";
+  // เปิดโปรที่หมดอายุไปแล้วจะไม่มีผลอะไรเลย และหน้าจอจะดูเหมือนระบบพัง จึงต้องกันตั้งแต่ต้นทาง
+  if (end && end < todayKey()) {
+    return "วันสิ้นสุดโปรโมชั่นผ่านไปแล้ว เลือกวันใหม่ก่อนเปิดโปรโมชั่น";
+  }
 
   const type = promotionType === "amount" ? "amount" : "percent";
   const value = Number(promotionValue);
@@ -35,12 +57,6 @@ function validatePromotionFields(body) {
       return `ส่วนลดต้องน้อยกว่าราคาสินค้า (${price} บาท)`;
     }
   }
-
-  const start = (promotionStartDate || "").trim();
-  const end = (promotionEndDate || "").trim();
-  if (start && !DATE_PATTERN.test(start)) return "รูปแบบวันเริ่มต้องเป็น YYYY-MM-DD";
-  if (end && !DATE_PATTERN.test(end)) return "รูปแบบวันสิ้นสุดต้องเป็น YYYY-MM-DD";
-  if (start && end && end < start) return "วันสิ้นสุดต้องไม่ก่อนวันเริ่ม";
 
   return null;
 }

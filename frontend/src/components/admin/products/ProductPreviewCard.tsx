@@ -1,6 +1,7 @@
 import { ImageOff } from "lucide-react";
 import type { ProductFormState, Category } from "../../../types/admin";
 import { formatBaht, formatThaiDate, resolveUploadUrl } from "../ui";
+import { previewDiscountedPrice, previewPromotionStatus } from "./promotionPreview";
 
 interface ProductPreviewCardProps {
   form: ProductFormState;
@@ -19,6 +20,18 @@ export function ProductPreviewCard({ form, categories }: ProductPreviewCardProps
   const isPreOrder = form.status === "Pre-Order";
   const categoryName = categories.find((item) => item.id === form.category)?.name;
   const price = typeof form.price === "string" ? parseFloat(form.price) : form.price;
+  const fullPrice = Number.isNaN(price) ? 0 : price;
+
+  // ป้ายราคาลดขึ้นเฉพาะตอนที่ส่วนลดมีผลจริงวันนี้ ให้ตรงกับที่ลูกค้าเห็นบนตู้
+  const discountValue = parseFloat(String(form.promotionValue)) || 0;
+  const isDiscounted =
+    previewPromotionStatus(
+      form.promotion,
+      discountValue,
+      form.promotionStartDate,
+      form.promotionEndDate,
+    ) === "active";
+  const discountedPrice = previewDiscountedPrice(fullPrice, form.promotionType, discountValue);
 
   return (
     <div className="flex flex-col gap-3">
@@ -60,8 +73,19 @@ export function ProductPreviewCard({ form, categories }: ProductPreviewCardProps
               : (categoryName ?? "ยังไม่เลือกหมวดหมู่")}
           </p>
 
-          <p className="bo-nums mt-1 text-lg font-semibold text-bo-text">
-            {formatBaht(Number.isNaN(price) ? 0 : price)}
+          <p className="bo-nums mt-1 flex items-baseline gap-2">
+            <span
+              className={`text-lg font-semibold ${
+                isDiscounted ? "text-bo-lowstock" : "text-bo-text"
+              }`}
+            >
+              {formatBaht(isDiscounted ? discountedPrice : fullPrice)}
+            </span>
+            {isDiscounted && (
+              <span className="text-xs text-bo-muted line-through">
+                {formatBaht(fullPrice)}
+              </span>
+            )}
           </p>
 
           {form.purchaseLimit !== "" && Number(form.purchaseLimit) > 0 && (

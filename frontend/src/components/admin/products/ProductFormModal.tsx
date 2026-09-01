@@ -13,10 +13,17 @@ import {
   TextArea,
   TextInput,
   UnderlineTabs,
+  formatBaht,
   resolveUploadUrl,
   type TabItem,
 } from "../ui";
 import { ProductPreviewCard } from "./ProductPreviewCard";
+import {
+  MAX_PERCENT,
+  previewDiscountedPrice,
+  previewPromotionStatus,
+  promotionScheduleNote,
+} from "./promotionPreview";
 
 type FormTab = "general" | "details" | "pricing" | "shipping";
 
@@ -72,6 +79,22 @@ export function ProductFormModal({
 }: ProductFormModalProps) {
   const [tab, setTab] = useState<FormTab>("general");
   const images = form.images ?? [];
+
+  // ตัวอย่างราคาหลังลด + คำเตือนเรื่องวันที่ ใช้ตรรกะชุดเดียวกับหน้าต่างตั้งส่วนลดในตาราง
+  const fullPrice = parseFloat(String(form.price)) || 0;
+  const discountValue = parseFloat(String(form.promotionValue)) || 0;
+  const discountedPrice = previewDiscountedPrice(fullPrice, form.promotionType, discountValue);
+  const promotionStatus = previewPromotionStatus(
+    form.promotion,
+    discountValue,
+    form.promotionStartDate,
+    form.promotionEndDate,
+  );
+  const scheduleNote = promotionScheduleNote(
+    promotionStatus,
+    form.promotionStartDate,
+    form.promotionEndDate,
+  );
 
   return (
     <Modal
@@ -168,6 +191,24 @@ export function ProductFormModal({
 
                 {form.promotion && (
                   <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between rounded-xl border border-bo-line bg-white px-4 py-3">
+                      <span className="text-xs text-bo-muted">ราคาหลังลด</span>
+                      <span className="flex items-baseline gap-2">
+                        <span className="bo-nums text-sm text-bo-muted line-through">
+                          {formatBaht(fullPrice)}
+                        </span>
+                        <span className="bo-nums text-lg font-semibold text-bo-text">
+                          {formatBaht(discountedPrice)}
+                        </span>
+                      </span>
+                    </div>
+
+                    {scheduleNote && (
+                      <p className="rounded-xl border border-amber-200 bg-bo-preorder-soft/60 px-4 py-3 text-[11px] leading-relaxed text-amber-800">
+                        {scheduleNote}
+                      </p>
+                    )}
+
                     <Field label="รูปแบบส่วนลด">
                       {(id) => (
                         <RadioGroup<DiscountType>
@@ -197,7 +238,7 @@ export function ProductFormModal({
                             prefix={form.promotionType === "amount" ? "฿" : undefined}
                             suffix={form.promotionType === "amount" ? undefined : "%"}
                             min={1}
-                            max={form.promotionType === "amount" ? undefined : 90}
+                            max={form.promotionType === "amount" ? undefined : MAX_PERCENT}
                             step={1}
                             value={form.promotionValue}
                             onChange={(event) =>

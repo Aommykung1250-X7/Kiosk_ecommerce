@@ -322,6 +322,16 @@ export const initDb = async () => {
             ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_end_date DATE;
         `);
 
+        // ล้างค่าส่วนลดที่ค้างอยู่ในสินค้าที่ปิดโปรโมชั่นไปแล้ว
+        // ถ้าปล่อยค้างไว้ พอแอดมินเปิดโปรอีกครั้ง ฟอร์มจะดึงวันเดิมที่หมดอายุแล้วกลับมาใส่
+        // กลายเป็นเปิดโปรแล้วราคาไม่ลด (ตั้งแต่นี้ไป repository ล้างให้เองตอนบันทึก)
+        await pool.query(`
+            UPDATE products
+            SET discount_value = 0, discount_start_date = NULL, discount_end_date = NULL
+            WHERE promotion IS NOT TRUE
+              AND (discount_value <> 0 OR discount_start_date IS NOT NULL OR discount_end_date IS NOT NULL);
+        `);
+
         // Migrate products.discount_percent -> discount_type/discount_value
         await pool.query(`
             DO $$

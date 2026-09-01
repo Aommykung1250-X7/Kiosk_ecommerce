@@ -8,12 +8,15 @@ import {
   Modal,
   NumberInput,
   RadioGroup,
-  TextInput,
   formatBaht,
 } from "../ui";
-
-/** เพดานส่วนลดแบบเปอร์เซ็นต์ ต้องตรงกับ MAX_DISCOUNT_PERCENT ใน backend/src/services/promotionService.js */
-const MAX_PERCENT = 90;
+import {
+  MAX_PERCENT,
+  previewDiscountedPrice,
+  previewPromotionStatus,
+  promotionScheduleNote,
+  todayKey,
+} from "./promotionPreview";
 
 const TYPE_OPTIONS: { value: DiscountType; label: string }[] = [
   { value: "percent", label: "ลดเป็นเปอร์เซ็นต์" },
@@ -25,19 +28,6 @@ export interface PromotionDraft {
   promotionValue: number;
   promotionStartDate: string;
   promotionEndDate: string;
-}
-
-/**
- * คิดราคาหลังลดด้วยสูตรเดียวกับ computePricing ฝั่ง backend
- * เพื่อให้ตัวอย่างในหน้าจอตรงกับราคาที่ลูกค้าจะเห็นจริง
- */
-function previewDiscountedPrice(
-  fullPrice: number,
-  type: DiscountType,
-  value: number,
-): number {
-  const raw = type === "amount" ? fullPrice - value : fullPrice * (1 - value / 100);
-  return Math.max(0, Math.round(raw * 100) / 100);
 }
 
 /**
@@ -65,8 +55,12 @@ export function ProductPromotionModal({
     const nextType = product.promotionType === "amount" ? "amount" : "percent";
     setType(nextType);
     setValue(String(product.promotionValue || (nextType === "amount" ? "" : 10)));
-    setStartDate(product.promotionStartDate ?? "");
-    setEndDate(product.promotionEndDate ?? "");
+
+    // ช่วงที่หมดอายุไปแล้วไม่ดึงกลับมา ไม่งั้นกดเปิดโปรอีกครั้งก็ยังไม่ลดราคาอยู่ดี
+    const savedEnd = product.promotionEndDate ?? "";
+    const stale = savedEnd !== "" && savedEnd < todayKey();
+    setStartDate(stale ? "" : (product.promotionStartDate ?? ""));
+    setEndDate(stale ? "" : savedEnd);
   }, [product]);
 
   if (!product) return null;
@@ -75,6 +69,11 @@ export function ProductPromotionModal({
   const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
   const fullPrice = product.originalPrice ?? product.price;
   const previewPrice = previewDiscountedPrice(fullPrice, type, safeValue);
+  const scheduleNote = promotionScheduleNote(
+    previewPromotionStatus(true, safeValue, startDate, endDate),
+    startDate,
+    endDate,
+  );
 
   const handleConfirm = () => {
     if (!Number.isFinite(numericValue) || numericValue <= 0) {
@@ -93,6 +92,10 @@ export function ProductPromotionModal({
     }
     if (startDate && endDate && endDate < startDate) {
       notify.warning("วันสิ้นสุดต้องไม่ก่อนวันเริ่ม");
+      return;
+    }
+    if (endDate && endDate < todayKey()) {
+      notify.warning("วันสิ้นสุดโปรโมชั่นผ่านไปแล้ว เลือกวันใหม่ก่อนเปิดโปรโมชั่น");
       return;
     }
     onConfirm({
@@ -133,6 +136,12 @@ export function ProductPromotionModal({
             </span>
           </span>
         </div>
+
+        {scheduleNote && (
+          <p className="rounded-xl border border-amber-200 bg-bo-preorder-soft/60 px-4 py-3 text-[11px] leading-relaxed text-amber-800">
+            {scheduleNote}
+          </p>
+        )}
 
         <Field label="รูปแบบส่วนลด">
           {(id) => (

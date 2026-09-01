@@ -2,7 +2,74 @@
 import pool from "../data/db.js";
 import { computePricing, toDateKey } from "../services/promotionService.js";
 
+/**
+ * เงื่อนไข SQL ของ "โปรโมชั่นที่กำลังลดราคาอยู่จริงวันนี้"
+ * ต้องตรงกับ resolvePromotionStatus() ใน promotionService.js — สวิตช์เปิด ค่าส่วนลดมากกว่า 0
+ * และวันนี้อยู่ในช่วงที่ตั้งไว้ (วันว่าง = ไม่จำกัด) ไม่งั้นโปรที่ยังไม่เริ่ม/หมดอายุแล้ว
+ * จะไปโผล่ในแท็บโปรโมชั่นหน้าตู้ด้วยราคาเต็ม
+ */
+const ACTIVE_PROMOTION_SQL = `(
+        p.promotion = true
+        AND p.discount_value > 0
+        AND (p.discount_start_date IS NULL OR p.discount_start_date <= CURRENT_DATE)
+        AND (p.discount_end_date IS NULL OR p.discount_end_date >= CURRENT_DATE)
+      )`;
+
+/**
+ * ค่าคอลัมน์ discount_* ที่จะเขียนลง DB
+ * ปิดสวิตช์โปรโมชั่น = ล้างค่าทิ้งให้หมด ไม่เก็บค้างไว้ เพราะถ้าเก็บไว้ พอเปิดโปรอีกครั้ง
+ * ฟอร์มจะดึงวันเดิม (ที่มักหมดอายุไปแล้ว) กลับมาใส่ กลายเป็นเปิดโปรแล้วราคาไม่ลด
+ *
+ * @param {object} p payload ของสินค้าจาก request
+ * @returns {{isOn: boolean, type: "percent"|"amount", value: number, startDate: string|null, endDate: string|null}}
+ */
+function buildDiscountColumns(p) {
+  const isOn = p.promotion === true || p.promotion === "true" || p.promotion === 1;
+  if (!isOn) {
+    return { isOn, type: 'percent', value: 0, startDate: null, endDate: null };
+  }
+  return {
+    isOn,
+    type: p.promotionType === 'amount' ? 'amount' : 'percent',
+    value: p.promotionValue || 0,
+    startDate: p.promotionStartDate || null,
+    endDate: p.promotionEndDate || null
+  };
+}
+
 class ProductRepository {
+
+  /**
+   * แปลงแถวจากตาราง products ให้เป็นรูปแบบที่ API ส่งออก
+   * ---------------------------------------------------------------------------
+   * รวมไว้ที่เดียวเพราะทั้ง getProducts / getBestSellers / getById ต้องได้ฟิลด์
+   * โปรโมชั่นชุดเดียวกันเสมอ ก่อนหน้านี้เขียนซ้ำสามที่แล้วหลุดไม่ครบ
+   *
+   * @param {object} row แถวดิบจาก SELECT * FROM products
+   * @param {object} [options]
+   * @param {boolean} [options.applyPromotion=true] false = คืนราคาเต็ม (หน้าแอดมิน)
+   * @returns {object}
+   */
+  mapProductRow(row, { applyPromotion = true } = {}) {
+    return {
+      ...row,
+      ...computePricing(parseFloat(row.price), row, applyPromotion),
+      // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง
+      // ซึ่งจะว่างเมื่อโปรยังไม่ถึงวันเริ่มหรือหมดอายุแล้ว ดู promotionStatus ประกอบ)
+      promotionType: row.discount_type === "amount" ? "amount" : "percent",
+      promotionValue: parseFloat(row.discount_value) || 0,
+      promotionStartDate: toDateKey(row.discount_start_date),
+      promotionEndDate: toDateKey(row.discount_end_date),
+      quantity: row.stock,
+      pickupLocation: row.pickup_location,
+      preorderReleaseDate: row.preorder_release_date,
+      purchaseLimit: row.purchase_limit,
+      soldCount: parseInt(row.sold_count, 10) || 0,
+      soldRevenue: parseFloat(row.sold_revenue) || 0,
+      additional_info: row.additional_info,
+      additionalInfo: row.additional_info
+    };
+  }
   /**
    * Fetch products with optional category and search filters
    * @param {object} params
@@ -60,7 +127,7 @@ class ProductRepository {
         }
 
         if (hasPromo) {
-          whereConditions.push(`p.promotion = true`);
+          whereConditions.push(ACTIVE_PROMOTION_SQL);
         }
       }
 
@@ -80,7 +147,7 @@ class ProductRepository {
       // ขายดี -> ยอดเข้าชม -> id  โดยชั้น "ขายดี" ใช้ sold_count ซึ่งเป็นเกณฑ์เดียวกับป้าย HOT NOW
       query += ` ORDER BY
         CASE WHEN (p.status = 'In Stock' AND p.stock <= 0) THEN 1 ELSE 0 END ASC,
-        CASE WHEN (p.promotion = true) THEN 0 ELSE 1 END ASC,
+        CASE WHEN ${ACTIVE_PROMOTION_SQL} THEN 0 ELSE 1 END ASC,
         p.sold_count DESC,
         p.views DESC,
         p.id ASC`;
@@ -111,25 +178,11 @@ class ProductRepository {
         }
 
         return {
-          ...row,
+          ...this.mapProductRow(row, { applyPromotion }),
           status: computedStatus,
           category: row.category_id,
           image: fallbackImage,
-          images: imagesList.slice(0, 5),
-          ...computePricing(parseFloat(row.price), row, applyPromotion),
-          // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง)
-          promotionType: row.discount_type === "amount" ? "amount" : "percent",
-          promotionValue: parseFloat(row.discount_value) || 0,
-          promotionStartDate: toDateKey(row.discount_start_date),
-          promotionEndDate: toDateKey(row.discount_end_date),
-          quantity: row.stock,
-          pickupLocation: row.pickup_location,
-          preorderReleaseDate: row.preorder_release_date,
-          purchaseLimit: row.purchase_limit,
-          soldCount: parseInt(row.sold_count, 10) || 0,
-          soldRevenue: parseFloat(row.sold_revenue) || 0,
-          additional_info: row.additional_info,
-          additionalInfo: row.additional_info
+          images: imagesList.slice(0, 5)
         };
       });
     } catch (error) {
@@ -176,7 +229,8 @@ class ProductRepository {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, p.promotionType === 'amount' ? 'amount' : 'percent', p.promotionValue || 0, p.promotionStartDate || null, p.promotionEndDate || null];
+    const discount = buildDiscountColumns(p);
+    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, discount.isOn, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, discount.type, discount.value, discount.startDate, discount.endDate];
     try {
       const res = await pool.query(query, values);
       const newProduct = res.rows[0];
@@ -222,7 +276,8 @@ class ProductRepository {
       WHERE id = $17
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, p.promotionType === 'amount' ? 'amount' : 'percent', p.promotionValue || 0, p.promotionStartDate || null, p.promotionEndDate || null, id];
+    const discount = buildDiscountColumns(p);
+    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, discount.isOn, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, discount.type, discount.value, discount.startDate, discount.endDate, id];
     try {
       const res = await pool.query(query, values);
       if (res.rows.length === 0) return null;
@@ -344,21 +399,7 @@ class ProductRepository {
         ORDER BY p.sold_count DESC, p.sold_revenue DESC, p.views DESC, p.id ASC
       `;
       const res = await pool.query(query);
-      return res.rows.map(row => ({
-        ...row,
-        ...computePricing(parseFloat(row.price), row),
-        // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง)
-        promotionType: row.discount_type === "amount" ? "amount" : "percent",
-        promotionValue: parseFloat(row.discount_value) || 0,
-        promotionStartDate: toDateKey(row.discount_start_date),
-        promotionEndDate: toDateKey(row.discount_end_date),
-        quantity: row.stock,
-        pickupLocation: row.pickup_location,
-        preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit,
-        soldCount: parseInt(row.sold_count, 10) || 0,
-        soldRevenue: parseFloat(row.sold_revenue) || 0
-      }));
+      return res.rows.map(row => this.mapProductRow(row));
     } catch (error) {
       console.error("Error in ProductRepository.getBestSellers:", error);
       throw error;
@@ -375,21 +416,7 @@ class ProductRepository {
       const res = await pool.query("SELECT * FROM products WHERE id = $1", [parseInt(id, 10)]);
       if (res.rows.length === 0) return null;
       const row = res.rows[0];
-      return {
-        ...row,
-        ...computePricing(parseFloat(row.price), row),
-        // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง)
-        promotionType: row.discount_type === "amount" ? "amount" : "percent",
-        promotionValue: parseFloat(row.discount_value) || 0,
-        promotionStartDate: toDateKey(row.discount_start_date),
-        promotionEndDate: toDateKey(row.discount_end_date),
-        quantity: row.stock,
-        pickupLocation: row.pickup_location,
-        preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit,
-        soldCount: parseInt(row.sold_count, 10) || 0,
-        soldRevenue: parseFloat(row.sold_revenue) || 0
-      };
+      return this.mapProductRow(row);
     } catch (error) {
       console.error("Error in ProductRepository.getById:", error);
       throw error;

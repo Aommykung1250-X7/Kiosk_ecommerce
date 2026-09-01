@@ -11,6 +11,8 @@ export type ProductStatus = "In Stock" | "Pre-Order";
 /** ส่วนลดของสินค้า — ลดเป็นเปอร์เซ็นต์ หรือลดเป็นจำนวนเงินบาท */
 export type DiscountType = "percent" | "amount";
 
+export type PromotionStatus = "off" | "scheduled" | "active" | "expired";
+
 export interface Category {
   id: string;
   name: string;
@@ -58,6 +60,11 @@ export interface Product {
   promotionStartDate?: string;
   /** YYYY-MM-DD — ว่าง = ไม่หมดอายุ */
   promotionEndDate?: string;
+  /**
+   * สถานะโปรโมชั่นเทียบกับวันนี้ — แยก "ยังไม่ถึงวันเริ่ม" และ "หมดอายุแล้ว" ออกจาก "ไม่มีโปร"
+   * ทั้งสามกรณีให้ราคาเต็มเหมือนกัน หน้าจอจึงต้องอาศัยฟิลด์นี้บอกความต่าง
+   */
+  promotionStatus?: PromotionStatus;
 }
 
 /** ค่าที่ผูกกับฟอร์มเพิ่ม/แก้ไขสินค้า (เก็บเป็น string ระหว่างพิมพ์) */
@@ -276,7 +283,45 @@ export interface ReportSummary {
   popularTags: string[];
 }
 
-export type ReportTab = "sales" | "products" | "kiosk";
+export type ReportTab = "sales" | "products" | "kiosk" | "digest";
+
+/** ออเดอร์หนึ่งใบในสรุปออเดอร์ค้างรายวัน */
+export interface DigestOrder {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  totalPrice: number;
+  deliveryOption: string;
+  shippingOption: string;
+  createdAt: string;
+  /** ป้ายสถานะตามบริบทของออเดอร์ใบนั้น (ละเอียดกว่าป้ายของกลุ่ม) */
+  stageLabel: string;
+}
+
+/** กลุ่มออเดอร์ที่ค้างด้วยสาเหตุเดียวกัน */
+export interface DigestGroup {
+  key: OrderStageKey;
+  label: string;
+  count: number;
+  orders: DigestOrder[];
+}
+
+/** สรุปออเดอร์ค้างของวันหนึ่ง — ใช้ทั้งพรีวิวบนหน้าจอและเนื้ออีเมล */
+export interface DailyDigest {
+  dateKey: string;
+  totalOrders: number;
+  fulfilledCount: number;
+  outstandingCount: number;
+  groups: DigestGroup[];
+}
+
+/** การตั้งค่าการส่งอีเมลสรุปออเดอร์ค้างรายวัน */
+export interface DailyDigestSettings {
+  enabled: boolean;
+  email: string;
+  /** HH:MM แบบ 24 ชั่วโมง */
+  time: string;
+}
 export type ExportFormat = "excel" | "csv" | "pdf";
 export type DatePreset = "today" | "7days" | "30days" | "all" | "custom";
 

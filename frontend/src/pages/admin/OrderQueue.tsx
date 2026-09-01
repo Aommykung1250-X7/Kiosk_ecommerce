@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, ClipboardList, RefreshCw, Store, Truck, X } from "lucide-react";
+import { Bell, CalendarCheck, ClipboardList, RefreshCw, Store, Truck, X } from "lucide-react";
 import type { Order, OrderItem, OrderStageKey } from "../../types/admin";
 import { notify, confirmDialog } from "../../components/notify";
 import { AdminLayout } from "../../components/admin/AdminLayout";
@@ -18,13 +18,13 @@ import {
   Table,
   TableShell,
   Td,
-  TextInput,
   Th,
   THead,
   Tr,
   UnderlineTabs,
   addDays,
   formatBaht,
+  formatThaiDate,
   formatTime,
   shortOrderRef,
   toLocalDateKey,
@@ -458,7 +458,7 @@ export default function OrderQueue() {
           <Table>
             <THead>
               <Th>คำสั่งซื้อ</Th>
-              <Th>เวลา</Th>
+              <Th>เวลาสั่ง / รับของ</Th>
               <Th>ลูกค้า</Th>
               <Th>ช่องทางรับของ</Th>
               <Th>การชำระเงิน</Th>
@@ -491,8 +491,18 @@ export default function OrderQueue() {
                       </span>
                     </Td>
 
-                    <Td className="text-sm whitespace-nowrap text-bo-muted">
-                      {formatTime(order.createdAt)}
+                    <Td className="whitespace-nowrap">
+                      <span className="block text-sm text-bo-muted">
+                        {formatTime(order.createdAt)}
+                      </span>
+                      {stage.key === "fulfilled" && (
+                        <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                          <CalendarCheck className="h-3 w-3 shrink-0" />
+                          {order.fulfilledAt
+                            ? `${formatThaiDate(order.fulfilledAt)} ${formatTime(order.fulfilledAt)}`
+                            : "ไม่มีข้อมูลเวลา"}
+                        </span>
+                      )}
                     </Td>
 
                     <Td>

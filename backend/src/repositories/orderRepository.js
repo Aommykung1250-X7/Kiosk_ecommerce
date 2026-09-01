@@ -445,6 +445,60 @@ class OrderRepository {
   /**
    * Fetch all paid and fulfilled orders (order history)
    */
+  /**
+   * ออเดอร์ของวันหนึ่ง (ตามปฏิทินไทย) พร้อมบอกว่าใบไหนยังค้างอยู่
+   * ---------------------------------------------------------------------------
+   * ใช้กับอีเมลสรุปออเดอร์ค้างรายวัน เงื่อนไข "ยังค้าง" ยกมาจาก getQueue() ตัวเดียวกัน
+   * ส่วนการตัดวันใช้ + INTERVAL '7 hours' แบบเดียวกับ reportRepository.js เพราะ
+   * Postgres เก็บเวลาเป็น UTC แต่รายงานต้องตัดวันตามเวลาไทย
+   *
+   * @param {string} dateKey วันที่รูปแบบ YYYY-MM-DD ตามเวลาไทย
+   * @returns {Promise<{orders: Array, totalOrders: number, fulfilledCount: number}>}
+   */
+  async getDayOrdersWithOutstanding(dateKey) {
+    const outstandingCondition = `
+      NOT (
+        fulfillment_status = 'fulfilled'
+        OR (
+          fulfillment_status_instock IN ('fulfilled', 'none')
+          AND fulfillment_status_preorder IN ('fulfilled', 'none')
+        )
+      )
+    `;
+    const query = `
+      SELECT *, (${outstandingCondition}) AS is_outstanding
+      FROM orders
+      WHERE payment_status = 'paid'
+        AND TO_CHAR(created_at + INTERVAL '7 hours', 'YYYY-MM-DD') = $1
+      ORDER BY created_at ASC
+    `;
+    try {
+      const res = await pool.query(query, [dateKey]);
+      if (res.rows.length === 0) {
+        return { orders: [], totalOrders: 0, fulfilledCount: 0 };
+      }
+
+      const orderIds = res.rows.map(r => r.id);
+      const itemsMap = await this.fetchItemsForOrders(orderIds);
+      const shipmentsMap = await this.fetchShipmentsForOrders(orderIds);
+
+      const orders = res.rows.map(row => {
+        const order = this.mapOrderRow(row, itemsMap[row.id] || [], shipmentsMap[row.id] || []);
+        order.isOutstanding = row.is_outstanding === true;
+        return order;
+      });
+
+      return {
+        orders,
+        totalOrders: orders.length,
+        fulfilledCount: orders.filter(o => !o.isOutstanding).length
+      };
+    } catch (error) {
+      console.error("Error fetching day orders from DB:", error);
+      throw error;
+    }
+  }
+
   async getHistory() {
     const query = `
       SELECT o.*, u.name as handler_name FROM orders o
@@ -478,6 +532,31 @@ class OrderRepository {
   }
 
   /**
+   * ประทับเวลาจ่ายของลงรายการสินค้าในออเดอร์
+   * ---------------------------------------------------------------------------
+   * order_items.fulfilled_at คือหลักฐานว่าของชิ้นไหนถูกจ่ายไปตอนไหน ซึ่งสำคัญกับออเดอร์
+   * ที่ลูกค้ามารับสองรอบ (ของพร้อมส่งรอบแรก พรีออเดอร์อีกรอบ) เพราะ orders.fulfilled_at
+   * เก็บได้แค่รอบสุดท้าย เดิมมีแต่ fulfillCombined/fulfillItem ที่เขียนคอลัมน์นี้
+   *
+   * @param {number} orderId
+   * @param {"instock"|"preorder"|"all"} [scope="all"] จ่ายเฉพาะรอบไหน
+   */
+  async stampItemsFulfilled(orderId, scope = "all") {
+    const scopeCondition =
+      scope === "instock"
+        ? " AND product_status <> 'Pre-Order'"
+        : scope === "preorder"
+          ? " AND product_status = 'Pre-Order'"
+          : "";
+    await pool.query(
+      `UPDATE order_items
+       SET fulfillment_status = 'fulfilled', fulfilled_at = NOW()
+       WHERE order_id = $1 AND fulfillment_status <> 'fulfilled'${scopeCondition}`,
+      [orderId]
+    );
+  }
+
+  /**
    * Mark order as fulfilled by a staff/admin
    */
   async fulfill(orderUuid, handlerId) {
@@ -496,6 +575,7 @@ class OrderRepository {
       const res = await pool.query(query, [handlerId, orderUuid]);
       if (res.rows.length === 0) return null;
       const orderRow = res.rows[0];
+      await this.stampItemsFulfilled(orderRow.id);
       const itemsMap = await this.fetchItemsForOrders([orderRow.id]);
       const shipmentsMap = await this.fetchShipmentsForOrders([orderRow.id]);
       return this.mapOrderRow(orderRow, itemsMap[orderRow.id] || [], shipmentsMap[orderRow.id] || []);
@@ -529,6 +609,7 @@ class OrderRepository {
       const res = await pool.query(query, [handlerId, orderUuid]);
       if (res.rows.length === 0) return null;
       const orderRow = res.rows[0];
+      await this.stampItemsFulfilled(orderRow.id, "instock");
 
       if (courier || trackingNumber) {
         await this.upsertShipment(orderRow.id, 'instock', courier, trackingNumber);
@@ -567,6 +648,7 @@ class OrderRepository {
       const res = await pool.query(query, [handlerId, orderUuid]);
       if (res.rows.length === 0) return null;
       const orderRow = res.rows[0];
+      await this.stampItemsFulfilled(orderRow.id, "preorder");
 
       if (courier || trackingNumber) {
         await this.upsertShipment(orderRow.id, 'preorder', courier, trackingNumber);

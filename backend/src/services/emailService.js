@@ -789,6 +789,218 @@ class EmailService {
       console.log("========================================================\n");
     }
   }
+
+  /**
+   * เทมเพลตอีเมลสรุปออเดอร์ค้างประจำวัน
+   * ใช้แถบหัวแบรนด์และชุดสีเดียวกับใบเสร็จ เพื่อให้ทุกอีเมลจากระบบหน้าตาเป็นชุดเดียวกัน
+   *
+   * @param {object} digest ผลลัพธ์จาก dailyReportService.buildDigest()
+   * @returns {{htmlContent: string, attachments: Array}}
+   */
+  generateDailyOrderDigestHtml(digest) {
+    const brand = this.buildBrandHeader();
+    const attachments = brand.attachment ? [brand.attachment] : [];
+
+    const dateLabel = formatThaiDate(`${digest.dateKey}T00:00:00+07:00`) || digest.dateKey;
+    const money = (value) =>
+      `฿${parseFloat(value || 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}`;
+    const timeOnly = (value) =>
+      value
+        ? new Date(value).toLocaleTimeString("th-TH", {
+            timeZone: "Asia/Bangkok",
+            hour: "2-digit",
+            minute: "2-digit"
+          })
+        : "-";
+    const channelLabel = (order) => {
+      if (order.deliveryOption !== "delivery") return "รับที่ร้าน";
+      return order.shippingOption === "split" ? "จัดส่ง · แยกรอบ" : "จัดส่ง";
+    };
+
+    // แต่ละสถานะหนึ่งบล็อก: หัวข้อ + จำนวน แล้วตามด้วยตารางออเดอร์ในสถานะนั้น
+    const groupsHtml = digest.groups
+      .map(
+        (group) => `
+          <tr>
+            <td style="padding: 0 0 16px 0;">
+              <table width="100%" bgcolor="${THEME.card}" style="background-color: ${THEME.card}; border: 1px solid ${THEME.line}; border-left: 3px solid ${THEME.yellow}; border-radius: 8px; border-collapse: separate;">
+                <tr>
+                  <td style="padding: 14px 14px 8px 14px;">
+                    <span style="font-size: 14px; font-weight: 700; color: ${THEME.navy};">${group.label}</span>
+                    <span style="font-size: 14px; font-weight: 900; color: ${THEME.sale}; padding-left: 6px;">${group.count}</span>
+                    <span style="font-size: 12px; color: ${THEME.muted};"> ออเดอร์</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 14px 14px 14px;">
+                    <table width="100%" style="border-collapse: collapse;">
+                      <tr>
+                        <td style="font-size: 11px; color: ${THEME.muted}; border-bottom: 1px solid ${THEME.line}; padding: 6px 4px;">คำสั่งซื้อ</td>
+                        <td style="font-size: 11px; color: ${THEME.muted}; border-bottom: 1px solid ${THEME.line}; padding: 6px 4px;">ลูกค้า</td>
+                        <td style="font-size: 11px; color: ${THEME.muted}; border-bottom: 1px solid ${THEME.line}; padding: 6px 4px;">ช่องทาง</td>
+                        <td style="font-size: 11px; color: ${THEME.muted}; border-bottom: 1px solid ${THEME.line}; padding: 6px 4px; text-align: right;">ยอด</td>
+                        <td style="font-size: 11px; color: ${THEME.muted}; border-bottom: 1px solid ${THEME.line}; padding: 6px 4px; text-align: right;">เวลาสั่ง</td>
+                      </tr>
+                      ${group.orders
+                        .map(
+                          (order) => `
+                      <tr>
+                        <td style="font-size: 12px; color: ${THEME.text}; font-weight: 700; border-bottom: 1px solid ${THEME.line}; padding: 8px 4px;">${order.id}</td>
+                        <td style="font-size: 12px; color: ${THEME.body}; border-bottom: 1px solid ${THEME.line}; padding: 8px 4px;">${order.customerName || "ไม่ระบุชื่อ"}${order.customerPhone ? `<br><span style="font-size: 11px; color: ${THEME.muted};">${order.customerPhone}</span>` : ""}</td>
+                        <td style="font-size: 12px; color: ${THEME.sub}; border-bottom: 1px solid ${THEME.line}; padding: 8px 4px;">${channelLabel(order)}</td>
+                        <td style="font-size: 12px; color: ${THEME.body}; border-bottom: 1px solid ${THEME.line}; padding: 8px 4px; text-align: right;">${money(order.totalPrice)}</td>
+                        <td style="font-size: 12px; color: ${THEME.muted}; border-bottom: 1px solid ${THEME.line}; padding: 8px 4px; text-align: right;">${timeOnly(order.createdAt)} น.</td>
+                      </tr>`
+                        )
+                        .join("")}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`
+      )
+      .join("");
+
+    // วันที่ไม่มีออเดอร์ค้างต้องบอกให้ชัด ไม่ใช่ส่งอีเมลเปล่าให้คนอ่านเดาเอง
+    const emptyHtml = `
+          <tr>
+            <td style="padding: 0 0 16px 0;">
+              <table width="100%" bgcolor="${THEME.card}" style="background-color: ${THEME.card}; border: 1px solid ${THEME.line}; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 24px; text-align: center;">
+                    <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: ${THEME.navy};">ไม่มีออเดอร์ค้าง</p>
+                    <p style="margin: 0; font-size: 12px; color: ${THEME.muted};">
+                      ${digest.totalOrders > 0
+                        ? `ออเดอร์ของวันนี้ทั้ง ${digest.totalOrders} ใบดำเนินการครบแล้ว`
+                        : "วันนี้ยังไม่มีคำสั่งซื้อที่ชำระเงินเข้ามา"}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light">
+  <title>สรุปออเดอร์ค้าง ${dateLabel}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;700;850;900&display=swap" rel="stylesheet">
+</head>
+<body bgcolor="${THEME.pageBg}" style="margin: 0; padding: 0; background-color: ${THEME.pageBg}; font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="${THEME.pageBg}" style="background-color: ${THEME.pageBg}; padding: 20px 10px;">
+    <tr>
+      <td align="center">
+        <table width="100%" class="container" bgcolor="${THEME.pageBg}" style="max-width: 500px; background-color: ${THEME.pageBg}; border-collapse: collapse;">
+
+          <tr>
+            ${brand.html}
+          </tr>
+
+          <!-- หัวเรื่อง + ตัวเลขสรุปของทั้งวัน -->
+          <tr>
+            <td style="padding: 24px 0 16px 0;">
+              <h1 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 900; color: ${THEME.navy};">สรุปออเดอร์ค้างประจำวัน</h1>
+              <p style="margin: 0 0 16px 0; font-size: 13px; color: ${THEME.sub};">${dateLabel}</p>
+
+              <table width="100%" bgcolor="${THEME.panel}" style="background-color: ${THEME.panel}; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 14px; text-align: center; width: 33%;">
+                    <div style="font-size: 20px; font-weight: 900; color: ${THEME.navy};">${digest.totalOrders}</div>
+                    <div style="font-size: 11px; color: ${THEME.muted};">ออเดอร์ทั้งวัน</div>
+                  </td>
+                  <td style="padding: 14px; text-align: center; width: 33%; border-left: 1px solid ${THEME.line};">
+                    <div style="font-size: 20px; font-weight: 900; color: ${THEME.navy};">${digest.fulfilledCount}</div>
+                    <div style="font-size: 11px; color: ${THEME.muted};">เสร็จสิ้นแล้ว</div>
+                  </td>
+                  <td style="padding: 14px; text-align: center; width: 33%; border-left: 1px solid ${THEME.line};">
+                    <div style="font-size: 20px; font-weight: 900; color: ${digest.outstandingCount > 0 ? THEME.sale : THEME.navy};">${digest.outstandingCount}</div>
+                    <div style="font-size: 11px; color: ${THEME.muted};">ยังค้างอยู่</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${digest.groups.length > 0 ? groupsHtml : emptyHtml}
+
+          <tr>
+            <td style="padding: 8px 24px 24px 24px; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 11px; color: ${THEME.muted};">
+                อีเมลนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ กรุณาอย่าตอบกลับอีเมลนี้
+              </p>
+              <p style="margin: 0; font-size: 11px; color: ${THEME.faint};">
+                &copy; ${new Date().getFullYear()} DITC CAMT. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    return { htmlContent, attachments };
+  }
+
+  /**
+   * ส่งอีเมลสรุปออเดอร์ค้างประจำวันให้ผู้ดูแลร้าน
+   * @param {object} digest ผลลัพธ์จาก dailyReportService.buildDigest()
+   * @param {string} recipientEmail
+   */
+  async sendDailyOrderDigest(digest, recipientEmail) {
+    this.initTransporter();
+
+    if (!recipientEmail || !recipientEmail.includes("@")) {
+      console.log(`[EmailService] Invalid or missing report email: "${recipientEmail}". Skipping.`);
+      return;
+    }
+
+    const { htmlContent, attachments } = this.generateDailyOrderDigestHtml(digest);
+    const subject = `[DITC Shop Kiosk] สรุปออเดอร์ค้าง ${digest.dateKey} · ค้าง ${digest.outstandingCount} ออเดอร์`;
+
+    if (this.transporter) {
+      try {
+        const info = await this.transporter.sendMail({
+          from: process.env.EMAIL_FROM || '"DITC Shop Kiosk" <no-reply@ditc-kiosk.com>',
+          to: recipientEmail.trim(),
+          subject,
+          html: htmlContent,
+          attachments
+        });
+        console.log(`[EmailService] Daily order digest sent to ${recipientEmail}. MessageId: ${info.messageId}`);
+      } catch (error) {
+        console.error(`[EmailService] Failed to send daily order digest to ${recipientEmail}:`, error);
+        throw error;
+      }
+    } else {
+      // DEVELOPMENT MOCK LOGGING
+      console.log("\n========================================================");
+      console.log("             [EmailService] [MOCK SENDING]");
+      console.log(`To:      ${recipientEmail}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`วันที่:   ${digest.dateKey}`);
+      console.log(`ออเดอร์ทั้งวัน ${digest.totalOrders} · เสร็จแล้ว ${digest.fulfilledCount} · ค้าง ${digest.outstandingCount}`);
+      if (digest.groups.length === 0) {
+        console.log("  (ไม่มีออเดอร์ค้าง)");
+      }
+      digest.groups.forEach(group => {
+        console.log(`  ${group.label}: ${group.count} ออเดอร์`);
+        group.orders.forEach(order => {
+          console.log(`    - ${order.id} | ${order.customerName || "ไม่ระบุชื่อ"} | ฿${order.totalPrice}`);
+        });
+      });
+      console.log("========================================================\n");
+    }
+  }
 }
 
 export default new EmailService();

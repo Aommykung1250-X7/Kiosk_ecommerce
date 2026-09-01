@@ -15,6 +15,7 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 import settingRoutes from "./routes/settingRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import { initDb } from "./data/db.js";
+import dailyReportService from "./services/dailyReportService.js";
 import { getAllowedOrigins } from "./config/security.js";
 
 const app = express();
@@ -48,6 +49,9 @@ app.use("/api", settingRoutes);
 app.use("/api/admin/reports", reportRoutes);
 
 await initDb();
+
+// เริ่มตัวตั้งเวลาส่งอีเมลสรุปออเดอร์ค้างรายวัน (อ่านค่าจาก system_settings ทุกนาที)
+dailyReportService.startScheduler();
 
 // Fallback for unmatched routes
 app.use((req, res) => {

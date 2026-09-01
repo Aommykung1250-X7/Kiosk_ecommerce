@@ -6,6 +6,108 @@ import {
     getProductReport, 
     getKioskTrafficReport 
 } from "../repositories/reportRepository.js";
+import dailyReportService, { TIME_PATTERN } from "../services/dailyReportService.js";
+
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** อ่านวันที่จาก query/body ไม่ระบุ = วันนี้ตามเวลาไทย */
+const resolveDateKey = (value) => {
+    if (value === undefined || value === null || value === "") {
+        return dailyReportService.todayInBangkok();
+    }
+    if (!DATE_KEY_PATTERN.test(String(value))) return null;
+    return String(value);
+};
+
+/**
+ * พรีวิวสรุปออเดอร์ค้างของวันหนึ่ง — หน้าจอกับอีเมลใช้ข้อมูลชุดเดียวกัน
+ * GET /api/admin/reports/daily-digest?date=YYYY-MM-DD
+ */
+export const getDailyDigestController = async (req, res) => {
+    const dateKey = resolveDateKey(req.query.date);
+    if (!dateKey) {
+        return res.status(400).json({ success: false, error: "รูปแบบวันที่ต้องเป็น YYYY-MM-DD" });
+    }
+
+    try {
+        const digest = await dailyReportService.buildDigest(dateKey);
+        res.json({ success: true, data: digest });
+    } catch (err) {
+        console.error("Error building daily digest:", err);
+        res.status(500).json({ success: false, error: "ไม่สามารถสร้างสรุปออเดอร์ค้างได้" });
+    }
+};
+
+/**
+ * GET /api/admin/reports/daily-digest/settings
+ */
+export const getDailyDigestSettingsController = async (req, res) => {
+    try {
+        const settings = await dailyReportService.getSettings();
+        // lastSentDate เป็นค่าใช้ภายในของตัวตั้งเวลา ไม่ต้องส่งออกไปให้หน้าจอ
+        const { lastSentDate, ...visible } = settings;
+        res.json({ success: true, data: visible });
+    } catch (err) {
+        console.error("Error reading daily digest settings:", err);
+        res.status(500).json({ success: false, error: "ไม่สามารถอ่านการตั้งค่ารายงานได้" });
+    }
+};
+
+/**
+ * POST /api/admin/reports/daily-digest/settings
+ */
+export const updateDailyDigestSettingsController = async (req, res) => {
+    const { enabled, email, time } = req.body || {};
+
+    const trimmedEmail = String(email ?? "").trim();
+    if (enabled && !trimmedEmail) {
+        return res.status(400).json({ success: false, error: "ต้องระบุอีเมลผู้รับก่อนเปิดการส่งอัตโนมัติ" });
+    }
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        return res.status(400).json({ success: false, error: "รูปแบบอีเมลไม่ถูกต้อง" });
+    }
+    if (!TIME_PATTERN.test(String(time ?? ""))) {
+        return res.status(400).json({ success: false, error: "รูปแบบเวลาต้องเป็น HH:MM เช่น 20:00" });
+    }
+
+    try {
+        const saved = await dailyReportService.saveSettings({
+            enabled: Boolean(enabled),
+            email: trimmedEmail,
+            time: String(time)
+        });
+        const { lastSentDate, ...visible } = saved;
+        res.json({ success: true, data: visible });
+    } catch (err) {
+        console.error("Error saving daily digest settings:", err);
+        res.status(500).json({ success: false, error: "บันทึกการตั้งค่ารายงานไม่สำเร็จ" });
+    }
+};
+
+/**
+ * ส่งอีเมลสรุปทันทีตามวันที่ที่เลือก (ไม่แตะตัวกันส่งซ้ำของตัวตั้งเวลา)
+ * POST /api/admin/reports/daily-digest/send
+ */
+export const sendDailyDigestController = async (req, res) => {
+    const dateKey = resolveDateKey(req.body?.date);
+    if (!dateKey) {
+        return res.status(400).json({ success: false, error: "รูปแบบวันที่ต้องเป็น YYYY-MM-DD" });
+    }
+
+    try {
+        const result = await dailyReportService.sendDigest(dateKey, req.body?.email);
+        res.json({
+            success: true,
+            data: { recipient: result.recipient, outstandingCount: result.digest.outstandingCount }
+        });
+    } catch (err) {
+        if (err.statusCode === 400) {
+            return res.status(400).json({ success: false, error: err.message });
+        }
+        console.error("Error sending daily digest:", err);
+        res.status(500).json({ success: false, error: "ส่งอีเมลรายงานไม่สำเร็จ ตรวจสอบการตั้งค่า SMTP" });
+    }
+};
 
 /**
  * Controller สำหรับดึงข้อมูลสรุป Dashboard Preview

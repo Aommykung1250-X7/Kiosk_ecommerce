@@ -36,7 +36,6 @@ import {
   Table,
   TableShell,
   Td,
-  TextInput,
   Th,
   THead,
   Tr,
@@ -47,6 +46,7 @@ import {
   toLocalDateKey,
   type TabItem,
 } from "../../components/admin/ui";
+import { DailyDigestPanel } from "../../components/admin/reports/DailyDigestPanel";
 import { RevenueTrendChart } from "../../components/admin/charts/RevenueTrendChart";
 import { HourlyTrafficChart } from "../../components/admin/charts/HourlyTrafficChart";
 import {
@@ -59,6 +59,7 @@ const REPORT_TABS: TabItem<ReportTab>[] = [
   { key: "sales", label: "ยอดขายและการเงิน" },
   { key: "products", label: "ประสิทธิภาพสินค้า" },
   { key: "kiosk", label: "การใช้งานตู้" },
+  { key: "digest", label: "ออเดอร์ค้างรายวัน" },
 ];
 
 const PRESET_LABEL: Record<Exclude<DatePreset, "custom">, string> = {
@@ -184,6 +185,7 @@ export default function ReportManagement() {
       }));
   }, [stats]);
 
+  const isDigestTab = activeTab === "digest";
   const dateRangeLabel =
     startDate && endDate ? `${startDate} ถึง ${endDate}` : "ข้อมูลทั้งหมดตั้งแต่เริ่มระบบ";
 
@@ -197,7 +199,10 @@ export default function ReportManagement() {
         </Button>
       }
     >
-      {/* ------------------------------------------------------------ ช่วงเวลา */}
+      {/* ------------------------------------------------------------ ช่วงเวลา
+          ซ่อนในแท็บ "ออเดอร์ค้างรายวัน" เพราะแท็บนั้นเป็นสรุปรายวันและมีตัวเลือกวันของตัวเอง
+          ถ้าโชว์คู่กันจะมีตัวควบคุมวันที่สองชุดบนจอเดียว */}
+      {!isDigestTab && (
       <Card className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <SegmentedControl<DatePreset>
           value={datePreset}
@@ -232,8 +237,10 @@ export default function ReportManagement() {
           />
         </div>
       </Card>
+      )}
 
       {/* --------------------------------------------------------- การ์ดสรุป */}
+      {!isDigestTab && (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           emphasis
@@ -271,6 +278,7 @@ export default function ReportManagement() {
           }
         />
       </div>
+      )}
 
       {/* ------------------------------------------------------ แท็บและส่งออก */}
       <div className="flex flex-col gap-4">
@@ -282,6 +290,7 @@ export default function ReportManagement() {
             onChange={setActiveTab}
           />
 
+          {!isDigestTab && (
           <div className="flex flex-wrap items-center gap-2 pb-3">
             <Button size="sm" icon={Download} onClick={() => handleExport("excel")}>
               Excel
@@ -293,11 +302,14 @@ export default function ReportManagement() {
               PDF
             </Button>
           </div>
+          )}
         </div>
 
-        {error && <ErrorBanner message={error} />}
+        {error && !isDigestTab && <ErrorBanner message={error} />}
 
-        {loading ? (
+        {isDigestTab ? (
+          <DailyDigestPanel />
+        ) : loading ? (
           <Card flush>
             <LoadingState label="กำลังประมวลผลข้อมูลรายงาน" />
           </Card>

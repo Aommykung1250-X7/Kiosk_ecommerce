@@ -46,6 +46,7 @@ import {
   Toggle,
   Tr,
   UnderlineTabs,
+  cn,
   formatBaht,
   formatBahtShort,
   formatCount,
@@ -58,6 +59,7 @@ import {
   MAX_PRODUCT_IMAGES,
 } from "../../components/admin/products/ProductFormModal";
 import { ProductPromotionModal } from "../../components/admin/products/ProductPromotionModal";
+import { previewPromotionStatus } from "../../components/admin/products/promotionPreview";
 import type { PromotionDraft } from "../../components/admin/products/ProductPromotionModal";
 import { CategoryManagerModal } from "../../components/admin/products/CategoryManagerModal";
 import { StaffPanel } from "../../components/admin/products/StaffPanel";
@@ -91,6 +93,57 @@ const EMPTY_FORM: ProductFormState = {
   preorderReleaseDate: "",
   purchaseLimit: "",
 };
+
+/**
+ * ช่องส่วนลดในตารางสินค้า
+ * ---------------------------------------------------------------------------
+ * แสดงส่วนลดที่แอดมิน "ตั้งไว้" เสมอ แล้วบอกสถานะกำกับว่ามีผลแล้วหรือยัง
+ * เดิมเช็คจาก discountType ซึ่งเป็นส่วนลดที่ "มีผลจริง" โปรที่ยังไม่ถึงวันเริ่มหรือหมดอายุ
+ * จึงขึ้น "—" เหมือนไม่ได้ตั้งโปรไว้เลย จนดูเหมือนระบบพัง
+ */
+function PromotionCell({ product }: { product: Product }) {
+  const value = Number(product.promotionValue) || 0;
+  if (!product.promotion || value <= 0) {
+    return <span className="text-sm text-bo-muted">—</span>;
+  }
+
+  const status =
+    product.promotionStatus ??
+    previewPromotionStatus(
+      true,
+      value,
+      product.promotionStartDate ?? "",
+      product.promotionEndDate ?? "",
+    );
+  const label =
+    product.promotionType === "amount" ? `-${formatBahtShort(value)}` : `-${value}%`;
+
+  return (
+    <span className="inline-flex flex-col items-center gap-0.5">
+      <span
+        className={cn(
+          "bo-nums text-sm font-medium",
+          status === "active" ? "text-bo-lowstock" : "text-bo-muted",
+        )}
+      >
+        {label}
+      </span>
+      {status === "active" ? (
+        <span className="bo-nums text-[10px] text-bo-muted">
+          -{formatBaht(product.discountAmount)}
+        </span>
+      ) : status === "scheduled" ? (
+        <span className="text-[10px] text-amber-800">
+          เริ่ม {formatThaiDate(product.promotionStartDate)}
+        </span>
+      ) : (
+        <span className="text-[10px] text-rose-700">
+          หมดอายุ {formatThaiDate(product.promotionEndDate)}
+        </span>
+      )}
+    </span>
+  );
+}
 
 /** จำนวนคงเหลือของสินค้า — backend ส่งมาทั้ง stock และ quantity แล้วแต่ endpoint */
 function stockOf(product: Product): number {
@@ -1217,20 +1270,7 @@ export default function ProductManagement() {
                         </Td>
 
                         <Td align="center">
-                          {product.discountType ? (
-                            <span className="inline-flex flex-col items-center gap-0.5">
-                              <span className="bo-nums text-sm font-medium text-bo-lowstock">
-                                {product.discountType === "amount"
-                                  ? `-${formatBahtShort(product.discountValue)}`
-                                  : `-${product.discountValue}%`}
-                              </span>
-                              <span className="bo-nums text-[10px] text-bo-muted">
-                                -{formatBaht(product.discountAmount)}
-                              </span>
-                            </span>
-                          ) : (
-                            <span className="text-sm text-bo-muted">—</span>
-                          )}
+                          <PromotionCell product={product} />
                         </Td>
 
                         <Td align="right" className="bo-nums text-sm text-bo-muted">
