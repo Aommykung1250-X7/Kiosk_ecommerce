@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TagIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
+import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 import { notify } from "./notify";
 
 function CategoryPlaceholder({ category }) {
@@ -23,6 +23,9 @@ export default function ProductDetailModal({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [qty, setQty] = useState(1);
   const [otherPageIndex, setOtherPageIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Reset states whenever active product changes
   useEffect(() => {
@@ -59,10 +62,6 @@ export default function ProductDetailModal({
     ? sameCategoryProducts
     : allProducts.filter((p) => p.id !== product.id);
   const maxOtherIndex = Math.max(0, otherProducts.length - 3);
-
-  const [touchStartX, setTouchStartX] = useState(null);
-  const [touchDeltaX, setTouchDeltaX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
 
   const handlePrevOther = (e) => {
     e?.stopPropagation();

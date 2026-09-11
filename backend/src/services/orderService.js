@@ -1,7 +1,6 @@
 // backend/src/services/orderService.js
 import orderRepository from "../repositories/orderRepository.js";
 import productRepository from "../repositories/productRepository.js";
-import shippingService from "./shippingService.js";
 import PaymentGatewayService from "./payment/PaymentGatewayService.js";
 
 class OrderService {

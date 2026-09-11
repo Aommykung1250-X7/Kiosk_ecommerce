@@ -9,7 +9,7 @@ import KioskPayment from "../components/KioskPayment";
 import Screensaver from "../components/Screensaver";
 import FooterBar from "../components/FooterBar";
 import SupportModal from "../components/SupportModal";
-import { ShoppingCartIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { ShoppingCartIcon, MagnifyingGlassIcon } from "@heroicons/react/24/solid";
 import { notify } from "../components/notify";
 
 /** สินค้าหมดเมื่อเป็นของพร้อมส่งแต่สต็อกหมด — Pre-Order ไม่นับว่าหมด แม้สต็อกจะเป็น 0 */

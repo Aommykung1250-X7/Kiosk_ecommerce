@@ -11,8 +11,8 @@ function CategoryPlaceholder({ category }) {
   );
 }
 
-export default function ProductCard({ product, onAddToCart, onSelectProduct, isHot }) {
-  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, status, quantity, category, isNew } = product;
+export default function ProductCard({ product, onSelectProduct, isHot }) {
+  const { name, price, originalPrice, discountAmount, image, status, quantity, category, isNew } = product;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
   // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
   const isDiscounted = discountAmount > 0 && originalPrice > price;
