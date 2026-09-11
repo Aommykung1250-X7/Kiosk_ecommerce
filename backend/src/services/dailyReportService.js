@@ -149,9 +149,13 @@ export async function buildDigest(dateKey) {
  * ประกอบสรุปแล้วส่งอีเมล
  * @param {string} dateKey
  * @param {string} [recipient] ไม่ระบุ = ใช้อีเมลที่ตั้งไว้ในระบบ
- * @returns {Promise<{sent: boolean, recipient: string, digest: object}>}
+ * @param {object} [options]
+ * @param {boolean} [options.skipWhenEmpty=false] true = วันที่ไม่มีออเดอร์ค้างให้ข้ามไม่ต้องส่ง
+ *   ใช้กับตัวส่งอัตโนมัติเท่านั้น เพราะอีเมล "ไม่มีออเดอร์ค้าง" ที่มาทุกวันจะกลายเป็นอีเมลขยะ
+ *   จนคนอ่านมองข้ามวันที่มีของค้างจริงไปด้วย ส่วนปุ่มกดส่งเองต้องส่งเสมอ (ใช้ทดสอบ SMTP)
+ * @returns {Promise<{sent: boolean, skipped?: boolean, recipient: string, digest: object}>}
  */
-export async function sendDigest(dateKey, recipient) {
+export async function sendDigest(dateKey, recipient, { skipWhenEmpty = false } = {}) {
   const settings = await getSettings();
   const to = (recipient || settings.email || "").trim();
 
@@ -162,6 +166,11 @@ export async function sendDigest(dateKey, recipient) {
   }
 
   const digest = await buildDigest(dateKey);
+
+  if (skipWhenEmpty && digest.outstandingCount === 0) {
+    return { sent: false, skipped: true, recipient: to, digest };
+  }
+
   await emailService.sendDailyOrderDigest(digest, to);
   return { sent: true, recipient: to, digest };
 }
@@ -184,9 +193,16 @@ export function startScheduler() {
       if (timeKey < settings.time) return;
 
       // จองวันไว้ก่อนส่ง กัน tick ถัดไปยิงซ้ำถ้าการส่งใช้เวลานาน
+      // ต้องประทับวันไว้แม้กรณีที่ข้ามการส่งด้วย ไม่งั้น tick จะวนสร้างสรุปใหม่ทุกนาที
+      // ไปจนเที่ยงคืน และถ้ามีออเดอร์เข้ามาค้างตอนดึกก็จะยิงอีเมลนอกเวลาที่ตั้งไว้
       await writeSetting(KEYS.lastSent, dateKey);
-      await sendDigest(dateKey, settings.email);
-      console.log(`[DailyReport] ส่งสรุปออเดอร์ค้างของวันที่ ${dateKey} ไปที่ ${settings.email} แล้ว`);
+      const result = await sendDigest(dateKey, settings.email, { skipWhenEmpty: true });
+
+      if (result.skipped) {
+        console.log(`[DailyReport] วันที่ ${dateKey} ไม่มีออเดอร์ค้าง จึงไม่ส่งอีเมล`);
+      } else {
+        console.log(`[DailyReport] ส่งสรุปออเดอร์ค้างของวันที่ ${dateKey} ไปที่ ${settings.email} แล้ว`);
+      }
     } catch (error) {
       console.error("[DailyReport] ส่งรายงานประจำวันไม่สำเร็จ:", error);
     }

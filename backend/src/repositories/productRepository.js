@@ -1,6 +1,7 @@
 // backend/src/repositories/productRepository.js
 import pool from "../data/db.js";
 import { computePricing, toDateKey } from "../services/promotionService.js";
+import { isNewProduct, NEW_PRODUCT_SQL } from "../services/newArrivalService.js";
 
 /**
  * เงื่อนไข SQL ของ "โปรโมชั่นที่กำลังลดราคาอยู่จริงวันนี้"
@@ -60,6 +61,8 @@ class ProductRepository {
       promotionValue: parseFloat(row.discount_value) || 0,
       promotionStartDate: toDateKey(row.discount_start_date),
       promotionEndDate: toDateKey(row.discount_end_date),
+      // ของใหม่คิดสดจาก created_at ทุกครั้ง หมดอายุเองโดยไม่ต้องมีงานตั้งเวลามาล้าง
+      isNew: isNewProduct(row),
       quantity: row.stock,
       pickupLocation: row.pickup_location,
       preorderReleaseDate: row.preorder_release_date,
@@ -143,10 +146,14 @@ class ProductRepository {
         query += " WHERE " + whereConditions.join(" AND ");
       }
 
-      // เรียงให้ตรงกับ comparator ฝั่งหน้าบ้าน (Home.jsx): ของหมดลงล่าง -> โปรโมชั่น ->
-      // ขายดี -> ยอดเข้าชม -> id  โดยชั้น "ขายดี" ใช้ sold_count ซึ่งเป็นเกณฑ์เดียวกับป้าย HOT NOW
+      // เรียงให้ตรงกับ comparator ฝั่งหน้าบ้าน (Home.jsx): ของหมดลงล่าง -> สินค้าใหม่ ->
+      // โปรโมชั่น -> ขายดี -> ยอดเข้าชม -> id
+      // ชั้น "สินค้าใหม่" มาก่อนโปรโมชั่น เพราะของที่เพิ่งเข้ายังมียอดขาย/ยอดวิวเป็น 0
+      // ถ้าไม่ดันขึ้นมาจะไปจมท้ายรายการจนลูกค้าไม่เห็นว่ามีของใหม่
+      // ส่วนชั้น "ขายดี" ใช้ sold_count ซึ่งเป็นเกณฑ์เดียวกับป้าย HOT NOW
       query += ` ORDER BY
         CASE WHEN (p.status = 'In Stock' AND p.stock <= 0) THEN 1 ELSE 0 END ASC,
+        CASE WHEN ${NEW_PRODUCT_SQL} THEN 0 ELSE 1 END ASC,
         CASE WHEN ${ACTIVE_PROMOTION_SQL} THEN 0 ELSE 1 END ASC,
         p.sold_count DESC,
         p.views DESC,

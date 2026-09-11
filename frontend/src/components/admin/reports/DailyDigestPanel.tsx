@@ -257,7 +257,7 @@ export function DailyDigestPanel() {
           <div>
             <p className="text-sm font-medium text-bo-text">เปิดการส่งอัตโนมัติ</p>
             <p className="text-[11px] text-bo-muted">
-              ปิดไว้ก็ยังกดปุ่ม “ส่งอีเมลตอนนี้” ได้ตามปกติ
+              วันที่ไม่มีออเดอร์ค้างจะไม่ส่งอีเมล · ปิดไว้ก็ยังกดปุ่ม “ส่งอีเมลตอนนี้” ได้ตามปกติ
             </p>
           </div>
           <Toggle

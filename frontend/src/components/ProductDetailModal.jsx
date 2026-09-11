@@ -33,7 +33,7 @@ export default function ProductDetailModal({
 
   if (!product) return null;
 
-  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, images, status, quantity, category, description } = product;
+  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, images, status, quantity, category, description, isNew } = product;
   // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
   const isDiscounted = discountAmount > 0 && originalPrice > price;
   // ลดเป็นบาทให้โชว์ "-฿50" ลดเป็นเปอร์เซ็นต์ให้โชว์ "-15%"
@@ -138,10 +138,20 @@ export default function ProductDetailModal({
 
         {/* 1. Main Product Image Box */}
         <div className="w-full aspect-[4/3] bg-[#F4F5F7] rounded-[28px] relative flex items-center justify-center p-6 overflow-hidden select-none">
-          {/* Purchase Limit Badge on top-left */}
-          {purchaseLimit > 0 && (
-            <div className="absolute top-3.5 left-3.5 z-10 bg-[#E53935] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-xs tracking-wide flex items-center gap-1">
-              <span>จำกัด {purchaseLimit} ชิ้น</span>
+          {/* Top-Left Badges — ยึดกติกาเดียวกับการ์ดบนหน้าแรก: ป้าย NEW อยู่บนสุดเสมอ
+              แล้วค่อยตามด้วยป้ายจำกัดจำนวน วางเป็นคอลัมน์เดียวให้ซ้อนกันเอง */}
+          {(isNew || purchaseLimit > 0) && (
+            <div className="absolute top-3.5 left-3.5 z-10 flex flex-col items-start gap-1.5">
+              {isNew && (
+                <div className="bg-[#0E1B3E] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-xs uppercase tracking-wide">
+                  NEW
+                </div>
+              )}
+              {purchaseLimit > 0 && (
+                <div className="bg-[#E53935] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-xs tracking-wide flex items-center gap-1">
+                  <span>จำกัด {purchaseLimit} ชิ้น</span>
+                </div>
+              )}
             </div>
           )}
 

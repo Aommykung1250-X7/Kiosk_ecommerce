@@ -12,7 +12,7 @@ function CategoryPlaceholder({ category }) {
 }
 
 export default function ProductCard({ product, onAddToCart, onSelectProduct, isHot }) {
-  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, status, quantity, category } = product;
+  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, status, quantity, category, isNew } = product;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
   // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
   const isDiscounted = discountAmount > 0 && originalPrice > price;
@@ -32,11 +32,22 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isH
     >
       {/* 1. Rounded Grey Image Box (มุมโค้ง 10px) */}
       <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[10px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
-        {/* Top-Left HOT NOW Badge — สินค้าขายดีที่สุดที่ยังมีของ
+        {/* Top-Left Badges — ป้าย NEW อยู่บนสุดเสมอ แล้วค่อยตามด้วย HOT NOW
+            วางเป็นคอลัมน์เดียว ป้ายจึงซ้อนกันเองโดยไม่ต้องคำนวณระยะเยื้อง
+            และไม่เหลือช่องว่างค้างเวลามีป้ายเดียว
             เช็ค isOutOfStock ซ้ำอีกชั้น กันป้ายไปโผล่ซ่อนอยู่ใต้แถบ SOLD OUT */}
-        {isHot && !isOutOfStock && (
-          <div className="absolute top-2.5 left-0 z-10 bg-[#F85153] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-r-[3px] uppercase tracking-wider shadow-xs">
-            HOT NOW
+        {!isOutOfStock && (isNew || isHot) && (
+          <div className="absolute top-2.5 left-0 z-10 flex flex-col items-start gap-1">
+            {isNew && (
+              <div className="bg-[#0E1B3E] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-r-[3px] uppercase tracking-wider shadow-xs">
+                NEW
+              </div>
+            )}
+            {isHot && (
+              <div className="bg-[#F85153] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-r-[3px] uppercase tracking-wider shadow-xs">
+                HOT NOW
+              </div>
+            )}
           </div>
         )}
 

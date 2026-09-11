@@ -105,14 +105,24 @@ export default function Home() {
             return isOutA ? 1 : -1;
           }
 
-          // 2. สินค้าที่มีโปรโมชัน (Promotion) อยู่ลำดับแรก
+          // 2. สินค้าใหม่ (เพิ่มเข้าระบบไม่เกิน 3 วัน) อยู่ลำดับแรกสุด
+          //    ต้องมาก่อนชั้นโปรโมชัน เพราะของที่เพิ่งเข้ายังมียอดขาย/ยอดวิวเป็น 0
+          //    ถ้าไม่ดันขึ้นมาจะไปจมท้ายรายการจนลูกค้าไม่เห็นว่ามีของใหม่
+          //    isNew คิดสดมาจากหลังบ้าน (newArrivalService.js) หมดอายุเองเมื่อครบกำหนด
+          const isNewA = a.isNew === true;
+          const isNewB = b.isNew === true;
+          if (isNewA !== isNewB) {
+            return isNewA ? -1 : 1;
+          }
+
+          // 3. สินค้าที่มีโปรโมชัน (Promotion) ถัดมา
           const isPromoA = a.promotion === true || (a.discountAmount && a.discountAmount > 0) || (a.originalPrice && a.originalPrice > a.price);
           const isPromoB = b.promotion === true || (b.discountAmount && b.discountAmount > 0) || (b.originalPrice && b.originalPrice > b.price);
           if (isPromoA !== isPromoB) {
             return isPromoA ? -1 : 1;
           }
 
-          // 3. สินค้าขายดี (Best Sellers) ถัดมา — ใช้ยอดขายจริงจาก products.sold_count
+          // 4. สินค้าขายดี (Best Sellers) ถัดมา — ใช้ยอดขายจริงจาก products.sold_count
           //    เกณฑ์เดียวกับป้าย HOT NOW ตัวที่ได้ป้ายจึงลอยขึ้นมาอยู่แถวบนเองโดยอัตโนมัติ
           const soldA = a.soldCount || 0;
           const soldB = b.soldCount || 0;
@@ -120,14 +130,14 @@ export default function Home() {
             return soldB - soldA;
           }
 
-          // 4. ยอดขายเท่ากัน ตัดสินด้วยยอดเข้าชม
+          // 5. ยอดขายเท่ากัน ตัดสินด้วยยอดเข้าชม
           const viewsA = a.views || 0;
           const viewsB = b.views || 0;
           if (viewsA !== viewsB) {
             return viewsB - viewsA;
           }
 
-          // 5. เรียงตาม ID สินค้า
+          // 6. เรียงตาม ID สินค้า
           return (a.id || 0) - (b.id || 0);
         });
 

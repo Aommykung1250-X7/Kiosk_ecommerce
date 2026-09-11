@@ -1201,8 +1201,15 @@ export default function ProductManagement() {
                               <p className="truncate text-sm font-medium text-bo-text">
                                 {product.name}
                               </p>
-                              {(isPreOrder && releaseDate) || limit ? (
+                              {product.isNew || (isPreOrder && releaseDate) || limit ? (
                                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                  {/* ตารางนี้ใช้ลำดับเดียวกับหน้าตู้ สินค้าใหม่จึงลอยขึ้นหัวตาราง
+                                      ป้ายนี้บอกสาเหตุ ไม่งั้นแอดมินจะงงว่าทำไมลำดับเปลี่ยนเอง */}
+                                  {product.isNew && (
+                                    <Badge tone="accent" size="sm">
+                                      สินค้าใหม่
+                                    </Badge>
+                                  )}
                                   {isPreOrder && releaseDate && (
                                     <Badge tone="preorder" size="sm">
                                       พร้อมส่ง {formatThaiDate(releaseDate)}
