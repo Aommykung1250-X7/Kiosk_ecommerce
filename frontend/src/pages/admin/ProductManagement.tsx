@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { removeBackground } from "@imgly/background-removal";
 import {
   AlertTriangle,
   Eye,
@@ -477,6 +476,7 @@ const refineAlphaMatte = (imageSource: Blob | File | string): Promise<Blob | nul
 const processBackgroundRemoval = async (imageSource: File | Blob | string): Promise<Blob | null> => {
   let resultBlob: Blob | null = null;
   try {
+    const { removeBackground } = await import("@imgly/background-removal");
     const blob = await removeBackground(imageSource, {
       model: "isnet", // High-Precision Full Float32 neural network model
       device: "gpu",  // Hardware accelerated GPU inference
@@ -487,6 +487,7 @@ const processBackgroundRemoval = async (imageSource: File | Blob | string): Prom
   } catch (aiErr) {
     console.warn("High-precision AI removeBackground failed, retrying with fp16 fallback:", aiErr);
     try {
+      const { removeBackground } = await import("@imgly/background-removal");
       const fallbackAiBlob = await removeBackground(imageSource, {
         model: "isnet_fp16",
         publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",

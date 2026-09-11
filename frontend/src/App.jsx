@@ -1,16 +1,18 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
-import MobileDelivery from "./pages/MobileDelivery";
-import Login from "./pages/Login";
-import Unauthorized from "./pages/Unauthorized";
-import OrderQueue from "./pages/admin/OrderQueue";
-import ProductManagement from "./pages/admin/ProductManagement";
-import ScreensaverManagement from "./pages/admin/ScreensaverManagement";
-import ReportManagement from "./pages/admin/ReportManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
-import NotificationDemo from "./pages/NotificationDemo";
 import { NotificationProvider } from "./components/notify";
+
+// Lazy load non-home pages for optimal initial bundle size
+const MobileDelivery = lazy(() => import("./pages/MobileDelivery"));
+const Login = lazy(() => import("./pages/Login"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized"));
+const OrderQueue = lazy(() => import("./pages/admin/OrderQueue"));
+const ProductManagement = lazy(() => import("./pages/admin/ProductManagement"));
+const ScreensaverManagement = lazy(() => import("./pages/admin/ScreensaverManagement"));
+const ReportManagement = lazy(() => import("./pages/admin/ReportManagement"));
+const NotificationDemo = lazy(() => import("./pages/NotificationDemo"));
 
 function KioskOrCheckout() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -87,39 +89,53 @@ export default function App() {
   return (
     <NotificationProvider>
       <Router>
-        <Routes>
-          {/* หน้าหลักของตู้สินค้า / หน้าจ่ายเงินบนมือถือ */}
-          <Route path="/" element={<KioskOrCheckout />} />
+        <Suspense fallback={
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+            backgroundColor: "#F8F8F8",
+            color: "#0E1B3E",
+            fontFamily: "'Prompt', sans-serif"
+          }}>
+            <div>กำลังโหลด...</div>
+          </div>
+        }>
+          <Routes>
+            {/* หน้าหลักของตู้สินค้า / หน้าจ่ายเงินบนมือถือ */}
+            <Route path="/" element={<KioskOrCheckout />} />
 
-          {/* หน้ายืนยันตัวตน */}
-          <Route path="/ditc-portal-to-manager" element={<Login />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route path="/mobile/delivery" element={<MobileDelivery />} />
+            {/* หน้ายืนยันตัวตน */}
+            <Route path="/ditc-portal-to-manager" element={<Login />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/mobile/delivery" element={<MobileDelivery />} />
 
-          {/* ทางลัดชื่อสั้นของหลังบ้าน ชี้ไปที่เส้นทางจริงใต้ /dashboard */}
-          <Route path="/orders" element={<Navigate to="/dashboard/orders" replace />} />
-          <Route path="/products" element={<Navigate to="/dashboard/products" replace />} />
-          <Route path="/screensavers" element={<Navigate to="/dashboard/screensavers" replace />} />
-          <Route path="/reports" element={<Navigate to="/dashboard/reports" replace />} />
+            {/* ทางลัดชื่อสั้นของหลังบ้าน ชี้ไปที่เส้นทางจริงใต้ /dashboard */}
+            <Route path="/orders" element={<Navigate to="/dashboard/orders" replace />} />
+            <Route path="/products" element={<Navigate to="/dashboard/products" replace />} />
+            <Route path="/screensavers" element={<Navigate to="/dashboard/screensavers" replace />} />
+            <Route path="/reports" element={<Navigate to="/dashboard/reports" replace />} />
 
-          {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (Staff & Admin) */}
-          <Route element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}>
-            <Route path="/dashboard/orders" element={<OrderQueue />} />
-          </Route>
+            {/* ส่วนงานพนักงานหน้าร้านและแอดมิน (Staff & Admin) */}
+            <Route element={<ProtectedRoute allowedRoles={["staff", "admin"]} />}>
+              <Route path="/dashboard/orders" element={<OrderQueue />} />
+            </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-            <Route path="/dashboard" element={<Navigate to="/dashboard/products" replace />} />
-            <Route path="/dashboard/products" element={<ProductManagement />} />
-            <Route path="/dashboard/screensavers" element={<ScreensaverManagement />} />
-            <Route path="/dashboard/reports" element={<ReportManagement />} />
-          </Route>
+            <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+              <Route path="/dashboard" element={<Navigate to="/dashboard/products" replace />} />
+              <Route path="/dashboard/products" element={<ProductManagement />} />
+              <Route path="/dashboard/screensavers" element={<ScreensaverManagement />} />
+              <Route path="/dashboard/reports" element={<ReportManagement />} />
+            </Route>
 
-          {/* หน้าสาธิตระบบแจ้งเตือน สำหรับนักพัฒนาและงานตรวจรับ UI */}
-          <Route path="/dev/notifications" element={<NotificationDemo />} />
+            {/* หน้าสาธิตระบบแจ้งเตือน สำหรับนักพัฒนาและงานตรวจรับ UI */}
+            <Route path="/dev/notifications" element={<NotificationDemo />} />
 
-          {/* เส้นทางกรณีไม่พบหน้าจอใดๆ ดีดกลับหน้าแรก */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* เส้นทางกรณีไม่พบหน้าจอใดๆ ดีดกลับหน้าแรก */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </Router>
     </NotificationProvider>
   );
