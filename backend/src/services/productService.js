@@ -27,8 +27,8 @@ class ProductService {
    * @param {string} [search]
    * @returns {Promise<Array>}
    */
-  async getProducts(category, search) {
-    return await productRepository.getProducts({ category, search });
+  async getProducts(category, search, applyPromotion = true) {
+    return await productRepository.getProducts({ category, search, applyPromotion });
   }
 
   /**
@@ -104,7 +104,7 @@ class ProductService {
     if (!Array.isArray(tags)) {
       throw new Error("Tags must be an array of strings.");
     }
-    const cleanTags = tags.map(t => String(t).trim()).filter(t => t.length > 0);
+    const cleanTags = tags.map(t => String(t).trim()).filter(t => t.length > 0).slice(0, 4);
     return await productRepository.updatePopularSearchTags(cleanTags);
   }
 }

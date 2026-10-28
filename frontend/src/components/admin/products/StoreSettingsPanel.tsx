@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Eye, RotateCcw, Truck, Search, Phone, Trash2 } from "lucide-react";
+import { Truck, Search, Phone, Trash2 } from "lucide-react";
 import type { ContactSettings } from "../../../types/admin";
-import { notify, confirmDialog } from "../../notify";
+import { notify } from "../../notify";
 import {
   Button,
   Card,
@@ -24,7 +24,7 @@ const DEFAULT_CONTACT: ContactSettings = {
 };
 
 /** ตั้งค่าที่ส่งผลกับหน้าตู้โดยตรง — ค่าจัดส่ง คำค้นหายอดนิยม และช่องทางติดต่อ */
-export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void }) {
+export function StoreSettingsPanel() {
   const [shippingFee, setShippingFee] = useState("40");
   const [popularTags, setPopularTags] = useState("");
   const [contact, setContact] = useState<ContactSettings>(DEFAULT_CONTACT);
@@ -94,10 +94,16 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
   const handleSaveTags = async () => {
     setSavingTags(true);
     try {
-      const tagList = popularTags
+      const rawTags = popularTags
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean);
+
+      if (rawTags.length > 4) {
+        notify.warning("คำค้นหายอดนิยมใส่นำเสนอได้สูงสุด 4 คำเท่านั้น");
+      }
+
+      const tagList = rawTags.slice(0, 4);
 
       const response = await fetch("/api/settings/search-tags", {
         method: "POST",
@@ -108,9 +114,9 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "บันทึกคำค้นหายอดนิยมไม่สำเร็จ");
 
-      notify.success("บันทึกคำค้นหายอดนิยมแล้ว");
+      notify.success("บันทึกคำค้นหายอดนิยมแล้ว (สูงสุด 4 คำ)");
       if (Array.isArray(data.popularSearchTags)) {
-        setPopularTags(data.popularSearchTags.join(", "));
+        setPopularTags(data.popularSearchTags.slice(0, 4).join(", "));
       }
     } catch (error) {
       notify.error((error as Error).message);
@@ -162,38 +168,11 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
     }
   };
 
-  const resetCounter = async (
-    endpoint: "reset-visitors" | "reset-product-views",
-    title: string,
-    message: string,
-  ) => {
-    const confirmed = await confirmDialog({
-      title,
-      message,
-      confirmText: "รีเซ็ตเป็น 0",
-      variant: "danger",
-    });
-    if (!confirmed) return;
-
-    try {
-      const response = await fetch(`/api/settings/${endpoint}`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "รีเซ็ตไม่สำเร็จ");
-
-      notify.success("รีเซ็ตเรียบร้อย เริ่มนับใหม่จาก 0");
-      onStatsReset();
-    } catch (error) {
-      notify.error((error as Error).message);
-    }
-  };
-
   const tagList = popularTags
     .split(",")
     .map((tag) => tag.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, 4);
   const feeValue = parseFloat(shippingFee) || 0;
 
   return (
@@ -247,7 +226,7 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
       <Card className="flex flex-col gap-5">
         <CardHeader
           title="คำค้นหายอดนิยม"
-          description="ปุ่มค้นหาด่วนที่ขึ้นบนหน้าค้นหาของตู้"
+          description="ปุ่มค้นหาด่วนที่ขึ้นบนหน้าค้นหาของตู้ (แสดงสูงสุด 4 คำ)"
           actions={
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-bo-accent-soft text-bo-accent">
               <Search className="h-4 w-4" />
@@ -255,7 +234,7 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
           }
         />
 
-        <Field label="คำค้นหา" hint="คั่นแต่ละคำด้วยเครื่องหมายจุลภาค">
+        <Field label="คำค้นหา" hint="คั่นแต่ละคำด้วยเครื่องหมายจุลภาค (สูงสุด 4 คำ)">
           {(id) => (
             <TextArea
               id={id}
@@ -422,42 +401,6 @@ export function StoreSettingsPanel({ onStatsReset }: { onStatsReset: () => void 
         >
           {savingContact ? "กำลังบันทึก" : "บันทึกข้อมูลการติดต่อ"}
         </Button>
-      </Card>
-
-      {/* ------------------------------------------------------- รีเซ็ตสถิติ */}
-      <Card className="flex flex-col gap-5 lg:col-span-2 xl:col-span-3">
-        <CardHeader
-          title="รีเซ็ตตัวนับสถิติ"
-          description="ตั้งค่าตัวนับกลับเป็น 0 เพื่อเริ่มเก็บสถิติรอบใหม่ ข้อมูลที่นับไว้เดิมจะหายถาวร"
-        />
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Button
-            icon={RotateCcw}
-            onClick={() =>
-              void resetCounter(
-                "reset-visitors",
-                "รีเซ็ตจำนวนผู้เข้าใช้งาน?",
-                "ตัวนับจำนวนครั้งที่ตู้ถูกแตะเริ่มใช้งานจะกลับไปเป็น 0 และย้อนกลับไม่ได้",
-              )
-            }
-          >
-            รีเซ็ตจำนวนผู้เข้าใช้งานตู้
-          </Button>
-
-          <Button
-            icon={Eye}
-            onClick={() =>
-              void resetCounter(
-                "reset-product-views",
-                "รีเซ็ตยอดการเข้าชมสินค้า?",
-                "ยอดเข้าชมของสินค้าทุกรายการจะกลับไปเป็น 0 และย้อนกลับไม่ได้",
-              )
-            }
-          >
-            รีเซ็ตยอดการเข้าชมสินค้า
-          </Button>
-        </div>
       </Card>
     </div>
   );

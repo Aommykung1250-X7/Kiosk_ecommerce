@@ -44,7 +44,7 @@ export default function CartDrawer({
 
   if (!isOpen) return null;
 
-  const { items = [], totalPrice = 0, totalItems = 0 } = cart || {};
+  const { items = [], totalPrice = 0, totalItems = 0, discountTotal = 0 } = cart || {};
   const hasInStock = items.some((item) => item.product && item.product.status === "In Stock");
   const hasPreOrder = items.some((item) => item.product && item.product.status === "Pre-Order");
   const isMixed = hasInStock && hasPreOrder;
@@ -191,6 +191,9 @@ export default function CartDrawer({
                           })}
                         </span>
                         <span className="text-xs sm:text-sm text-gray-400 font-medium">
+                          {product.discountAmount > 0 && product.originalPrice > product.price && (
+                            <span className="line-through mr-1.5">฿{product.originalPrice}</span>
+                          )}
                           (฿{product.price}/piece)
                         </span>
                       </div>
@@ -339,6 +342,17 @@ export default function CartDrawer({
                         : "จัดส่งพัสดุ"}
                     </span>
                   </div>
+                  {discountTotal > 0 && (
+                    <div className="flex justify-between items-center text-gray-500 font-normal">
+                      <span>ส่วนลดโปรโมชั่น</span>
+                      <span className="font-bold text-[#00796B]">
+                        −฿{discountTotal.toLocaleString("th-TH", {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center text-gray-500 font-normal">
                     <span>ค่าบริการจัดส่ง</span>
                     {shippingFee > 0 ? (

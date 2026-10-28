@@ -103,6 +103,27 @@ try {
     console.log(`PASS long cart ${width}×${height}`);
   }
 
+  // Preserve Backend's merchandising rules while exercising the responsive cards.
+  products[2].isNew = true;
+  Object.assign(products[3], { promotion: true, originalPrice: 50, discountAmount: 25 });
+  products[4].soldCount = 100;
+  Object.assign(products[23], { quantity: 0, stock: 0, soldCount: 999 });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${process.env.KIOSK_URL || 'http://localhost:5173'}/?kiosk=true`);
+  await page.locator('.kiosk-product-card h3').first().waitFor();
+  const names = await page.locator('.kiosk-product-card h3').allTextContents();
+  assert.deepEqual(names.slice(0, 3), [products[2].name, products[3].name, products[4].name]);
+  assert.equal(names.at(-1), products[23].name, 'sold-out best seller stays last');
+  const hotCard = page.locator('.kiosk-product-card').filter({ hasText: 'HOT NOW' });
+  assert.equal(await hotCard.count(), 1);
+  assert.ok((await hotCard.textContent()).includes(products[4].name), 'HOT NOW uses available product sales');
+  const promoCard = page.locator('.kiosk-product-card').filter({ hasText: products[3].name });
+  await fits(promoCard, 'discounted product card');
+  await promoCard.click();
+  await fits(page.locator('.kiosk-product-dialog'), 'discounted product dialog');
+  await page.getByRole('button', { name: 'ADD TO CART' }).click();
+  console.log('PASS NEW / promotion / sales ranking after merge');
+
   await page.clock.install();
   for (const [width, height] of [[2160, 3840], [1440, 900], [390, 844]]) {
     await page.setViewportSize({ width, height });

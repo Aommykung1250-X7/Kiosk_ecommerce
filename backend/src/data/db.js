@@ -138,6 +138,41 @@ export const initDb = async () => {
             ALTER TABLE products ADD COLUMN IF NOT EXISTS views INTEGER DEFAULT 0;
         `);
 
+        // ยอดขายสะสมของสินค้า — ต้องรู้ก่อนว่าเพิ่งสร้างคอลัมน์รอบนี้หรือเปล่า
+        // เพราะ initDb() รันทุกครั้งที่ boot ถ้า backfill แบบไม่มีเงื่อนไข
+        // ตัวเลขที่นับสะสมมาจะโดนเขียนทับด้วยค่าที่คำนวณใหม่ทุกครั้งที่รีสตาร์ต
+        const soldColumn = await pool.query(`
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'products' AND column_name = 'sold_count'
+        `);
+        const isNewSoldColumn = soldColumn.rows.length === 0;
+
+        await pool.query(`
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS sold_count INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS sold_revenue NUMERIC(12, 2) NOT NULL DEFAULT 0;
+        `);
+
+        // เติมยอดย้อนหลังจากออเดอร์ที่จ่ายเงินแล้ว ทำครั้งเดียวตอนสร้างคอลัมน์
+        // สูตรเดียวกับที่ getBestSellers / getProductReport ใช้ ตัวเลขจะได้ตรงกับหน้ารายงาน
+        if (isNewSoldColumn) {
+            await pool.query(`
+                UPDATE products p SET
+                    sold_count = COALESCE(agg.qty, 0),
+                    sold_revenue = COALESCE(agg.revenue, 0)
+                FROM (
+                    SELECT oi.product_id,
+                           SUM(oi.quantity)::int AS qty,
+                           SUM(oi.quantity * oi.unit_price) AS revenue
+                    FROM order_items oi
+                    JOIN orders o ON o.id = oi.order_id
+                    WHERE o.payment_status = 'paid'
+                    GROUP BY oi.product_id
+                ) AS agg
+                WHERE agg.product_id = p.id
+            `);
+            console.log("[DB] Backfilled products.sold_count / sold_revenue from paid orders.");
+        }
+
         // Create kiosk_stats table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS kiosk_stats(
@@ -168,6 +203,7 @@ export const initDb = async () => {
             ('screensaver_master_enabled', 'true'),
             ('screensaver_master_duration', '10'),
             ('screensaver_featured_products', '[]'),
+            ('screensaver_main_image', 'main_screen.jpeg'),
             ('popular_search_tags', '["น้ำดื่ม", "ชาเขียว", "เลย์", "KitKat", "แก้วน้ำ", "เสื้อ"]'),
             ('contact_hotline', '02-123-4567 / 081-234-5678'),
             ('contact_line_id', '@ditcsupport'),
@@ -261,12 +297,14 @@ export const initDb = async () => {
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_option VARCHAR(50) DEFAULT 'combined';
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_gateway_ref VARCHAR(255) DEFAULT NULL;
             ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customer_profiles(id) ON DELETE SET NULL;
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_total NUMERIC(10, 2) DEFAULT 0;
         `);
 
         // Alter order_items table
         await pool.query(`
             ALTER TABLE order_items ADD COLUMN IF NOT EXISTS fulfillment_status VARCHAR(50) DEFAULT 'pending';
             ALTER TABLE order_items ADD COLUMN IF NOT EXISTS fulfilled_at TIMESTAMP;
+            ALTER TABLE order_items ADD COLUMN IF NOT EXISTS original_unit_price NUMERIC(10, 2);
         `);
 
         // Insert default shipping settings if not exist
@@ -278,6 +316,36 @@ export const initDb = async () => {
         // Alter products table to add category_id FK
         await pool.query(`
             ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id VARCHAR(100) REFERENCES categories(id) ON DELETE SET NULL;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_type VARCHAR(10) DEFAULT 'percent';
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_value NUMERIC(10, 2) DEFAULT 0;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_start_date DATE;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_end_date DATE;
+        `);
+
+        // ล้างค่าส่วนลดที่ค้างอยู่ในสินค้าที่ปิดโปรโมชั่นไปแล้ว
+        // ถ้าปล่อยค้างไว้ พอแอดมินเปิดโปรอีกครั้ง ฟอร์มจะดึงวันเดิมที่หมดอายุแล้วกลับมาใส่
+        // กลายเป็นเปิดโปรแล้วราคาไม่ลด (ตั้งแต่นี้ไป repository ล้างให้เองตอนบันทึก)
+        await pool.query(`
+            UPDATE products
+            SET discount_value = 0, discount_start_date = NULL, discount_end_date = NULL
+            WHERE promotion IS NOT TRUE
+              AND (discount_value <> 0 OR discount_start_date IS NOT NULL OR discount_end_date IS NOT NULL);
+        `);
+
+        // Migrate products.discount_percent -> discount_type/discount_value
+        await pool.query(`
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'products' AND column_name = 'discount_percent'
+                ) THEN
+                    UPDATE products
+                    SET discount_type = 'percent', discount_value = discount_percent
+                    WHERE discount_percent > 0 AND (discount_value IS NULL OR discount_value = 0);
+                    ALTER TABLE products DROP COLUMN discount_percent;
+                END IF;
+            END $$;
         `);
 
         // Migrate products.category to products.category_id

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TagIcon, ShoppingCartIcon } from "@heroicons/react/24/solid";
+import { ShoppingCartIcon } from "@heroicons/react/24/solid";
 import { notify } from "./notify";
 
 function CategoryPlaceholder({ category }) {
@@ -23,18 +23,28 @@ export default function ProductDetailModal({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [qty, setQty] = useState(1);
   const [otherPageIndex, setOtherPageIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Reset states whenever active product changes
   useEffect(() => {
     setQty(1);
     setActiveImageIndex(0);
+    setOtherPageIndex(0);
   }, [product?.id]);
 
   if (!product) return null;
 
-  const { name, price, image, images, promotion, status, quantity, category, views, description } = product;
+  const { name, price, originalPrice, discountType, discountValue, discountAmount, image, images, status, quantity, category, description, isNew } = product;
+  // ส่วนลดจากหลังบ้าน — price คือราคาหลังลดแล้ว
+  const isDiscounted = discountAmount > 0 && originalPrice > price;
+  // ลดเป็นบาทให้โชว์ "-฿50" ลดเป็นเปอร์เซ็นต์ให้โชว์ "-15%"
+  const discountLabel =
+    discountType === "amount"
+      ? `-฿${discountValue.toLocaleString("th-TH")}`
+      : `-${discountValue}%`;
   const isOutOfStock = status === "In Stock" && (quantity === undefined || quantity <= 0);
-  const isMostViewed = (views || 0) > 0;
   const purchaseLimit = Number(product.purchaseLimit || product.purchase_limit) || 0;
 
   const imagesList = Array.isArray(images) && images.length > 0
@@ -43,13 +53,15 @@ export default function ProductDetailModal({
 
   const currentImg = imagesList[activeImageIndex] || image;
 
-  // Other / Next products list (excluding current product)
-  const otherProducts = allProducts.filter((p) => p.id !== product.id);
+  // Filter products in the SAME category (excluding current product)
+  const currentCat = product.category_id || product.category;
+  const sameCategoryProducts = allProducts.filter(
+    (p) => p.id !== product.id && ((p.category_id && p.category_id === currentCat) || (p.category && p.category === currentCat))
+  );
+  const otherProducts = sameCategoryProducts.length > 0
+    ? sameCategoryProducts
+    : allProducts.filter((p) => p.id !== product.id);
   const maxOtherIndex = Math.max(0, otherProducts.length - 3);
-
-  const [touchStartX, setTouchStartX] = useState(null);
-  const [touchDeltaX, setTouchDeltaX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
 
   const handlePrevOther = (e) => {
     e?.stopPropagation();
@@ -125,10 +137,20 @@ export default function ProductDetailModal({
 
         {/* 1. Main Product Image Box */}
         <div className="w-full aspect-[4/3] bg-[#F4F5F7] rounded-[calc(var(--kiosk-unit)*28)] relative flex items-center justify-center p-6 overflow-hidden select-none">
-          {/* Purchase Limit Badge on top-left */}
-          {purchaseLimit > 0 && (
-            <div className="absolute top-3.5 left-3.5 z-10 bg-[#E53935] text-white text-[calc(var(--kiosk-unit)*10)] font-bold px-2.5 py-0.5 rounded-full shadow-xs tracking-wide flex items-center gap-1">
-              <span>จำกัด {purchaseLimit} ชิ้น</span>
+          {/* Top-Left Badges — ยึดกติกาเดียวกับการ์ดบนหน้าแรก: ป้าย NEW อยู่บนสุดเสมอ
+              แล้วค่อยตามด้วยป้ายจำกัดจำนวน วางเป็นคอลัมน์เดียวให้ซ้อนกันเอง */}
+          {(isNew || purchaseLimit > 0) && (
+            <div className="absolute top-3.5 left-3.5 z-10 flex flex-col items-start gap-1.5">
+              {isNew && (
+                <div className="bg-[#0E1B3E] text-white text-[calc(var(--kiosk-unit)*10)] font-bold px-2.5 py-0.5 rounded-full shadow-xs uppercase tracking-wide">
+                  NEW
+                </div>
+              )}
+              {purchaseLimit > 0 && (
+                <div className="bg-[#E53935] text-white text-[calc(var(--kiosk-unit)*10)] font-bold px-2.5 py-0.5 rounded-full shadow-xs tracking-wide flex items-center gap-1">
+                  <span>จำกัด {purchaseLimit} ชิ้น</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -136,18 +158,6 @@ export default function ProductDetailModal({
           {isOutOfStock ? (
             <div className="absolute top-3.5 right-3.5 z-10 bg-[#F85153] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
               SOLD OUT
-            </div>
-          ) : isMostViewed ? (
-            <div className="absolute top-3.5 right-3.5 z-10 select-none">
-              <svg className="w-8 h-7 drop-shadow-xs" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 2h28a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H12l-6 5v-5H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#FFFFFF" stroke="#000000" strokeWidth="2.2" strokeLinejoin="round"/>
-                <text x="18" y="16" fill="#000000" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="middle" fontFamily="'DIN Pro Cond', 'DIN Condensed', 'Prompt', sans-serif" letterSpacing="0.5">HOT</text>
-              </svg>
-            </div>
-          ) : promotion ? (
-            <div className="absolute top-3.5 right-3.5 z-10 bg-[#FF6B00] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
-              <TagIcon className="w-3 h-3 text-white" />
-              <span>PROMO</span>
             </div>
           ) : status === "Pre-Order" ? (
             <div className="absolute top-3.5 right-3.5 z-10 bg-[#F5A623] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
@@ -207,11 +217,28 @@ export default function ProductDetailModal({
 
           {/* Price & Quantity Stepper Row */}
           <div className="flex items-center justify-between mt-3.5 select-none">
-            <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-              ฿{(price || 0).toLocaleString("th-TH", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+            <span className="flex flex-col min-w-0">
+              <span className="flex items-center gap-2 flex-wrap">
+                <span className={`text-xl sm:text-2xl font-bold tracking-tight ${isDiscounted ? "text-[#E01E5A]" : "text-gray-900"}`}>
+                  ฿{(price || 0).toLocaleString("th-TH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                {isDiscounted && (
+                  <span className="text-sm text-gray-400 line-through">
+                    ฿{originalPrice.toLocaleString("th-TH", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                )}
+                {isDiscounted && (
+                  <span className="bg-[#E01E5A] text-white text-[calc(var(--kiosk-unit)*11)] font-bold px-2.5 py-0.5 rounded-full tracking-wide shadow-xs">
+                    {discountLabel}
+                  </span>
+                )}
+              </span>
             </span>
 
             {/* Stepper Button (Longer & Wider) */}
@@ -277,9 +304,21 @@ export default function ProductDetailModal({
           </div>
         </div>
 
-        {/* 3. Next / Other Products Smooth Sliding Carousel (สินค้าชิ้นต่อไปแบบแอนิเมชันลื่นไหล) */}
+        {/* 3. Next / Other Products Smooth Sliding Carousel (สินค้าอื่นๆ ในหมวดหมู่เดียวกัน) */}
         {otherProducts.length > 0 && (
-          <div className="kiosk-related-row flex items-center justify-center gap-2 sm:gap-3 mt-5 select-none">
+          <div className="flex flex-col mt-4 pt-3 border-t border-gray-150 select-none">
+            <div className="flex items-center justify-between px-1 mb-1.5">
+              <span className="text-xs sm:text-sm font-bold text-gray-900 tracking-tight">
+                สินค้าอื่นๆ
+              </span>
+              {sameCategoryProducts.length > 0 && (
+                <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-medium text-gray-500">
+                  หมวดหมู่เดียวกัน
+                </span>
+              )}
+            </div>
+
+            <div className="kiosk-related-row flex items-center justify-center gap-2 sm:gap-3">
             {/* Prev Button */}
             <button
               type="button"
@@ -356,7 +395,8 @@ export default function ProductDetailModal({
               ▶
             </button>
           </div>
-        )}
+        </div>
+      )}
 
         {/* 4. Bottom Action Button: ADD TO CART */}
         <button

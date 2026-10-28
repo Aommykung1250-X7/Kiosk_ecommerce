@@ -1,12 +1,17 @@
 // src/components/Screensaver.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ShoppingCartIcon, QuestionMarkCircleIcon, SparklesIcon } from "@heroicons/react/24/solid";
+import { resolveUploadUrl } from "./admin/ui/format";
+
+const FEATURED_SLOTS = 4;
 
 export default function Screensaver({ onWake }) {
-  const [language, setLanguage] = useState("TH");
-  const [slides, setSlides] = useState([]);
+  const [ads, setAds] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [mainImage, setMainImage] = useState("");
+  const [masterEnabled, setMasterEnabled] = useState(true);
+  const [masterDuration, setMasterDuration] = useState(10);
   const [contactInfo, setContactInfo] = useState({
     website: "www.camt.cmu.ac.th",
     facebook: "CAMT Chiang Mai University",
@@ -19,24 +24,36 @@ export default function Screensaver({ onWake }) {
       fetch("/api/screensavers/active").then((res) => (res.ok ? res.json() : [])).catch(() => []),
       fetch("/api/screensavers/config").then((res) => (res.ok ? res.json() : null)).catch(() => null),
       fetch("/api/settings/contact").then((res) => (res.ok ? res.json() : null)).catch(() => null),
-    ]).then(([ads, config, contact]) => {
-      if (Array.isArray(ads) && ads.length > 0) {
-        setSlides(ads);
+    ]).then(([adList, config, contact]) => {
+      if (Array.isArray(adList) && adList.length > 0) {
+        setAds(adList);
       }
 
-      if (config && Array.isArray(config.featuredProducts) && config.featuredProducts.length > 0) {
-        setFeaturedProducts(config.featuredProducts.slice(0, 4));
+      if (config) {
+        setMainImage(config.mainImage || "");
+        setMasterEnabled(config.masterEnabled !== false);
+        setMasterDuration(config.masterDuration || 10);
+      }
+
+      // backend เติมสินค้าขายดีให้ครบ 4 ช่องมาแล้วใน displayProducts
+      const configured =
+        (config && Array.isArray(config.displayProducts) && config.displayProducts) ||
+        (config && Array.isArray(config.featuredProducts) && config.featuredProducts) ||
+        [];
+
+      if (configured.length > 0) {
+        setFeaturedProducts(configured.slice(0, FEATURED_SLOTS));
       } else {
-        // Fallback to fetch bestsellers if no featured products configured
+        // Fallback ฝั่ง client เฉพาะกรณีเรียก config ไม่สำเร็จเลย ให้ดึงสินค้าขายดี (Best Sellers) เสมอ
         fetch("/api/products/bestsellers")
           .then((res) => (res.ok ? res.json() : []))
           .then((bData) => {
             if (Array.isArray(bData) && bData.length > 0) {
-              setFeaturedProducts(bData.slice(0, 4));
+              setFeaturedProducts(bData.slice(0, FEATURED_SLOTS));
             } else {
-              fetch("/api/products")
+              fetch("/api/products/bestsellers")
                 .then((r) => (r.ok ? r.json() : []))
-                .then((pData) => setFeaturedProducts((pData || []).slice(0, 4)))
+                .then((pData) => setFeaturedProducts((pData || []).slice(0, FEATURED_SLOTS)))
                 .catch(() => {});
             }
           })
@@ -52,6 +69,20 @@ export default function Screensaver({ onWake }) {
       }
     });
   }, []);
+
+  // รูปหลักของหน้าจอหลักเป็นสไลด์แรกของรอบ แล้วสลับไปสื่อโฆษณาต่อ
+  const slides = useMemo(() => {
+    const mainSlide =
+      masterEnabled && mainImage
+        ? [{ id: "main-screen", mediaUrl: mainImage, title: "DITC STORE", duration: masterDuration }]
+        : [];
+    return [...mainSlide, ...ads];
+  }, [masterEnabled, mainImage, masterDuration, ads]);
+
+  // กันกรณี index ค้างเกินความยาวรอบใหม่หลังโหลด config เสร็จ
+  useEffect(() => {
+    setCurrentSlideIndex(0);
+  }, [slides.length]);
 
   // Automatic Carousel timer for advertisement area
   useEffect(() => {
@@ -85,37 +116,8 @@ export default function Screensaver({ onWake }) {
           />
         </div>
 
-        {/* Right: Language Switcher + Help Button */}
+        {/* Right: Help Button */}
         <div className="flex items-center gap-4 sm:gap-6">
-          {/* Language Switcher Pill */}
-          <div
-            className="flex items-center bg-[#101C38] rounded-full p-0.5 border border-white/15 shadow-inner select-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setLanguage("TH")}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                language === "TH"
-                  ? "bg-[#FABE2C] text-black shadow-xs"
-                  : "text-white/80 hover:text-white"
-              }`}
-            >
-              TH
-            </button>
-            <button
-              type="button"
-              onClick={() => setLanguage("EN")}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                language === "EN"
-                  ? "bg-[#FABE2C] text-black shadow-xs"
-                  : "text-white/80 hover:text-white"
-              }`}
-            >
-              EN
-            </button>
-          </div>
-
           {/* Help Button */}
           <div className="flex items-center gap-1.5 text-white/90 hover:text-white font-bold text-xs sm:text-sm tracking-wide cursor-pointer transition-colors">
             <QuestionMarkCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" />
@@ -207,12 +209,7 @@ export default function Screensaver({ onWake }) {
             /* Active Screensaver / Promotional Ad */
             <div className="w-full h-full relative">
               <img
-                src={
-                  currentSlide.mediaUrl.startsWith("http") ||
-                  currentSlide.mediaUrl.startsWith("blob")
-                    ? currentSlide.mediaUrl
-                    : `/uploads/screensavers/${currentSlide.mediaUrl}`
-                }
+                src={resolveUploadUrl(currentSlide.mediaUrl, "screensavers") ?? ""}
                 alt={currentSlide.title || "Advertisement"}
                 className="w-full h-full object-cover transition-opacity duration-700"
               />
@@ -270,45 +267,34 @@ export default function Screensaver({ onWake }) {
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 sm:gap-2.5 w-full">
-            {(featuredProducts.length > 0
-              ? featuredProducts
-              : [1, 2, 3, 4]
-            ).map((item, idx) => {
-              const isObj = typeof item === "object";
-              const name = isObj ? item.name : `สินค้า ${idx + 1}`;
-              const price = isObj ? parseFloat(item.price).toLocaleString("th-TH") : "20";
-              const image = isObj && item.image ? item.image : "";
+          <div className="grid grid-cols-4 gap-2.5 sm:gap-3 w-full">
+            {Array.from({ length: FEATURED_SLOTS }, (_, idx) => featuredProducts[idx] ?? null).map(
+              (item, idx) => {
+                const isObj = Boolean(item && typeof item === "object");
+                const name = isObj ? item.name : `สินค้า ${idx + 1}`;
+                const image = isObj && item.image ? item.image : "";
+                const usableImage =
+                  image && (image.startsWith("http") || image.startsWith("/") || image.includes("."));
+                const imageUrl = usableImage ? resolveUploadUrl(image, "products") : null;
 
-              return (
-                <div
-                  key={isObj ? item.id : idx}
-                  className="bg-[#F8F9FA] rounded-[calc(var(--kiosk-unit)*20)] p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
-                >
-                  <div className="w-full h-11 sm:h-13 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden mb-1 border border-gray-100">
-                    {image ? (
-                      image.startsWith("http") || image.startsWith("/") || image.includes(".") ? (
-                        <img
-                          src={image.startsWith("http") || image.startsWith("/") ? image : `/uploads/products/${image}`}
-                          alt={name}
-                          className="h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-xl">🛍️</span>
-                      )
+                return (
+                  <div
+                    key={isObj ? (item.id ?? idx) : idx}
+                    className="aspect-square bg-[#F4F5F7] rounded-[calc(var(--kiosk-unit)*20)] p-2.5 flex items-center justify-center shadow-xs border border-slate-200/60 overflow-hidden relative"
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={name}
+                        className="w-full h-full max-w-[90%] max-h-[90%] object-contain drop-shadow-xs transition-transform duration-200 hover:scale-105"
+                      />
                     ) : (
-                      <span className="text-xl">🛍️</span>
+                      <span className="text-2xl opacity-40">🛍️</span>
                     )}
                   </div>
-                  <h4 className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-bold text-gray-800 line-clamp-1 w-full leading-tight">
-                    {name}
-                  </h4>
-                  <p className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-black text-[#E53935] mt-0.5">
-                    ฿{price}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
           </div>
         </div>
 

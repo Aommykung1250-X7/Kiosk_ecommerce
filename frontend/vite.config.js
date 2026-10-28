@@ -19,4 +19,22 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('@imgly')) {
+              return 'bg-removal';
+            }
+            if (id.includes('lucide-react') || id.includes('@heroicons')) {
+              return 'icons';
+            }
+            return 'vendor';
+          }
+        }
+      }
+    }
+  }
 })

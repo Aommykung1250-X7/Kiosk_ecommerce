@@ -111,7 +111,7 @@ export function FeaturedProductModal({
       onClose={onClose}
       size="xl"
       title="สินค้าแนะนำบนหน้าจอพัก"
-      description={`เลือกได้สูงสุด ${SLOT_COUNT} รายการ ช่องที่เว้นไว้ระบบจะเติมสินค้าขายดีให้อัตโนมัติ`}
+      description={`เลือกได้สูงสุด ${SLOT_COUNT} รายการ หากไม่ได้เลือกช่องไหนไว้ ระบบจะนำสินค้าที่ขายดีที่สุด (ยอดซื้อสูงสุด) มาแสดงให้อัตโนมัติ`}
       footer={
         <>
           <span className="mr-auto text-xs text-bo-muted">

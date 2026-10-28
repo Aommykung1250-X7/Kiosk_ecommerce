@@ -46,6 +46,8 @@ export function Th({ children, align = "left", className, ...rest }: ThProps) {
       scope="col"
       className={cn(
         "px-4 py-3 text-[11px] font-semibold tracking-wide text-bo-muted uppercase",
+        // ป้ายหัวคอลัมน์เป็นข้อความสั้น ถ้าปล่อยให้ตกบรรทัดจะดันความสูงแถวหัวและอ่านยาก
+        "whitespace-nowrap",
         align === "center" && "text-center",
         align === "right" && "text-right",
         className,

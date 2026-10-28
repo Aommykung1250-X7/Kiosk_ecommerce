@@ -85,7 +85,7 @@ export function NumberInput({
   ...rest
 }: InputHTMLAttributes<HTMLInputElement> & { prefix?: string; suffix?: string }) {
   return (
-    <div className="relative">
+    <div className={cn("relative w-full", className)}>
       {prefix && (
         <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-bo-muted">
           {prefix}
@@ -98,13 +98,12 @@ export function NumberInput({
           CONTROL_BASE,
           "bo-nums h-10",
           prefix && "pl-8",
-          suffix && "pr-12",
-          className,
+          suffix && "pr-16",
         )}
         {...rest}
       />
       {suffix && (
-        <span className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-xs text-bo-muted">
+        <span className="pointer-events-none absolute top-1/2 right-7 -translate-y-1/2 text-xs text-bo-muted">
           {suffix}
         </span>
       )}

@@ -101,35 +101,6 @@ class SettingController {
       return res.status(500).json({ error: "Failed to upload image." });
     }
   }
-  /**
-   * POST /api/settings/reset-visitors
-   * Reset kiosk visitor / wakeup session count to 0 (Admin only - Temporary)
-   */
-  async resetVisitorCount(req, res) {
-    try {
-      await pool.query(
-        "INSERT INTO kiosk_stats (key, value) VALUES ('session_wakeups', 0) ON CONFLICT (key) DO UPDATE SET value = 0"
-      );
-      return res.json({ success: true, message: "Visitor count reset to 0 successfully." });
-    } catch (error) {
-      console.error("Error in resetVisitorCount:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-
-  /**
-   * POST /api/settings/reset-product-views
-   * Reset views count for all products to 0 (Admin only - Temporary)
-   */
-  async resetProductViews(req, res) {
-    try {
-      await pool.query("UPDATE products SET views = 0");
-      return res.json({ success: true, message: "Product views reset to 0 successfully." });
-    } catch (error) {
-      console.error("Error in resetProductViews:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
 }
 
 export default new SettingController();

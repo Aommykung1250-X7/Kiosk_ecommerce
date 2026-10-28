@@ -8,6 +8,11 @@
 
 export type ProductStatus = "In Stock" | "Pre-Order";
 
+/** ส่วนลดของสินค้า — ลดเป็นเปอร์เซ็นต์ หรือลดเป็นจำนวนเงินบาท */
+export type DiscountType = "percent" | "amount";
+
+export type PromotionStatus = "off" | "scheduled" | "active" | "expired";
+
 export interface Category {
   id: string;
   name: string;
@@ -35,6 +40,36 @@ export interface Product {
   purchaseLimit?: number | null;
   purchase_limit?: number | null;
   views?: number;
+  /** จำนวนชิ้นที่ขายได้สะสม นับตอนออเดอร์จ่ายเงินสำเร็จ (อ่านอย่างเดียว) */
+  soldCount?: number;
+  /** ยอดเงินที่ขายได้สะสม นับคู่กับ soldCount (อ่านอย่างเดียว) */
+  soldRevenue?: number;
+  /** ราคาเต็มก่อนหักส่วนลดโปรโมชั่น — backend ส่งมาคู่กับ price เสมอ */
+  originalPrice?: number;
+  /** ชนิดส่วนลดที่มีผลอยู่จริง (null = ไม่ลด) */
+  discountType?: DiscountType | null;
+  /** ค่าส่วนลดที่มีผลอยู่จริง — เป็น % หรือจำนวนบาท ตาม discountType */
+  discountValue?: number;
+  /** ส่วนลดที่ได้จริงคิดเป็นบาท (originalPrice - price) */
+  discountAmount?: number;
+  /** ชนิดส่วนลดที่แอดมินตั้งไว้ที่สินค้าชิ้นนี้ */
+  promotionType?: DiscountType;
+  /** ค่าส่วนลดที่แอดมินตั้งไว้ (คนละตัวกับ discountValue ที่เป็นผลลัพธ์) */
+  promotionValue?: number;
+  /** YYYY-MM-DD — ว่าง = เริ่มทันที */
+  promotionStartDate?: string;
+  /** YYYY-MM-DD — ว่าง = ไม่หมดอายุ */
+  promotionEndDate?: string;
+  /**
+   * สถานะโปรโมชั่นเทียบกับวันนี้ — แยก "ยังไม่ถึงวันเริ่ม" และ "หมดอายุแล้ว" ออกจาก "ไม่มีโปร"
+   * ทั้งสามกรณีให้ราคาเต็มเหมือนกัน หน้าจอจึงต้องอาศัยฟิลด์นี้บอกความต่าง
+   */
+  promotionStatus?: PromotionStatus;
+  /**
+   * สินค้าเพิ่งเพิ่มเข้าระบบไม่เกิน 3 วันหรือไม่ — หลังบ้านคิดสดจาก created_at ทุกครั้ง
+   * (backend/src/services/newArrivalService.js) ไม่ใช่ค่าที่เก็บไว้ในฐานข้อมูล
+   */
+  isNew?: boolean;
 }
 
 /** ค่าที่ผูกกับฟอร์มเพิ่ม/แก้ไขสินค้า (เก็บเป็น string ระหว่างพิมพ์) */
@@ -49,6 +84,10 @@ export interface ProductFormState {
   image: string;
   images: string[];
   promotion: boolean;
+  promotionType: DiscountType;
+  promotionValue: number | string;
+  promotionStartDate: string;
+  promotionEndDate: string;
   pickupLocation: string;
   status: ProductStatus;
   preorderReleaseDate: string;
@@ -187,8 +226,13 @@ export interface Screensaver {
 export interface ScreensaverConfig {
   masterEnabled: boolean;
   masterDuration: number;
+  /** ชื่อไฟล์รูปหลักของหน้าจอหลัก (อยู่ใน uploads/screensavers) */
+  mainImage: string;
   featuredProductIds: number[];
+  /** เฉพาะสินค้าที่แอดมินเลือกเอง */
   featuredProducts: Product[];
+  /** สินค้าที่เติมสินค้าขายดีให้ครบ 4 ช่องแล้ว (ใช้บนหน้าจอตู้) */
+  displayProducts?: Product[];
 }
 
 /* --------------------------------------------------------------- Reports */
@@ -244,7 +288,45 @@ export interface ReportSummary {
   popularTags: string[];
 }
 
-export type ReportTab = "sales" | "products" | "kiosk";
+export type ReportTab = "sales" | "products" | "kiosk" | "digest";
+
+/** ออเดอร์หนึ่งใบในสรุปออเดอร์ค้างรายวัน */
+export interface DigestOrder {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  totalPrice: number;
+  deliveryOption: string;
+  shippingOption: string;
+  createdAt: string;
+  /** ป้ายสถานะตามบริบทของออเดอร์ใบนั้น (ละเอียดกว่าป้ายของกลุ่ม) */
+  stageLabel: string;
+}
+
+/** กลุ่มออเดอร์ที่ค้างด้วยสาเหตุเดียวกัน */
+export interface DigestGroup {
+  key: OrderStageKey;
+  label: string;
+  count: number;
+  orders: DigestOrder[];
+}
+
+/** สรุปออเดอร์ค้างของวันหนึ่ง — ใช้ทั้งพรีวิวบนหน้าจอและเนื้ออีเมล */
+export interface DailyDigest {
+  dateKey: string;
+  totalOrders: number;
+  fulfilledCount: number;
+  outstandingCount: number;
+  groups: DigestGroup[];
+}
+
+/** การตั้งค่าการส่งอีเมลสรุปออเดอร์ค้างรายวัน */
+export interface DailyDigestSettings {
+  enabled: boolean;
+  email: string;
+  /** HH:MM แบบ 24 ชั่วโมง */
+  time: string;
+}
 export type ExportFormat = "excel" | "csv" | "pdf";
 export type DatePreset = "today" | "7days" | "30days" | "all" | "custom";
 

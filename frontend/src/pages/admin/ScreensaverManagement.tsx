@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Clock,
+  ImagePlus,
   Images,
   Pencil,
   Plus,
@@ -35,6 +36,7 @@ import { FeaturedProductModal } from "../../components/admin/screensavers/Featur
 import type { Product } from "../../types/admin";
 
 const FEATURED_SLOTS = 4;
+const ALLOWED_MAIN_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export default function ScreensaverManagement() {
   const navigate = useNavigate();
@@ -49,6 +51,8 @@ export default function ScreensaverManagement() {
 
   const [masterEnabled, setMasterEnabled] = useState(true);
   const [masterDuration, setMasterDuration] = useState(10);
+  const [mainImage, setMainImage] = useState("");
+  const [uploadingMainImage, setUploadingMainImage] = useState(false);
   const [featuredProductIds, setFeaturedProductIds] = useState<number[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [featuredModalOpen, setFeaturedModalOpen] = useState(false);
@@ -63,6 +67,7 @@ export default function ScreensaverManagement() {
       const data = await response.json();
       setMasterEnabled(data.masterEnabled ?? true);
       setMasterDuration(data.masterDuration ?? 10);
+      setMainImage(data.mainImage ?? "");
       setFeaturedProductIds(data.featuredProductIds ?? []);
       setFeaturedProducts(data.featuredProducts ?? []);
     } catch (loadError) {
@@ -106,7 +111,10 @@ export default function ScreensaverManagement() {
 
   /* ------------------------------------------------------------ หน้าจอหลัก */
 
-  const saveConfig = async (productIds: number[] = featuredProductIds) => {
+  const saveConfig = async (
+    productIds: number[] = featuredProductIds,
+    image: string = mainImage,
+  ) => {
     setSavingConfig(true);
     try {
       const response = await fetch("/api/screensavers/config", {
@@ -117,6 +125,7 @@ export default function ScreensaverManagement() {
           masterEnabled,
           masterDuration,
           featuredProductIds: productIds,
+          mainImage: image,
         }),
       });
       if (!response.ok) throw new Error("ไม่สามารถบันทึกการตั้งค่าได้");
@@ -127,6 +136,25 @@ export default function ScreensaverManagement() {
       notify.error((saveError as Error).message);
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  const handleMainImageChange = async (file: File | null) => {
+    if (!file) return;
+    if (!ALLOWED_MAIN_IMAGE_TYPES.includes(file.type)) {
+      notify.warning("รองรับไฟล์ JPG, PNG และ WebP เท่านั้น");
+      return;
+    }
+
+    setUploadingMainImage(true);
+    try {
+      const filename = await uploadImage(file);
+      setMainImage(filename);
+      await saveConfig(featuredProductIds, filename);
+    } catch (uploadError) {
+      notify.error((uploadError as Error).message);
+    } finally {
+      setUploadingMainImage(false);
     }
   };
 
@@ -268,6 +296,38 @@ export default function ScreensaverManagement() {
             }
           />
 
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xs font-semibold text-bo-text">รูปหลักของหน้าจอหลัก</h3>
+                <p className="mt-0.5 text-[11px] text-bo-muted">
+                  ภาพแรกของรอบ ดูตัวอย่างได้ที่ลำดับ 1 ในลำดับการเล่น
+                </p>
+              </div>
+              <label className="shrink-0">
+                <input
+                  type="file"
+                  accept={ALLOWED_MAIN_IMAGE_TYPES.join(",")}
+                  className="sr-only"
+                  disabled={uploadingMainImage}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    event.target.value = "";
+                    void handleMainImageChange(file);
+                  }}
+                />
+                <span
+                  className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-bo-line bg-white px-3 text-xs font-medium text-bo-text transition-colors hover:bg-slate-50 ${
+                    uploadingMainImage ? "pointer-events-none opacity-60" : ""
+                  }`}
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  {uploadingMainImage ? "กำลังอัปโหลด" : "เปลี่ยนรูป"}
+                </span>
+              </label>
+            </div>
+          </div>
+
           <Field label="ระยะเวลาแสดงผลของหน้าจอหลัก" hint="ตั้งได้ระหว่าง 3 ถึง 60 วินาที">
             {(id) => (
               <NumberInput
@@ -368,6 +428,7 @@ export default function ScreensaverManagement() {
             screensavers={screensavers}
             masterEnabled={masterEnabled}
             masterDuration={masterDuration}
+            mainImage={mainImage}
           />
         </Card>
       </div>

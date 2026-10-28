@@ -1,7 +1,78 @@
 // backend/src/repositories/productRepository.js
 import pool from "../data/db.js";
+import { computePricing, toDateKey } from "../services/promotionService.js";
+import { isNewProduct, NEW_PRODUCT_SQL } from "../services/newArrivalService.js";
+
+/**
+ * เงื่อนไข SQL ของ "โปรโมชั่นที่กำลังลดราคาอยู่จริงวันนี้"
+ * ต้องตรงกับ resolvePromotionStatus() ใน promotionService.js — สวิตช์เปิด ค่าส่วนลดมากกว่า 0
+ * และวันนี้อยู่ในช่วงที่ตั้งไว้ (วันว่าง = ไม่จำกัด) ไม่งั้นโปรที่ยังไม่เริ่ม/หมดอายุแล้ว
+ * จะไปโผล่ในแท็บโปรโมชั่นหน้าตู้ด้วยราคาเต็ม
+ */
+const ACTIVE_PROMOTION_SQL = `(
+        p.promotion = true
+        AND p.discount_value > 0
+        AND (p.discount_start_date IS NULL OR p.discount_start_date <= CURRENT_DATE)
+        AND (p.discount_end_date IS NULL OR p.discount_end_date >= CURRENT_DATE)
+      )`;
+
+/**
+ * ค่าคอลัมน์ discount_* ที่จะเขียนลง DB
+ * ปิดสวิตช์โปรโมชั่น = ล้างค่าทิ้งให้หมด ไม่เก็บค้างไว้ เพราะถ้าเก็บไว้ พอเปิดโปรอีกครั้ง
+ * ฟอร์มจะดึงวันเดิม (ที่มักหมดอายุไปแล้ว) กลับมาใส่ กลายเป็นเปิดโปรแล้วราคาไม่ลด
+ *
+ * @param {object} p payload ของสินค้าจาก request
+ * @returns {{isOn: boolean, type: "percent"|"amount", value: number, startDate: string|null, endDate: string|null}}
+ */
+function buildDiscountColumns(p) {
+  const isOn = p.promotion === true || p.promotion === "true" || p.promotion === 1;
+  if (!isOn) {
+    return { isOn, type: 'percent', value: 0, startDate: null, endDate: null };
+  }
+  return {
+    isOn,
+    type: p.promotionType === 'amount' ? 'amount' : 'percent',
+    value: p.promotionValue || 0,
+    startDate: p.promotionStartDate || null,
+    endDate: p.promotionEndDate || null
+  };
+}
 
 class ProductRepository {
+
+  /**
+   * แปลงแถวจากตาราง products ให้เป็นรูปแบบที่ API ส่งออก
+   * ---------------------------------------------------------------------------
+   * รวมไว้ที่เดียวเพราะทั้ง getProducts / getBestSellers / getById ต้องได้ฟิลด์
+   * โปรโมชั่นชุดเดียวกันเสมอ ก่อนหน้านี้เขียนซ้ำสามที่แล้วหลุดไม่ครบ
+   *
+   * @param {object} row แถวดิบจาก SELECT * FROM products
+   * @param {object} [options]
+   * @param {boolean} [options.applyPromotion=true] false = คืนราคาเต็ม (หน้าแอดมิน)
+   * @returns {object}
+   */
+  mapProductRow(row, { applyPromotion = true } = {}) {
+    return {
+      ...row,
+      ...computePricing(parseFloat(row.price), row, applyPromotion),
+      // ค่าที่แอดมินตั้งไว้ที่ตัวสินค้า (discountType/discountValue ด้านบนคือส่วนลดที่มีผลจริง
+      // ซึ่งจะว่างเมื่อโปรยังไม่ถึงวันเริ่มหรือหมดอายุแล้ว ดู promotionStatus ประกอบ)
+      promotionType: row.discount_type === "amount" ? "amount" : "percent",
+      promotionValue: parseFloat(row.discount_value) || 0,
+      promotionStartDate: toDateKey(row.discount_start_date),
+      promotionEndDate: toDateKey(row.discount_end_date),
+      // ของใหม่คิดสดจาก created_at ทุกครั้ง หมดอายุเองโดยไม่ต้องมีงานตั้งเวลามาล้าง
+      isNew: isNewProduct(row),
+      quantity: row.stock,
+      pickupLocation: row.pickup_location,
+      preorderReleaseDate: row.preorder_release_date,
+      purchaseLimit: row.purchase_limit,
+      soldCount: parseInt(row.sold_count, 10) || 0,
+      soldRevenue: parseFloat(row.sold_revenue) || 0,
+      additional_info: row.additional_info,
+      additionalInfo: row.additional_info
+    };
+  }
   /**
    * Fetch products with optional category and search filters
    * @param {object} params
@@ -31,10 +102,14 @@ class ProductRepository {
     return imagesMap;
   }
 
-  async getProducts({ category, search } = {}) {
+  /**
+   * @param {object} params
+   * @param {boolean} [params.applyPromotion=true] false = คืนราคาเต็มจาก DB (สำหรับหน้าแอดมินที่ต้องเขียนราคากลับ)
+   */
+  async getProducts({ category, search, applyPromotion = true } = {}) {
     try {
       let query = `
-        SELECT DISTINCT p.* 
+        SELECT p.* 
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
       `;
@@ -55,7 +130,7 @@ class ProductRepository {
         }
 
         if (hasPromo) {
-          whereConditions.push(`p.promotion = true`);
+          whereConditions.push(ACTIVE_PROMOTION_SQL);
         }
       }
 
@@ -71,7 +146,18 @@ class ProductRepository {
         query += " WHERE " + whereConditions.join(" AND ");
       }
 
-      query += " ORDER BY p.id ASC";
+      // เรียงให้ตรงกับ comparator ฝั่งหน้าบ้าน (Home.jsx): ของหมดลงล่าง -> สินค้าใหม่ ->
+      // โปรโมชั่น -> ขายดี -> ยอดเข้าชม -> id
+      // ชั้น "สินค้าใหม่" มาก่อนโปรโมชั่น เพราะของที่เพิ่งเข้ายังมียอดขาย/ยอดวิวเป็น 0
+      // ถ้าไม่ดันขึ้นมาจะไปจมท้ายรายการจนลูกค้าไม่เห็นว่ามีของใหม่
+      // ส่วนชั้น "ขายดี" ใช้ sold_count ซึ่งเป็นเกณฑ์เดียวกับป้าย HOT NOW
+      query += ` ORDER BY
+        CASE WHEN (p.status = 'In Stock' AND p.stock <= 0) THEN 1 ELSE 0 END ASC,
+        CASE WHEN ${NEW_PRODUCT_SQL} THEN 0 ELSE 1 END ASC,
+        CASE WHEN ${ACTIVE_PROMOTION_SQL} THEN 0 ELSE 1 END ASC,
+        p.sold_count DESC,
+        p.views DESC,
+        p.id ASC`;
 
       const res = await pool.query(query, queryParams);
       const productIds = res.rows.map(r => r.id);
@@ -99,18 +185,11 @@ class ProductRepository {
         }
 
         return {
-          ...row,
+          ...this.mapProductRow(row, { applyPromotion }),
           status: computedStatus,
           category: row.category_id,
           image: fallbackImage,
-          images: imagesList.slice(0, 5),
-          price: parseFloat(row.price),
-          quantity: row.stock,
-          pickupLocation: row.pickup_location,
-          preorderReleaseDate: row.preorder_release_date,
-          purchaseLimit: row.purchase_limit,
-          additional_info: row.additional_info,
-          additionalInfo: row.additional_info
+          images: imagesList.slice(0, 5)
         };
       });
     } catch (error) {
@@ -123,8 +202,8 @@ class ProductRepository {
    * Fetch all products from the PostgreSQL database
    * @returns {Promise<Array>}
    */
-  async getAll() {
-    return this.getProducts({ category: "all" });
+  async getAll(options = {}) {
+    return this.getProducts({ category: "all", ...options });
   }
 
   /**
@@ -153,11 +232,12 @@ class ProductRepository {
     const primaryImg = rawImages.length > 0 ? rawImages[0] : (p.image || null);
 
     const query = `
-      INSERT INTO products (name, description, price, stock, category_id, image, promotion, pickup_location, status, preorder_release_date, purchase_limit, additional_info)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      INSERT INTO products (name, description, price, stock, category_id, image, promotion, pickup_location, status, preorder_release_date, purchase_limit, additional_info, discount_type, discount_value, discount_start_date, discount_end_date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, p.promotion || false, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null];
+    const discount = buildDiscountColumns(p);
+    const values = [p.name, p.description, p.price, p.stock || 0, p.category || p.categoryId, primaryImg, discount.isOn, p.pickupLocation || null, p.status || 'In Stock', p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, discount.type, discount.value, discount.startDate, discount.endDate];
     try {
       const res = await pool.query(query, values);
       const newProduct = res.rows[0];
@@ -199,11 +279,12 @@ class ProductRepository {
 
     const query = `
       UPDATE products 
-      SET name = $1, description = $2, price = $3, stock = $4, category_id = $5, image = COALESCE($6, image), promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11, additional_info = $12
-      WHERE id = $13
+      SET name = $1, description = $2, price = $3, stock = $4, category_id = $5, image = COALESCE($6, image), promotion = $7, pickup_location = $8, status = $9, preorder_release_date = $10, purchase_limit = $11, additional_info = $12, discount_type = $13, discount_value = $14, discount_start_date = $15, discount_end_date = $16
+      WHERE id = $17
       RETURNING *
     `;
-    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, p.promotion, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, id];
+    const discount = buildDiscountColumns(p);
+    const values = [p.name, p.description, p.price, p.stock, p.category || p.categoryId, primaryImg, discount.isOn, p.pickupLocation, p.status, p.preorderReleaseDate || null, p.purchaseLimit || null, p.additional_info || p.additionalInfo || null, discount.type, discount.value, discount.startDate, discount.endDate, id];
     try {
       const res = await pool.query(query, values);
       if (res.rows.length === 0) return null;
@@ -270,8 +351,30 @@ class ProductRepository {
   }
 
   /**
+   * บันทึกยอดขายสะสมของสินค้าหลังออเดอร์จ่ายเงินสำเร็จ
+   * อัปเดตทั้งสองคอลัมน์ใน query เดียว จำนวนชิ้นกับยอดเงินจะได้ไม่หลุดจากกัน
+   * @param {number|string} productId
+   * @param {number} quantity จำนวนชิ้นที่ขายได้
+   * @param {number} revenue ยอดเงินของรายการนี้ (ราคาต่อชิ้นที่ขายจริง x จำนวน)
+   */
+  async recordSale(productId, quantity, revenue) {
+    const query = `
+      UPDATE products
+      SET sold_count = sold_count + $1,
+          sold_revenue = sold_revenue + $2
+      WHERE id = $3
+    `;
+    try {
+      await pool.query(query, [quantity, revenue, parseInt(productId, 10)]);
+    } catch (error) {
+      console.error(`Error recording sale for product ${productId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Increment the view counter of a product by 1
-   * @param {number|string} productId 
+   * @param {number|string} productId
    */
   async incrementViews(productId) {
     const query = `
@@ -295,31 +398,15 @@ class ProductRepository {
    */
   async getBestSellers() {
     try {
+      // อ่านจากคอลัมน์ sold_count ที่นับสะสมไว้ตอนจ่ายเงินสำเร็จ
+      // (เดิมคำนวณสดด้วย subquery แล้ว alias ทับชื่อคอลัมน์จริงจนได้คอลัมน์ชื่อซ้ำ)
       const query = `
-        SELECT 
-          p.*,
-          COALESCE(
-            (
-              SELECT SUM(oi.quantity)::int
-              FROM order_items oi
-              JOIN orders o ON o.id = oi.order_id
-              WHERE o.payment_status = 'paid' 
-                AND oi.product_id = p.id
-            ), 0
-          ) AS sold_count
+        SELECT p.*
         FROM products p
-        ORDER BY sold_count DESC, p.views DESC, p.id ASC
+        ORDER BY p.sold_count DESC, p.sold_revenue DESC, p.views DESC, p.id ASC
       `;
       const res = await pool.query(query);
-      return res.rows.map(row => ({
-        ...row,
-        price: parseFloat(row.price),
-        quantity: row.stock,
-        pickupLocation: row.pickup_location,
-        preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit,
-        soldCount: parseInt(row.sold_count, 10)
-      }));
+      return res.rows.map(row => this.mapProductRow(row));
     } catch (error) {
       console.error("Error in ProductRepository.getBestSellers:", error);
       throw error;
@@ -336,14 +423,7 @@ class ProductRepository {
       const res = await pool.query("SELECT * FROM products WHERE id = $1", [parseInt(id, 10)]);
       if (res.rows.length === 0) return null;
       const row = res.rows[0];
-      return {
-        ...row,
-        price: parseFloat(row.price),
-        quantity: row.stock,
-        pickupLocation: row.pickup_location,
-        preorderReleaseDate: row.preorder_release_date,
-        purchaseLimit: row.purchase_limit
-      };
+      return this.mapProductRow(row);
     } catch (error) {
       console.error("Error in ProductRepository.getById:", error);
       throw error;

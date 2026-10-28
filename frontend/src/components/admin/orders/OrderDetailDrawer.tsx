@@ -1,4 +1,4 @@
-import { Check, MapPin, Package, Phone, Store, Truck, User } from "lucide-react";
+import { CalendarCheck, Check, MapPin, Package, Phone, Store, Truck, User } from "lucide-react";
 import type { Order, OrderItem } from "../../../types/admin";
 import {
   Badge,
@@ -7,6 +7,7 @@ import {
   formatBaht,
   formatDateTime,
   formatThaiDate,
+  formatTime,
   shortOrderRef,
 } from "../ui";
 import { getOrderStage, getPaymentBadge } from "./orderStage";
@@ -45,6 +46,20 @@ export function OrderDetailDrawer({
     (item) => item.fulfillmentStatus === "fulfilled",
   );
   const finished = readOnly || stage.key === "fulfilled";
+
+  // คำเรียกเวลาที่ของถึงมือลูกค้า ต่างกันตามช่องทางรับของ
+  const handoverLabel = isPickup ? "รับของ" : "จัดส่ง";
+  const handoverHeading = isPickup ? "ลูกค้ารับของเรียบร้อยแล้ว" : "จัดส่งเรียบร้อยแล้ว";
+  // เวลาที่ของถึงมือลูกค้าจริงในแต่ละรอบ — ออเดอร์ที่มารับสองรอบจะมีมากกว่าหนึ่งเวลา
+  // orders.fulfilledAt เก็บได้แค่รอบสุดท้าย จึงต้องดูเวลารายชิ้นประกอบ
+  const handoverTimes = [
+    ...new Set(
+      (order.items ?? [])
+        .map((item) => item.fulfilledAt)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ].sort();
+  const hasSeparateRounds = handoverTimes.length > 1;
 
   return (
     <Drawer
@@ -129,6 +144,14 @@ export function OrderDetailDrawer({
             <dt className="text-[11px] text-bo-muted">เวลาสั่งซื้อ</dt>
             <dd className="mt-0.5">{formatDateTime(order.createdAt)}</dd>
           </div>
+          {stage.key === "fulfilled" && (
+            <div>
+              <dt className="text-[11px] text-bo-muted">เวลา{handoverLabel}</dt>
+              <dd className="mt-0.5 font-medium text-emerald-700">
+                {order.fulfilledAt ? formatDateTime(order.fulfilledAt) : "ไม่มีข้อมูลเวลา"}
+              </dd>
+            </div>
+          )}
           <div>
             <dt className="text-[11px] text-bo-muted">อ้างอิงการชำระเงิน</dt>
             <dd className="font-bo-mono mt-0.5 text-[13px] break-all">
@@ -186,6 +209,11 @@ export function OrderDetailDrawer({
                         {formatBaht(item.price)} / ชิ้น
                       </span>
                     </div>
+                    {item.fulfilledAt && (
+                      <p className="mt-1 text-[11px] text-emerald-700">
+                        {handoverLabel}แล้ว {formatDateTime(item.fulfilledAt)}
+                      </p>
+                    )}
                   </div>
 
                   {isPickup && !finished && (
@@ -277,9 +305,35 @@ export function OrderDetailDrawer({
         )}
 
         {stage.key === "fulfilled" && (
-          <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800">
-            <p>ผู้ดำเนินการล่าสุด: {order.handlerName || "ไม่ระบุพนักงาน"}</p>
-            {order.fulfilledAt && <p className="mt-1">สำเร็จเมื่อ {formatDateTime(order.fulfilledAt)}</p>}
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+            <div className="flex items-start gap-3">
+              <CalendarCheck className="mt-0.5 h-5 w-5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold">{handoverHeading}</p>
+                {order.fulfilledAt ? (
+                  <p className="mt-1 text-base leading-snug font-semibold">
+                    {formatThaiDate(order.fulfilledAt)}
+                    <span className="ml-2 font-normal">เวลา {formatTime(order.fulfilledAt)}</span>
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm">ไม่มีข้อมูลเวลา{handoverLabel}</p>
+                )}
+
+                {hasSeparateRounds && (
+                  <ul className="mt-2 flex flex-col gap-0.5 border-t border-emerald-200 pt-2 text-xs">
+                    {handoverTimes.map((time, index) => (
+                      <li key={time}>
+                        รอบที่ {index + 1}: {formatDateTime(time)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="mt-2 text-xs">
+                  ผู้ดำเนินการล่าสุด: {order.handlerName || "ไม่ระบุพนักงาน"}
+                </p>
+              </div>
+            </div>
           </section>
         )}
       </div>

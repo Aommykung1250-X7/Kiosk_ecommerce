@@ -252,9 +252,9 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
                 </span>
               </div>
 
-              {/* QR Code Container */}
-              <div className="flex flex-col items-center justify-center gap-2.5 py-4 px-6 bg-[#F8F9FA] rounded-[calc(var(--kiosk-unit)*24)] border border-gray-100 mt-1 select-none">
-                <div className="p-3 bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col items-center justify-center gap-1.5 w-[calc(var(--kiosk-unit)*210)] sm:w-[calc(var(--kiosk-unit)*220)]">
+              {/* QR Code Container (พื้นหลังสีเทาอ่อนมินิมอล) */}
+              <div className="flex flex-col items-center justify-center gap-2.5 py-4 px-6 bg-[#F4F5F7] rounded-[calc(var(--kiosk-unit)*24)] border border-slate-200/80 mt-1 select-none">
+                <div className="p-3 bg-[#F4F5F7] rounded-2xl shadow-2xs border border-slate-200/60 flex flex-col items-center justify-center gap-1.5 w-[calc(var(--kiosk-unit)*210)] sm:w-[calc(var(--kiosk-unit)*220)]">
                   <div className="w-full bg-[#003B71] text-white py-1 px-2.5 rounded-md text-[calc(var(--kiosk-unit)*9)] font-bold flex items-center justify-center gap-1.5 uppercase tracking-wider">
                     <svg className="w-3 h-3 text-white fill-current" viewBox="0 0 24 24">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
@@ -268,9 +268,9 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
                   <div className="flex items-center justify-center py-1">
                     {qrPayload ? (
                       qrPayload.startsWith("http://") || qrPayload.startsWith("https://") ? (
-                        <img src={qrPayload} alt="PromptPay QR Code" className="w-[calc(var(--kiosk-unit)*160)] h-[calc(var(--kiosk-unit)*160)] object-contain" />
+                        <img src={qrPayload} alt="PromptPay QR Code" className="w-[calc(var(--kiosk-unit)*160)] h-[calc(var(--kiosk-unit)*160)] object-contain rounded-lg p-1 bg-[#F4F5F7]" />
                       ) : (
-                        <QRCodeSVG className="kiosk-payment-qr" value={qrPayload} size={160} />
+                        <QRCodeSVG className="kiosk-payment-qr" value={qrPayload} size={160} bgColor="#F4F5F7" fgColor="#000000" />
                       )
                     ) : (
                       <div className="h-[calc(var(--kiosk-unit)*160)] w-[calc(var(--kiosk-unit)*160)] flex flex-col items-center justify-center text-gray-400">
@@ -342,14 +342,14 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
 
                 {/* Mobile Delivery QR Code Card (Show only for delivery orders) */}
                 {deliveryOption === "delivery" && (
-                  <div className="w-full flex flex-col items-center gap-2 bg-gradient-to-br from-[#FFF9E6] to-[#FFF3CC] p-3.5 rounded-2xl border border-[#F8C032]/40 shadow-2xs">
-                    <div className="flex items-center gap-1.5 text-[#8A6200]">
+                  <div className="w-full flex flex-col items-center gap-2 bg-[#F4F5F7] p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div className="flex items-center gap-1.5 text-gray-800">
                       <span className="text-xs font-black text-center leading-tight">
                         📱 สามารถสแกน QR Code เพื่อกรอกข้อมูลสำหรับการจัดส่งสินค้า
                       </span>
                     </div>
-                    <div className="p-2.5 bg-white rounded-xl shadow-2xs border border-[#F8C032]/30">
-                      <QRCodeSVG className="kiosk-delivery-qr" value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={135} level="M" />
+                    <div className="p-2.5 bg-[#F4F5F7] rounded-xl shadow-2xs border border-slate-200/60">
+                      <QRCodeSVG className="kiosk-delivery-qr" value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={135} level="M" bgColor="#F4F5F7" fgColor="#000000" />
                     </div>
                     <span className="text-[calc(var(--kiosk-unit)*10)] text-gray-500 text-center font-medium">
                       สแกนด้วยกล้องมือถือ เพื่อระบุชื่อและที่อยู่จัดส่งสินค้า (หรือกดลิงก์ในอีเมล)

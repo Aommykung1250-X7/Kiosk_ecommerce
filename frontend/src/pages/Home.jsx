@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import ProductCard from "../components/ProductCard";
@@ -9,8 +9,11 @@ import KioskPayment from "../components/KioskPayment";
 import Screensaver from "../components/Screensaver";
 import FooterBar from "../components/FooterBar";
 import SupportModal from "../components/SupportModal";
-import { ShoppingCartIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { ShoppingCartIcon, MagnifyingGlassIcon } from "@heroicons/react/24/solid";
 import { notify } from "../components/notify";
+
+/** สินค้าหมดเมื่อเป็นของพร้อมส่งแต่สต็อกหมด — Pre-Order ไม่นับว่าหมด แม้สต็อกจะเป็น 0 */
+const isSoldOut = (p) => p.status === "In Stock" && (p.quantity ?? p.stock ?? 0) <= 0;
 
 export default function Home() {
   const [selectedCategories, setSelectedCategories] = useState(["all"]);
@@ -58,7 +61,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchCart();
-    fetch("/api/categories")
+    fetch("/api/categories?hasProducts=true")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setCategoryList(data))
       .catch((err) => console.error("Error loading categories in Home:", err));
@@ -94,19 +97,50 @@ export default function Home() {
         return res.json();
       })
       .then((data) => {
-        const sorted = [...data];
-        if (sorted.length > 0) {
-          let maxIndex = 0;
-          for (let i = 1; i < sorted.length; i++) {
-            if ((sorted[i].views || 0) > (sorted[maxIndex].views || 0)) {
-              maxIndex = i;
-            }
+        const sorted = [...data].sort((a, b) => {
+          // 1. สินค้าที่หมดสต็อก (Out of Stock / Sold Out) อยู่ล่างสุดเสมอ!
+          const isOutA = a.status === "In Stock" && (a.quantity === undefined || a.quantity <= 0 || a.stock <= 0);
+          const isOutB = b.status === "In Stock" && (b.quantity === undefined || b.quantity <= 0 || b.stock <= 0);
+          if (isOutA !== isOutB) {
+            return isOutA ? 1 : -1;
           }
-          if ((sorted[maxIndex].views || 0) > 0) {
-            const [mostViewed] = sorted.splice(maxIndex, 1);
-            sorted.unshift(mostViewed);
+
+          // 2. สินค้าใหม่ (เพิ่มเข้าระบบไม่เกิน 3 วัน) อยู่ลำดับแรกสุด
+          //    ต้องมาก่อนชั้นโปรโมชัน เพราะของที่เพิ่งเข้ายังมียอดขาย/ยอดวิวเป็น 0
+          //    ถ้าไม่ดันขึ้นมาจะไปจมท้ายรายการจนลูกค้าไม่เห็นว่ามีของใหม่
+          //    isNew คิดสดมาจากหลังบ้าน (newArrivalService.js) หมดอายุเองเมื่อครบกำหนด
+          const isNewA = a.isNew === true;
+          const isNewB = b.isNew === true;
+          if (isNewA !== isNewB) {
+            return isNewA ? -1 : 1;
           }
-        }
+
+          // 3. สินค้าที่มีโปรโมชัน (Promotion) ถัดมา
+          const isPromoA = a.promotion === true || (a.discountAmount && a.discountAmount > 0) || (a.originalPrice && a.originalPrice > a.price);
+          const isPromoB = b.promotion === true || (b.discountAmount && b.discountAmount > 0) || (b.originalPrice && b.originalPrice > b.price);
+          if (isPromoA !== isPromoB) {
+            return isPromoA ? -1 : 1;
+          }
+
+          // 4. สินค้าขายดี (Best Sellers) ถัดมา — ใช้ยอดขายจริงจาก products.sold_count
+          //    เกณฑ์เดียวกับป้าย HOT NOW ตัวที่ได้ป้ายจึงลอยขึ้นมาอยู่แถวบนเองโดยอัตโนมัติ
+          const soldA = a.soldCount || 0;
+          const soldB = b.soldCount || 0;
+          if (soldA !== soldB) {
+            return soldB - soldA;
+          }
+
+          // 5. ยอดขายเท่ากัน ตัดสินด้วยยอดเข้าชม
+          const viewsA = a.views || 0;
+          const viewsB = b.views || 0;
+          if (viewsA !== viewsB) {
+            return viewsB - viewsA;
+          }
+
+          // 6. เรียงตาม ID สินค้า
+          return (a.id || 0) - (b.id || 0);
+        });
+
         setProducts(sorted);
         setLoading(false);
       })
@@ -120,11 +154,36 @@ export default function Home() {
     fetchProducts();
   }, [selectedCategories, searchQuery]);
 
+  /**
+   * ป้าย HOT NOW = สินค้าขายดีที่สุดที่ "ยังมีของ" ในร้าน
+   *
+   * คำนวณใหม่ทุกครั้งจากข้อมูลสด ไม่เก็บสถานะไว้ที่ไหน จึงได้พฤติกรรมครบทั้งสามข้อเอง:
+   *   - ตัวที่ขายดีที่สุดได้ป้าย
+   *   - ถ้าตัวนั้นของหมด ป้ายเลื่อนไปตัวขายดีรองลงมา (เพราะกรองของหมดออกก่อนเลือก)
+   *   - พอตัวเดิมเติมของแล้วยังขายดีสุด ป้ายกลับไปหาตัวเดิมเอง
+   *
+   * ใช้ products ทั้งร้าน ไม่ใช่รายการที่ถูกกรอง ป้ายจะได้ไม่ย้ายไปมาเวลาสลับหมวดหมู่
+   */
+  const hotProductId = useMemo(() => {
+    const candidates = products.filter((p) => (p.soldCount || 0) > 0 && !isSoldOut(p));
+    if (candidates.length === 0) return null;
+
+    return candidates.reduce((best, p) => {
+      const bySold = (p.soldCount || 0) - (best.soldCount || 0);
+      if (bySold !== 0) return bySold > 0 ? p : best;
+      // ยอดขายเท่ากัน ตัดสินด้วยยอดวิวแล้วค่อย id ให้ป้ายนิ่ง ไม่สลับตัวไปมาทุกครั้งที่โหลด
+      // (เกณฑ์เดียวกับ ORDER BY ของ getBestSellers ฝั่งหลังบ้าน)
+      const byViews = (p.views || 0) - (best.views || 0);
+      if (byViews !== 0) return byViews > 0 ? p : best;
+      return p.id < best.id ? p : best;
+    }).id;
+  }, [products]);
+
   // Idle detection timer - ปรับเวลารอพักหน้าจอตรงนี้ (หน่วยเป็นมิลลิวินาที ms)
   useEffect(() => {
     let idleTimer;
     // ตัวอย่าง: 30 * 1000 (30 วินาที), 60 * 1000 (1 นาที), 120 * 1000 (2 นาที)
-    const timeoutDuration = 240 * 1000; // 24 วินาที (0.4 นาที)
+    const timeoutDuration = 240 * 1000; // 240 วินาที (4 นาที)
 
     const resetTimer = () => {
       clearTimeout(idleTimer);
@@ -324,8 +383,10 @@ export default function Home() {
     setActiveOrder(null);
     setIsCartOpen(true);
   };
-  const bottomHasPreOrder = cart.items.some(item => item.product && item.product.status === "Pre-Order");
-  const bottomDisplayTotal = cart.totalPrice;
+  const bottomHasPreOrder = Array.isArray(cart?.items)
+    ? cart.items.some((item) => item?.product && item.product.status === "Pre-Order")
+    : false;
+  const bottomDisplayTotal = cart?.totalPrice || 0;
 
   return (
     <div className="kiosk-app-container flex flex-col font-['DIN_Pro_Cond',_'Prompt',_sans-serif]">
@@ -367,7 +428,7 @@ export default function Home() {
                 </span>
                 <div className="flex items-center gap-2 flex-nowrap">
                   {(popularSearchTags.length > 0
-                    ? popularSearchTags
+                    ? popularSearchTags.slice(0, 4)
                     : ["น้ำดื่ม", "ชาเขียว", "นม", "kitkat"]
                   ).map((tag) => {
                     const isSelected = searchQuery === tag;
@@ -392,9 +453,12 @@ export default function Home() {
               {/* 2. Category Title & Item Count matching mockup */}
               {(() => {
                 let filteredProducts = products;
+                // ติ๊ก HOT NOW = สินค้าที่เคยขายได้จริง เรียงขายดีมากไปน้อย
+                // ให้ตรงกับป้าย HOT NOW บนการ์ด ถ้ายังไม่มีใครซื้ออะไรเลยก็ตกไปที่ empty state
                 if (selectedCategories.includes("hot") && !isAllSelected) {
-                  filteredProducts = products.filter(p => (p.views || 0) > 0 || p.promotion);
-                  if (filteredProducts.length === 0) filteredProducts = products.slice(0, 4);
+                  filteredProducts = products
+                    .filter((p) => (p.soldCount || 0) > 0)
+                    .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0));
                 }
 
                 const isPromoSelected = selectedCategories.includes("promotion");
@@ -454,18 +518,15 @@ export default function Home() {
                           cart.totalItems > 0 ? "pb-36" : "pb-24"
                         }`}
                       >
-                        {(() => {
-                          const maxViews = filteredProducts.length > 0 ? Math.max(...filteredProducts.map(p => p.views || 0)) : 0;
-                          return filteredProducts.map((product) => (
-                            <ProductCard
-                              key={product.id}
-                              product={product}
-                              onAddToCart={handleAddToCart}
-                              onSelectProduct={handleSelectProduct}
-                              isMostViewed={maxViews > 0 && product.views === maxViews}
-                            />
-                          ));
-                        })()}
+                        {filteredProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            onAddToCart={handleAddToCart}
+                            onSelectProduct={handleSelectProduct}
+                            isHot={product.id === hotProductId}
+                          />
+                        ))}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-20 px-4 text-center select-none">

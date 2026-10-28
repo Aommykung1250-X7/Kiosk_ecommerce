@@ -5,9 +5,9 @@ class CartController {
   /**
    * Handle GET /api/cart
    */
-  getCart(req, res) {
+  async getCart(req, res) {
     try {
-      const cart = cartService.getCartDetails();
+      const cart = await cartService.getCartDetails();
       return res.json(cart);
     } catch (error) {
       console.error("Error in CartController.getCart:", error);
@@ -44,7 +44,7 @@ class CartController {
   /**
    * Handle PUT /api/cart
    */
-  updateQuantity(req, res) {
+  async updateQuantity(req, res) {
     try {
       const { productId, quantity } = req.body;
       if (!productId || (typeof productId !== "string" && typeof productId !== "number")) {
@@ -56,7 +56,7 @@ class CartController {
         return res.status(400).json({ error: "Quantity must be a non-negative integer." });
       }
 
-      const cart = cartService.updateItemQuantity(String(productId), qty);
+      const cart = await cartService.updateItemQuantity(String(productId), qty);
       return res.json(cart);
     } catch (error) {
       console.error("Error in CartController.updateQuantity:", error);
@@ -67,14 +67,14 @@ class CartController {
   /**
    * Handle DELETE /api/cart/:productId
    */
-  removeItem(req, res) {
+  async removeItem(req, res) {
     try {
       const { productId } = req.params;
       if (!productId || (typeof productId !== "string" && typeof productId !== "number")) {
         return res.status(400).json({ error: "Invalid product ID format." });
       }
 
-      const cart = cartService.removeItemFromCart(String(productId));
+      const cart = await cartService.removeItemFromCart(String(productId));
       return res.json(cart);
     } catch (error) {
       console.error("Error in CartController.removeItem:", error);
@@ -85,9 +85,9 @@ class CartController {
   /**
    * Handle POST /api/cart/clear
    */
-  clear(req, res) {
+  async clear(req, res) {
     try {
-      const cart = cartService.clearCart();
+      const cart = await cartService.clearCart();
       return res.json(cart);
     } catch (error) {
       console.error("Error in CartController.clear:", error);

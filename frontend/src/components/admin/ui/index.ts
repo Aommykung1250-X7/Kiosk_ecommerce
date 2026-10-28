@@ -35,4 +35,6 @@ export { Drawer } from "./Drawer";
 export { Dropzone } from "./Dropzone";
 export { EmptyState, LoadingState, ErrorBanner } from "./EmptyState";
 export { useDialog } from "./useDialog";
+export { DatePicker } from "./DatePicker";
+export type { DatePickerProps } from "./DatePicker";
 export * from "./format";
