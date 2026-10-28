@@ -31,8 +31,8 @@ export default function SupportModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-50 duration-200 font-['Prompt']">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-gray-100 animate-in zoom-in-95 duration-200">
+    <div className="kiosk-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-50 duration-200 font-['Prompt']">
+      <div className="kiosk-dialog kiosk-support-dialog bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-gray-100 animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="bg-[#1B1B1C] text-white p-5 flex items-center justify-between">
@@ -54,7 +54,7 @@ export default function SupportModal({ isOpen, onClose }) {
         </div>
 
         {/* Content Area */}
-        <div className="p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+        <div className="p-6 space-y-5 overflow-y-auto min-h-0">
 
           {/* Contact Methods */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -72,7 +72,7 @@ export default function SupportModal({ isOpen, onClose }) {
                 <span className="text-base font-black text-[#1B1B1C] block select-all">
                   {contactInfo.hotline}
                 </span>
-                <span className="text-[10px] text-gray-400 block mt-0.5 font-medium">{contactInfo.serviceHours}</span>
+                <span className="text-[calc(var(--kiosk-unit)*10)] text-gray-400 block mt-0.5 font-medium">{contactInfo.serviceHours}</span>
               </div>
             </div>
 
@@ -84,12 +84,12 @@ export default function SupportModal({ isOpen, onClose }) {
               </div>
               <div className="bg-white p-2.5 rounded-xl border border-[#5EBAA8]/30 shadow-xs mb-2">
                 {contactInfo.lineQrImage ? (
-                  <img src={contactInfo.lineQrImage} className="w-[90px] h-[90px] object-contain rounded-lg" alt="LINE QR Code" />
+                  <img src={contactInfo.lineQrImage} className="w-[calc(var(--kiosk-unit)*90)] h-[calc(var(--kiosk-unit)*90)] object-contain rounded-lg" alt="LINE QR Code" />
                 ) : (
-                  <QRCodeSVG value={contactInfo.lineUrl || "https://line.me/ti/p/@ditcsupport"} size={90} level="M" />
+                  <QRCodeSVG className="kiosk-contact-qr" value={contactInfo.lineUrl || "https://line.me/ti/p/@ditcsupport"} size={90} level="M" />
                 )}
               </div>
-              <span className="text-[11px] font-bold text-gray-700">{contactInfo.lineId}</span>
+              <span className="text-[calc(var(--kiosk-unit)*11)] font-bold text-gray-700">{contactInfo.lineId}</span>
             </div>
 
           </div>

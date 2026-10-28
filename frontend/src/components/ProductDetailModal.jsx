@@ -8,7 +8,7 @@ function CategoryPlaceholder({ category }) {
       <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
       </svg>
-      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
+      <span className="text-[calc(var(--kiosk-unit)*9)] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
     </div>
   );
 }
@@ -105,12 +105,12 @@ export default function ProductDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['DIN_Pro_Cond',_'Prompt',_sans-serif]"
+      className="kiosk-overlay fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-sm transition-opacity duration-200 font-['DIN_Pro_Cond',_'Prompt',_sans-serif]"
       onClick={onClose}
     >
       {/* Modal Card matching mockup */}
       <div
-        className="relative w-[92%] max-w-[460px] bg-white rounded-[36px] sm:rounded-[40px] pt-13 sm:pt-14 pb-6 sm:pb-7 px-6 sm:px-7 flex flex-col shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-200"
+        className="kiosk-dialog kiosk-product-dialog relative w-[92%] max-w-[calc(var(--kiosk-unit)*460)] bg-white rounded-[calc(var(--kiosk-unit)*36)] sm:rounded-[calc(var(--kiosk-unit)*40)] pt-13 sm:pt-14 pb-6 sm:pb-7 px-6 sm:px-7 flex flex-col shadow-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Red Circle Close Button */}
@@ -124,17 +124,17 @@ export default function ProductDetailModal({
         </button>
 
         {/* 1. Main Product Image Box */}
-        <div className="w-full aspect-[4/3] bg-[#F4F5F7] rounded-[28px] relative flex items-center justify-center p-6 overflow-hidden select-none">
+        <div className="w-full aspect-[4/3] bg-[#F4F5F7] rounded-[calc(var(--kiosk-unit)*28)] relative flex items-center justify-center p-6 overflow-hidden select-none">
           {/* Purchase Limit Badge on top-left */}
           {purchaseLimit > 0 && (
-            <div className="absolute top-3.5 left-3.5 z-10 bg-[#E53935] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-xs tracking-wide flex items-center gap-1">
+            <div className="absolute top-3.5 left-3.5 z-10 bg-[#E53935] text-white text-[calc(var(--kiosk-unit)*10)] font-bold px-2.5 py-0.5 rounded-full shadow-xs tracking-wide flex items-center gap-1">
               <span>จำกัด {purchaseLimit} ชิ้น</span>
             </div>
           )}
 
           {/* Badges */}
           {isOutOfStock ? (
-            <div className="absolute top-3.5 right-3.5 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#F85153] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
               SOLD OUT
             </div>
           ) : isMostViewed ? (
@@ -145,16 +145,16 @@ export default function ProductDetailModal({
               </svg>
             </div>
           ) : promotion ? (
-            <div className="absolute top-3.5 right-3.5 z-10 bg-[#FF6B00] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#FF6B00] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
               <TagIcon className="w-3 h-3 text-white" />
               <span>PROMO</span>
             </div>
           ) : status === "Pre-Order" ? (
-            <div className="absolute top-3.5 right-3.5 z-10 bg-[#F5A623] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#F5A623] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
               PRE-ORDER
             </div>
           ) : (
-            <div className="absolute top-3.5 right-3.5 z-10 bg-[#1CD0A2] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+            <div className="absolute top-3.5 right-3.5 z-10 bg-[#1CD0A2] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
               In-stock
             </div>
           )}
@@ -197,7 +197,7 @@ export default function ProductDetailModal({
 
         {/* 2. Text Details Below Image */}
         <div className="flex flex-col mt-3.5 px-0.5 text-left">
-          <span className="text-[11px] sm:text-xs font-normal text-gray-400 uppercase tracking-wider truncate">
+          <span className="text-[calc(var(--kiosk-unit)*11)] sm:text-xs font-normal text-gray-400 uppercase tracking-wider truncate">
             {getCategoryLabel()}
           </span>
 
@@ -215,7 +215,7 @@ export default function ProductDetailModal({
             </span>
 
             {/* Stepper Button (Longer & Wider) */}
-            <div className="bg-[#FABE2C] text-black rounded-full w-[130px] sm:w-[145px] h-10 px-3 flex items-center justify-between shadow-xs select-none">
+            <div className="bg-[#FABE2C] text-black rounded-full w-[calc(var(--kiosk-unit)*130)] sm:w-[calc(var(--kiosk-unit)*145)] h-10 px-3 flex items-center justify-between shadow-xs select-none">
               <button
                 type="button"
                 onClick={() => setQty((prev) => Math.max(1, prev - 1))}
@@ -268,7 +268,7 @@ export default function ProductDetailModal({
             )}
             {(product.additional_info || product.additionalInfo) && (
               <div className="mt-1 text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200 flex flex-col gap-0.5">
-                <span className="font-bold text-gray-400 uppercase text-[9px] tracking-wider">ข้อมูลเพิ่มเติม (Additional Info)</span>
+                <span className="font-bold text-gray-400 uppercase text-[calc(var(--kiosk-unit)*9)] tracking-wider">ข้อมูลเพิ่มเติม (Additional Info)</span>
                 <p className="whitespace-pre-line text-xs font-medium text-gray-700">
                   {product.additional_info || product.additionalInfo}
                 </p>
@@ -279,7 +279,7 @@ export default function ProductDetailModal({
 
         {/* 3. Next / Other Products Smooth Sliding Carousel (สินค้าชิ้นต่อไปแบบแอนิเมชันลื่นไหล) */}
         {otherProducts.length > 0 && (
-          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-5 select-none">
+          <div className="kiosk-related-row flex items-center justify-center gap-2 sm:gap-3 mt-5 select-none">
             {/* Prev Button */}
             <button
               type="button"
@@ -297,7 +297,7 @@ export default function ProductDetailModal({
 
             {/* Smooth Viewport (3 items wide with smooth transform track) */}
             <div
-              className="w-[242px] sm:w-[260px] overflow-hidden py-1"
+              className="kiosk-related-window overflow-hidden py-1"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -307,9 +307,9 @@ export default function ProductDetailModal({
               onMouseLeave={handleTouchEnd}
             >
               <div
-                className="flex items-center gap-2.5 sm:gap-3 transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                className="kiosk-related-track flex items-center gap-2.5 sm:gap-3 transition-transform duration-400 ease-[cubic-bezier(0.25,1,0.5,1)]"
                 style={{
-                  transform: `translateX(calc(-${otherPageIndex * 84}px + ${isDragging ? touchDeltaX : 0}px))`
+                  transform: `translateX(calc(-${otherPageIndex} * (var(--kiosk-related-size) + var(--kiosk-related-gap)) + ${isDragging ? touchDeltaX : 0}px))`
                 }}
               >
                 {otherProducts.map((otherProd) => (
@@ -320,7 +320,7 @@ export default function ProductDetailModal({
                         onSelectProduct && onSelectProduct(otherProd);
                       }
                     }}
-                    className="w-[74px] h-[74px] sm:w-[78px] sm:h-[78px] shrink-0 bg-[#F4F5F7] hover:bg-[#ECEEF2] rounded-[8px] p-2.5 flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 active:scale-95 hover:border-[#FABE2C] hover:shadow-md shadow-2xs group select-none"
+                    className="kiosk-related-item w-[calc(var(--kiosk-unit)*74)] h-[calc(var(--kiosk-unit)*74)] sm:w-[calc(var(--kiosk-unit)*78)] sm:h-[calc(var(--kiosk-unit)*78)] shrink-0 bg-[#F4F5F7] hover:bg-[#ECEEF2] rounded-[calc(var(--kiosk-unit)*8)] p-2.5 flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 active:scale-95 hover:border-[#FABE2C] hover:shadow-md shadow-2xs group select-none"
                     title={otherProd.name}
                   >
                     {otherProd.image && otherProd.image.includes(".") ? (

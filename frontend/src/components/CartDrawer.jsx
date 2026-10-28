@@ -10,7 +10,7 @@ function CategoryPlaceholder({ category }) {
       <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
       </svg>
-      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
+      <span className="text-[calc(var(--kiosk-unit)*8)] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
     </div>
   );
 }
@@ -64,7 +64,7 @@ export default function CartDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#F2F2F2] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] overflow-hidden"
+      className="kiosk-cart fixed inset-0 z-50 bg-[#F2F2F2] flex flex-col animate-in fade-in zoom-in-95 duration-200 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
       {/* 1. Header: Dark Navy with DITC logo and Shopping basket title */}
@@ -88,16 +88,16 @@ export default function CartDrawer({
               {totalItems} ITEM
             </span>
           </div>
-          <p className="text-[10px] sm:text-[11px] text-white/70 font-normal mt-0.5">
+          <p className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] text-white/70 font-normal mt-0.5">
             Verify the accuracy and quantity of the items before proceeding with payment.
           </p>
         </div>
       </header>
 
       {/* 2. Cart Content Body */}
-      <main className="flex-1 flex flex-col p-4 sm:p-6 gap-4 overflow-y-auto min-h-0">
+      <main className="kiosk-cart-content flex-1 flex flex-col p-4 sm:p-6 gap-4 overflow-y-auto min-h-0">
         {totalItems === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[32px] border border-gray-100 p-8 shadow-xs">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white rounded-[calc(var(--kiosk-unit)*32)] border border-gray-100 p-8 shadow-xs">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
               <ShoppingBagIcon className="w-10 h-10" />
             </div>
@@ -116,7 +116,7 @@ export default function CartDrawer({
         ) : (
           <>
             {/* Top Row: Items label + Clear Cart */}
-            <div className="w-full max-w-[569.39px] mx-auto flex justify-between items-center px-1 select-none shrink-0">
+            <div className="w-full max-w-[calc(var(--kiosk-unit)*569.39)] mx-auto flex justify-between items-center px-1 select-none shrink-0">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Items in the shopping cart
               </span>
@@ -131,10 +131,10 @@ export default function CartDrawer({
 
             {/* Cart Items List: Shows 4 items by default, or 3 items when split-shipping options are visible */}
             <div
-              className={`w-full max-w-[569.39px] mx-auto flex flex-col gap-3.5 overflow-y-auto pr-1 pb-1 scroll-smooth shrink-0 transition-all duration-300 ${
+              className={`kiosk-cart-items w-full max-w-[calc(var(--kiosk-unit)*569.39)] mx-auto flex flex-col gap-3.5 overflow-y-auto pr-1 pb-1 scroll-smooth shrink-0 transition-all duration-300 ${
                 deliveryOption === "delivery" && isMixed
-                  ? "max-h-[430px] sm:max-h-[450px]"
-                  : "max-h-[580px] sm:max-h-[600px]"
+                  ? "max-h-[calc(var(--kiosk-unit)*430)] sm:max-h-[calc(var(--kiosk-unit)*450)]"
+                  : "max-h-[calc(var(--kiosk-unit)*580)] sm:max-h-[calc(var(--kiosk-unit)*600)]"
               }`}
             >
               {items.map((item) => {
@@ -144,10 +144,10 @@ export default function CartDrawer({
                 return (
                   <div
                     key={product.id}
-                    className="w-full max-w-[569.39px] min-h-[132px] sm:min-h-[140px] flex items-center justify-between p-4 sm:p-4.5 bg-white border border-gray-100 rounded-[10px] shadow-[0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all gap-4 shrink-0 mx-auto"
+                    className="w-full max-w-[calc(var(--kiosk-unit)*569.39)] min-h-[calc(var(--kiosk-unit)*132)] sm:min-h-[calc(var(--kiosk-unit)*140)] flex items-center justify-between p-4 sm:p-4.5 bg-white border border-gray-100 rounded-[calc(var(--kiosk-unit)*10)] shadow-[0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all gap-4 shrink-0 mx-auto"
                   >
                     {/* Left: Larger Product Image */}
-                    <div className="w-24 h-24 sm:w-26 sm:h-26 bg-[#F4F5F7] flex items-center justify-center p-2 rounded-[8px] shrink-0 overflow-hidden select-none">
+                    <div className="w-24 h-24 sm:w-26 sm:h-26 bg-[#F4F5F7] flex items-center justify-center p-2 rounded-[calc(var(--kiosk-unit)*8)] shrink-0 overflow-hidden select-none">
                       {product.image && product.image.includes(".") ? (
                         <img
                           src={`/uploads/products/${product.image}`}
@@ -167,15 +167,15 @@ export default function CartDrawer({
                         </h3>
                         <div className="mt-1">
                           {isOutOfStock ? (
-                            <span className="bg-[#F85153] text-white text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
+                            <span className="bg-[#F85153] text-white text-[calc(var(--kiosk-unit)*10)] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
                               SOLD OUT
                             </span>
                           ) : product.status === "Pre-Order" ? (
-                            <span className="bg-[#F5A623] text-white text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
+                            <span className="bg-[#F5A623] text-white text-[calc(var(--kiosk-unit)*10)] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
                               PRE-ORDER
                             </span>
                           ) : (
-                            <span className="bg-[#1CD0A2] text-white text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
+                            <span className="bg-[#1CD0A2] text-white text-[calc(var(--kiosk-unit)*10)] sm:text-xs font-bold px-2.5 py-0.5 rounded-full inline-block">
                               In-stock
                             </span>
                           )}
@@ -209,7 +209,7 @@ export default function CartDrawer({
                       </button>
 
                       {/* Longer & Wider Dark Navy Stepper Pill */}
-                      <div className="flex items-center justify-between bg-[#101C38] text-white rounded-full w-[130px] sm:w-[145px] h-10 px-3 shadow-xs select-none">
+                      <div className="flex items-center justify-between bg-[#101C38] text-white rounded-full w-[calc(var(--kiosk-unit)*130)] sm:w-[calc(var(--kiosk-unit)*145)] h-10 px-3 shadow-xs select-none">
                         <button
                           type="button"
                           onClick={() => onUpdateQuantity(product.id, quantity - 1)}
@@ -242,7 +242,7 @@ export default function CartDrawer({
             </div>
 
             {/* 3. Order Summary Card matching mockup */}
-            <div className="w-full max-w-[569.39px] mx-auto bg-white p-5 sm:p-6 rounded-[28px] sm:rounded-[32px] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.06)] flex flex-col gap-3.5 mt-auto select-none shrink-0 animate-in slide-in-from-bottom duration-300">
+            <div className="kiosk-cart-summary w-full max-w-[calc(var(--kiosk-unit)*569.39)] mx-auto bg-white p-5 sm:p-6 rounded-[calc(var(--kiosk-unit)*28)] sm:rounded-[calc(var(--kiosk-unit)*32)] border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.06)] flex flex-col gap-3.5 mt-auto select-none shrink-0 animate-in slide-in-from-bottom duration-300">
               <div className="flex flex-col gap-3">
                 <h2 className="text-2xl font-black text-gray-900 tracking-tight">
                   Order Summary
@@ -298,7 +298,7 @@ export default function CartDrawer({
                         />
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-gray-800">จัดส่งพร้อมกันทั้งหมด</span>
-                          <span className="text-[10px] text-gray-500">
+                          <span className="text-[calc(var(--kiosk-unit)*10)] text-gray-500">
                             รอส่งรอบเดียวเมื่อสินค้า Pre-Order ครบ (ค่าส่งปกติ ฿{shippingSettings.baseShippingFee})
                           </span>
                         </div>
@@ -314,7 +314,7 @@ export default function CartDrawer({
                         />
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-gray-800">แยกจัดส่งสินค้า (บวกค่าส่งเพิ่ม)</span>
-                          <span className="text-[10px] text-gray-500">
+                          <span className="text-[calc(var(--kiosk-unit)*10)] text-gray-500">
                             ส่งของพร้อมส่งทันที + Pre-Order ตามหลัง (ค่าส่งรวม ฿{shippingSettings.baseShippingFee + (shippingSettings.additionalSplitShippingFee !== undefined ? shippingSettings.additionalSplitShippingFee : shippingSettings.baseShippingFee)})
                           </span>
                         </div>

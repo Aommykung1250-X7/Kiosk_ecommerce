@@ -72,7 +72,7 @@ export default function Screensaver({ onWake }) {
   return (
     <div
       onClick={onWake}
-      className="fixed inset-0 z-50 bg-[#081028] flex flex-col justify-between p-3 sm:p-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none cursor-pointer overflow-hidden"
+      className="kiosk-screensaver fixed inset-0 z-50 bg-[#081028] flex flex-col justify-between p-3 sm:p-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none cursor-pointer overflow-hidden"
     >
       {/* 1. TOP HEADER BAR (Outside Card) */}
       <header className="w-full flex items-center justify-between px-2 sm:px-4 py-1 shrink-0 z-10 select-none">
@@ -125,7 +125,7 @@ export default function Screensaver({ onWake }) {
       </header>
 
       {/* 2. MAIN FLOATING WHITE CARD (Compact & Closer Spacing) */}
-      <main className="relative w-full max-w-[580px] mx-auto flex-1 bg-white rounded-[36px] sm:rounded-[42px] shadow-2xl p-4 sm:p-5 flex flex-col items-center justify-center gap-2 sm:gap-2.5 my-1 overflow-hidden border border-white/20">
+      <main className="kiosk-welcome relative w-full max-w-[calc(var(--kiosk-unit)*580)] mx-auto flex-1 bg-white rounded-[calc(var(--kiosk-unit)*36)] sm:rounded-[calc(var(--kiosk-unit)*42)] shadow-2xl p-4 sm:p-5 flex flex-col items-center justify-center gap-2 sm:gap-2.5 my-1 overflow-hidden border border-white/20">
         {/* Subtle Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#0E1B3E_2px,transparent_2px)] [background-size:20px_20px]" />
 
@@ -202,7 +202,7 @@ export default function Screensaver({ onWake }) {
         </div>
 
         {/* MIDDLE SECTION: ADVERTISEMENT AREA (Larger & Prominent) */}
-        <div className="w-full max-w-[530px] aspect-[16/9.5] sm:aspect-[16/9] min-h-[210px] sm:min-h-[250px] rounded-3xl overflow-hidden shadow-lg relative bg-gray-100 border border-gray-150 flex items-center justify-center z-10 my-0.5">
+        <div className="kiosk-advert w-full max-w-[calc(var(--kiosk-unit)*530)] aspect-[16/9.5] sm:aspect-[16/9] min-h-[calc(var(--kiosk-unit)*210)] sm:min-h-[calc(var(--kiosk-unit)*250)] rounded-3xl overflow-hidden shadow-lg relative bg-gray-100 border border-gray-150 flex items-center justify-center z-10 my-0.5">
           {slides.length > 0 && currentSlide ? (
             /* Active Screensaver / Promotional Ad */
             <div className="w-full h-full relative">
@@ -235,7 +235,7 @@ export default function Screensaver({ onWake }) {
               <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
               <div className="absolute -left-10 -bottom-10 w-40 h-40 rounded-full bg-black/10 blur-xl pointer-events-none" />
               
-              <span className="bg-white/20 backdrop-blur-xs text-white text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-1.5 border border-white/30">
+              <span className="bg-white/20 backdrop-blur-xs text-white text-[calc(var(--kiosk-unit)*10)] sm:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-1.5 border border-white/30">
                 PROMOTION & ADS
               </span>
               <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-sm text-center">
@@ -252,7 +252,7 @@ export default function Screensaver({ onWake }) {
         <button
           type="button"
           onClick={onWake}
-          className="w-full max-w-[440px] h-13 sm:h-14 rounded-full bg-gradient-to-b from-[#FCD24E] to-[#F5B41C] text-black font-black text-base sm:text-lg shadow-[0_10px_25px_rgba(245,180,28,0.45)] hover:shadow-[0_14px_30px_rgba(245,180,28,0.6)] border border-[#FFE885]/60 flex items-center justify-center gap-2.5 active:scale-[0.97] transition-all duration-200 cursor-pointer select-none z-10"
+          className="w-full max-w-[calc(var(--kiosk-unit)*440)] h-13 sm:h-14 rounded-full bg-gradient-to-b from-[#FCD24E] to-[#F5B41C] text-black font-black text-base sm:text-lg shadow-[0_10px_25px_rgba(245,180,28,0.45)] hover:shadow-[0_14px_30px_rgba(245,180,28,0.6)] border border-[#FFE885]/60 flex items-center justify-center gap-2.5 active:scale-[0.97] transition-all duration-200 cursor-pointer select-none z-10"
         >
           <ShoppingCartIcon className="w-5 h-5 text-black stroke-[1.5]" />
           <span>START SHOPPING</span>
@@ -261,11 +261,11 @@ export default function Screensaver({ onWake }) {
         {/* BOTTOM SECTION: FEATURED PRODUCTS SHOWCASE (ชิดกับปุ่ม) */}
         <div className="w-full pt-1.5 sm:pt-2 border-t border-gray-100 z-10 select-none">
           <div className="flex items-center justify-between px-1 mb-1">
-            <span className="text-[11px] sm:text-xs font-bold text-gray-800 flex items-center gap-1.5">
+            <span className="text-[calc(var(--kiosk-unit)*11)] sm:text-xs font-bold text-gray-800 flex items-center gap-1.5">
               <SparklesIcon className="w-3.5 h-3.5 text-[#FABE2C]" />
               <span>สินค้าแนะนำพิเศษ</span>
             </span>
-            <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">
+            <span className="text-[calc(var(--kiosk-unit)*9)] sm:text-[calc(var(--kiosk-unit)*10)] text-gray-400 font-medium">
               สัมผัสหน้าจอเพื่อสั่งซื้อ
             </span>
           </div>
@@ -283,7 +283,7 @@ export default function Screensaver({ onWake }) {
               return (
                 <div
                   key={isObj ? item.id : idx}
-                  className="bg-[#F8F9FA] rounded-[20px] p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
+                  className="bg-[#F8F9FA] rounded-[calc(var(--kiosk-unit)*20)] p-2 border border-gray-150 flex flex-col items-center text-center shadow-2xs hover:shadow-sm transition-all"
                 >
                   <div className="w-full h-11 sm:h-13 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden mb-1 border border-gray-100">
                     {image ? (
@@ -300,10 +300,10 @@ export default function Screensaver({ onWake }) {
                       <span className="text-xl">🛍️</span>
                     )}
                   </div>
-                  <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-800 line-clamp-1 w-full leading-tight">
+                  <h4 className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-bold text-gray-800 line-clamp-1 w-full leading-tight">
                     {name}
                   </h4>
-                  <p className="text-[10px] sm:text-[11px] font-black text-[#E53935] mt-0.5">
+                  <p className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-black text-[#E53935] mt-0.5">
                     ฿{price}
                   </p>
                 </div>
@@ -324,8 +324,8 @@ export default function Screensaver({ onWake }) {
               </svg>
             </div>
             <div className="flex flex-col text-left leading-tight min-w-0">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#C98B00]">เว็บไซต์:</span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate max-w-[120px]">
+              <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-bold text-[#C98B00]">เว็บไซต์:</span>
+              <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-semibold text-gray-800 truncate max-w-[calc(var(--kiosk-unit)*120)]">
                 {contactInfo.website}
               </span>
             </div>
@@ -339,8 +339,8 @@ export default function Screensaver({ onWake }) {
               </svg>
             </div>
             <div className="flex flex-col text-left leading-tight min-w-0">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#C98B00]">Facebook:</span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate max-w-[130px]">
+              <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-bold text-[#C98B00]">Facebook:</span>
+              <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-semibold text-gray-800 truncate max-w-[calc(var(--kiosk-unit)*130)]">
                 {contactInfo.facebook}
               </span>
             </div>
@@ -354,8 +354,8 @@ export default function Screensaver({ onWake }) {
               </svg>
             </div>
             <div className="flex flex-col text-left leading-tight min-w-0">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#C98B00]">โทรศัพท์:</span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate max-w-[110px]">
+              <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-bold text-[#C98B00]">โทรศัพท์:</span>
+              <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-semibold text-gray-800 truncate max-w-[calc(var(--kiosk-unit)*110)]">
                 {contactInfo.hotline}
               </span>
             </div>

@@ -10,7 +10,7 @@ export default function Header({
 }) {
   return (
     <header
-      className="w-full h-[88px] bg-[#0E1B3E] flex items-center justify-between 
+      className="kiosk-header w-full h-[calc(var(--kiosk-unit)*88)] bg-[#0E1B3E] flex items-center justify-between
                  px-6 sm:px-8 gap-4 shrink-0 font-['Prompt'] shadow-md z-20"
     >
       {/* Left: DITC Logo */}
@@ -23,13 +23,14 @@ export default function Header({
       </div>
 
       {/* Center: Search Bar */}
-      <div className="flex-1 max-w-md lg:max-w-xl mx-2 sm:mx-6">
+      <div className="kiosk-search flex-1 min-w-0 max-w-md lg:max-w-xl mx-2 sm:mx-6">
         <div className="relative flex items-center w-full">
           <MagnifyingGlassIcon className="w-5 h-5 text-gray-500 absolute left-4 pointer-events-none stroke-[2]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            aria-label="ค้นหาสินค้า"
             placeholder="ค้นหาสินค้า..."
             className="w-full h-11 bg-[#E8ECEF] text-gray-900 placeholder:text-gray-400 font-medium rounded-full pl-11 pr-10 border border-transparent focus:border-white focus:bg-white outline-none transition-all shadow-inner text-sm"
           />
@@ -49,7 +50,7 @@ export default function Header({
       {/* Right: Total Price & Cart Pill Button */}
       <div className="flex items-center gap-4 sm:gap-6 shrink-0">
         <div className="flex flex-col items-end leading-tight select-none">
-          <span className="text-[10px] font-semibold text-white/80 uppercase tracking-widest">
+          <span className="text-[calc(var(--kiosk-unit)*10)] font-semibold text-white/80 uppercase tracking-widest">
             TOTAL
           </span>
           <span className="text-lg sm:text-xl font-medium text-white whitespace-nowrap">
@@ -68,7 +69,7 @@ export default function Header({
           <div className="relative flex items-center">
             <ShoppingCartIcon className="w-5 h-5 text-white" />
             {(cart.totalItems || 0) > 0 && (
-              <span className="absolute -top-2.5 -right-2.5 bg-[#20C997] text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center border-2 border-[#FABE2C] shadow-xs">
+              <span className="absolute -top-2.5 -right-2.5 bg-[#20C997] text-white text-[calc(var(--kiosk-unit)*10)] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center border-2 border-[#FABE2C] shadow-xs">
                 {cart.totalItems}
               </span>
             )}

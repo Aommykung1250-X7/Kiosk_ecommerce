@@ -7,7 +7,7 @@ function CategoryPlaceholder({ category }) {
       <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
       </svg>
-      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
+      <span className="text-[calc(var(--kiosk-unit)*9)] font-bold text-gray-400 uppercase tracking-widest">{category || "PRODUCT"}</span>
     </div>
   );
 }
@@ -29,13 +29,13 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
   return (
     <div
       onClick={() => onSelectProduct(product)}
-      className="group cursor-pointer select-none flex flex-col w-full font-['DIN_Pro_Cond',_'Prompt',_sans-serif] transition-all"
+      className="kiosk-product-card group cursor-pointer select-none flex flex-col w-full font-['DIN_Pro_Cond',_'Prompt',_sans-serif] transition-all"
     >
       {/* 1. Rounded Grey Image Box (มุมโค้ง 10px) */}
-      <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[10px] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
+      <div className="w-full aspect-square bg-[#F4F5F7] group-hover:bg-[#ECEEF2] rounded-[calc(var(--kiosk-unit)*10)] p-5 sm:p-6 relative flex items-center justify-center overflow-hidden transition-colors duration-200">
         {/* Top-Right Badge matching mockup */}
         {isOutOfStock ? (
-          <div className="absolute top-3 right-3 z-10 bg-[#F85153] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+          <div className="absolute top-3 right-3 z-10 bg-[#F85153] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
             SOLD OUT
           </div>
         ) : isMostViewed ? (
@@ -47,16 +47,16 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
             </svg>
           </div>
         ) : promotion ? (
-          <div className="absolute top-3 right-3 z-10 bg-[#FF6B00] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
+          <div className="absolute top-3 right-3 z-10 bg-[#FF6B00] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs tracking-wide">
             <TagIcon className="w-3 h-3 text-white" />
             <span>PROMO</span>
           </div>
         ) : status === "Pre-Order" ? (
-          <div className="absolute top-3 right-3 z-10 bg-[#F5A623] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+          <div className="absolute top-3 right-3 z-10 bg-[#F5A623] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
             PRE-ORDER
           </div>
         ) : (
-          <div className="absolute top-3 right-3 z-10 bg-[#1CD0A2] text-white text-[10px] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
+          <div className="absolute top-3 right-3 z-10 bg-[#1CD0A2] text-white text-[calc(var(--kiosk-unit)*10)] font-medium px-2.5 py-0.5 rounded-full shadow-xs tracking-wide">
             In-stock
           </div>
         )}
@@ -78,13 +78,13 @@ export default function ProductCard({ product, onAddToCart, onSelectProduct, isM
       {/* 2. Text Details Below Image */}
       <div className="flex flex-col mt-2 px-1 text-left">
         {/* Subtitle */}
-        <span className="text-[10px] sm:text-[11px] font-normal text-gray-400 uppercase tracking-wider truncate">
+        <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-normal text-gray-400 uppercase tracking-wider truncate">
           {getCategoryLabel()}
         </span>
 
         {/* Product Name */}
         <h3
-          className="text-xs sm:text-[13px] font-normal text-gray-800 line-clamp-2 leading-snug mt-0.5 min-h-[2.2rem]"
+          className="text-xs sm:text-[calc(var(--kiosk-unit)*13)] font-normal text-gray-800 line-clamp-2 leading-snug mt-0.5 min-h-[2.2rem]"
           title={name}
         >
           {name}

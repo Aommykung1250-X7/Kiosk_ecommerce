@@ -336,13 +336,13 @@ export default function Home() {
         onSearchChange={setSearchQuery}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="kiosk-content flex flex-1 min-h-0 overflow-hidden">
         <Sidebar
           selectedCategories={selectedCategories}
           onToggleCategory={handleToggleCategory}
         />
 
-        <main className="flex-1 overflow-y-auto min-w-0 bg-white pb-24 font-['DIN_Pro_Cond',_'Prompt',_sans-serif]">
+        <main className="kiosk-catalog flex-1 overflow-y-auto min-w-0 bg-white pb-24 font-['DIN_Pro_Cond',_'Prompt',_sans-serif]">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-[#2B2B2B]/60">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#101C3D] mb-4"></div>
@@ -437,7 +437,7 @@ export default function Home() {
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight uppercase leading-none">
                           {categoryTitle}
                         </h1>
-                        <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 tracking-wider uppercase mt-1">
+                        <span className="text-[calc(var(--kiosk-unit)*10)] sm:text-[calc(var(--kiosk-unit)*11)] font-bold text-gray-700 tracking-wider uppercase mt-1">
                           NOW SHOWING
                         </span>
                       </div>
@@ -450,7 +450,7 @@ export default function Home() {
                     {/* 3. Product Grid matching mockup */}
                     {filteredProducts.length > 0 ? (
                       <div
-                        className={`grid grid-cols-2 gap-x-4 sm:gap-x-5 gap-y-6 sm:gap-y-7 p-4 sm:p-5 ${
+                        className={`kiosk-product-grid grid grid-cols-2 gap-x-4 sm:gap-x-5 gap-y-6 sm:gap-y-7 p-4 sm:p-5 ${
                           cart.totalItems > 0 ? "pb-36" : "pb-24"
                         }`}
                       >
@@ -524,7 +524,7 @@ export default function Home() {
       {cart.totalItems > 0 && (
         <div
           onClick={handleCartClick}
-          className="absolute bottom-[72px] sm:bottom-[76px] right-3 sm:right-5 left-3 sm:left-[232px] max-w-[430px] ml-auto z-40 
+          className="kiosk-cart-bar absolute bottom-[calc(var(--kiosk-unit)*72)] sm:bottom-[calc(var(--kiosk-unit)*76)] right-3 sm:right-5 left-3 sm:left-[calc(var(--kiosk-unit)*232)] max-w-[calc(var(--kiosk-unit)*430)] ml-auto z-40
                      h-15 sm:h-16 bg-[#2B2B2B] text-white rounded-2xl 
                      shadow-[0_12px_36px_rgba(43,43,43,0.45)] border border-white/15
                      flex items-center justify-between px-4 sm:px-5 cursor-pointer 
@@ -534,7 +534,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="relative p-2 sm:p-2.5 bg-[#FABE2C] rounded-xl text-white shadow-sm">
               <ShoppingCartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-black stroke-[1.5]" />
-              <span className="absolute -top-1.5 -right-1.5 bg-[#20C997] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
+              <span className="absolute -top-1.5 -right-1.5 bg-[#20C997] text-white text-[calc(var(--kiosk-unit)*10)] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#2B2B2B]">
                 {cart.totalItems}
               </span>
             </div>
@@ -544,13 +544,13 @@ export default function Home() {
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="flex flex-col items-end justify-center leading-tight">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-white/70 font-medium">ยอดรวม:</span>
+                <span className="text-[calc(var(--kiosk-unit)*11)] text-white/70 font-medium">ยอดรวม:</span>
                 <span className="text-lg sm:text-xl font-black text-[#FABE2C]">
                   ฿{(bottomDisplayTotal || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               {bottomHasPreOrder && (
-                <span className="text-[9px] text-[#F8A838] font-bold mt-0.5">
+                <span className="text-[calc(var(--kiosk-unit)*9)] text-[#F8A838] font-bold mt-0.5">
                   (มีสินค้า Pre-order)
                 </span>
               )}

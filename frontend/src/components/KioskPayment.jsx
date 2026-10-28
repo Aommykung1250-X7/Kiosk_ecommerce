@@ -131,8 +131,8 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F2F2F2] flex items-center justify-center p-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none">
-      <div className="w-[92%] max-w-[430px] bg-white rounded-[32px] sm:rounded-[36px] shadow-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200">
+    <div className="kiosk-overlay fixed inset-0 z-50 bg-[#F2F2F2] flex items-center justify-center p-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none">
+      <div className="kiosk-dialog kiosk-payment-dialog w-[92%] max-w-[calc(var(--kiosk-unit)*430)] bg-white rounded-[calc(var(--kiosk-unit)*32)] sm:rounded-[calc(var(--kiosk-unit)*36)] shadow-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95 duration-200">
         
         {/* Top Dark Navy Strip with DITC Logo */}
         <div className="w-full bg-[#0E1B3E] py-3 px-6 flex items-center justify-center shrink-0">
@@ -158,7 +158,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
               </div>
 
               {/* Total Price Box */}
-              <div className="flex flex-col items-center justify-center gap-0.5 bg-[#FFF9EC] py-3.5 px-6 rounded-[22px] border border-[#FFE7B8] text-center shadow-2xs">
+              <div className="flex flex-col items-center justify-center gap-0.5 bg-[#FFF9EC] py-3.5 px-6 rounded-[calc(var(--kiosk-unit)*22)] border border-[#FFE7B8] text-center shadow-2xs">
                 <span className="text-xs font-semibold text-gray-700">
                   ยอดเงินชำระทั้งหมด
                 </span>
@@ -253,29 +253,29 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
               </div>
 
               {/* QR Code Container */}
-              <div className="flex flex-col items-center justify-center gap-2.5 py-4 px-6 bg-[#F8F9FA] rounded-[24px] border border-gray-100 mt-1 select-none">
-                <div className="p-3 bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col items-center justify-center gap-1.5 w-[210px] sm:w-[220px]">
-                  <div className="w-full bg-[#003B71] text-white py-1 px-2.5 rounded-md text-[9px] font-bold flex items-center justify-center gap-1.5 uppercase tracking-wider">
+              <div className="flex flex-col items-center justify-center gap-2.5 py-4 px-6 bg-[#F8F9FA] rounded-[calc(var(--kiosk-unit)*24)] border border-gray-100 mt-1 select-none">
+                <div className="p-3 bg-white rounded-2xl shadow-xs border border-gray-100 flex flex-col items-center justify-center gap-1.5 w-[calc(var(--kiosk-unit)*210)] sm:w-[calc(var(--kiosk-unit)*220)]">
+                  <div className="w-full bg-[#003B71] text-white py-1 px-2.5 rounded-md text-[calc(var(--kiosk-unit)*9)] font-bold flex items-center justify-center gap-1.5 uppercase tracking-wider">
                     <svg className="w-3 h-3 text-white fill-current" viewBox="0 0 24 24">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
                     </svg>
                     <span>THAI QR PAYMENT</span>
                   </div>
-                  <div className="text-[9px] font-bold text-[#003B71] tracking-widest uppercase">
+                  <div className="text-[calc(var(--kiosk-unit)*9)] font-bold text-[#003B71] tracking-widest uppercase">
                     PromptPay
                   </div>
 
                   <div className="flex items-center justify-center py-1">
                     {qrPayload ? (
                       qrPayload.startsWith("http://") || qrPayload.startsWith("https://") ? (
-                        <img src={qrPayload} alt="PromptPay QR Code" className="w-[160px] h-[160px] object-contain" />
+                        <img src={qrPayload} alt="PromptPay QR Code" className="w-[calc(var(--kiosk-unit)*160)] h-[calc(var(--kiosk-unit)*160)] object-contain" />
                       ) : (
-                        <QRCodeSVG value={qrPayload} size={160} />
+                        <QRCodeSVG className="kiosk-payment-qr" value={qrPayload} size={160} />
                       )
                     ) : (
-                      <div className="h-[160px] w-[160px] flex flex-col items-center justify-center text-gray-400">
+                      <div className="h-[calc(var(--kiosk-unit)*160)] w-[calc(var(--kiosk-unit)*160)] flex flex-col items-center justify-center text-gray-400">
                         <ArrowPathIcon className="w-8 h-8 animate-spin mb-1.5 text-[#FABE2C]" />
-                        <span className="text-[10px]">กำลังสร้าง QR Code...</span>
+                        <span className="text-[calc(var(--kiosk-unit)*10)]">กำลังสร้าง QR Code...</span>
                       </div>
                     )}
                   </div>
@@ -332,7 +332,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
                 </div>
 
                 <div className="w-full flex flex-col gap-1 bg-[#E8F5E9]/50 p-3 rounded-2xl border border-[#C8E6C9]/40 mt-1">
-                  <span className="text-[10px] text-gray-400 font-semibold font-mono uppercase tracking-wider">
+                  <span className="text-[calc(var(--kiosk-unit)*10)] text-gray-400 font-semibold font-mono uppercase tracking-wider">
                     Order Reference
                   </span>
                   <span className="text-xs font-bold text-gray-800 font-mono">
@@ -349,9 +349,9 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
                       </span>
                     </div>
                     <div className="p-2.5 bg-white rounded-xl shadow-2xs border border-[#F8C032]/30">
-                      <QRCodeSVG value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={135} level="M" />
+                      <QRCodeSVG className="kiosk-delivery-qr" value={`${window.location.origin}/mobile/delivery?orderId=${orderId}`} size={135} level="M" />
                     </div>
-                    <span className="text-[10px] text-gray-500 text-center font-medium">
+                    <span className="text-[calc(var(--kiosk-unit)*10)] text-gray-500 text-center font-medium">
                       สแกนด้วยกล้องมือถือ เพื่อระบุชื่อและที่อยู่จัดส่งสินค้า (หรือกดลิงก์ในอีเมล)
                     </span>
                   </div>
@@ -368,7 +368,7 @@ export default function KioskPayment({ orderId, totalPrice, qrPayload, deliveryO
                 >
                   กลับสู่หน้าหลัก
                 </button>
-                <p className="text-center text-[11px] text-gray-400 font-medium">
+                <p className="text-center text-[calc(var(--kiosk-unit)*11)] text-gray-400 font-medium">
                   ระบบจะนำคุณกลับสู่หน้าหลักอัตโนมัติใน <strong className="text-gray-700 font-mono font-bold">{countdown}</strong> วินาที
                 </p>
               </div>

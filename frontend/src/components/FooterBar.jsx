@@ -3,7 +3,7 @@ import { ExclamationTriangleIcon, PhoneIcon, ChevronRightIcon } from "@heroicons
 
 export default function FooterBar({ onOpenSupport }) {
   return (
-    <footer className="w-full h-16 bg-[#1B1B1C] text-white border-t border-gray-800 flex items-center justify-between px-4 shrink-0 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] z-30 shadow-lg relative">
+    <footer className="kiosk-footer w-full h-16 bg-[#1B1B1C] text-white border-t border-gray-800 flex items-center justify-between px-4 shrink-0 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] z-30 shadow-lg relative">
       
       {/* Left: Support text & Icon */}
       <div className="flex items-center gap-3">
@@ -14,7 +14,7 @@ export default function FooterBar({ onOpenSupport }) {
           <span className="text-xs font-bold text-gray-200">
             ระบบมีปัญหา? , มีเหตุขัดข้อง? | แจ้งปัญหาได้ที่&nbsp;--&gt;
           </span>
-          <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">
+          <span className="text-[calc(var(--kiosk-unit)*10)] text-gray-400 font-medium hidden sm:inline">
             กดปุ่มติดต่อเจ้าหน้าที่เพื่อขอความช่วยเหลือได้ตลอดเวลา
           </span>
         </div>

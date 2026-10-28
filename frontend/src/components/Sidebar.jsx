@@ -60,11 +60,11 @@ export default function Sidebar({
 
   return (
     <aside
-      className="w-[190px] sm:w-[210px] h-full bg-white border-r border-gray-200 shrink-0 flex flex-col 
+      className="kiosk-sidebar w-[calc(var(--kiosk-unit)*190)] sm:w-[calc(var(--kiosk-unit)*210)] h-full bg-white border-r border-gray-200 shrink-0 flex flex-col
                  pt-5 pb-4 px-3.5 sm:px-4 font-['DIN_Pro_Cond',_'Prompt',_sans-serif] select-none z-10 overflow-hidden justify-between"
     >
       {/* Scrollable Category List Container */}
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2.5">
+      <div className="kiosk-category-list flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2.5">
         {/* Category Header */}
         <div className="px-1 pb-0.5 sticky top-0 bg-white z-10">
           <h2 className="text-xs sm:text-sm font-bold text-gray-900 tracking-wider uppercase">
@@ -118,7 +118,7 @@ export default function Sidebar({
                 className="flex items-center gap-3 w-full text-left cursor-pointer group py-1"
               >
                 <div
-                  className={`w-5 h-5 rounded-[4px] flex items-center justify-center transition-all shrink-0 ${
+                  className={`w-5 h-5 rounded-[calc(var(--kiosk-unit)*4)] flex items-center justify-center transition-all shrink-0 ${
                     isSelected
                       ? "bg-[#101C38] border-2 border-[#101C38] text-white"
                       : "border-2 border-gray-900 bg-white group-hover:border-black"
@@ -144,7 +144,7 @@ export default function Sidebar({
             className="flex items-center gap-3 w-full text-left cursor-pointer group py-1"
           >
             <div
-              className={`w-5 h-5 rounded-[4px] flex items-center justify-center transition-all shrink-0 ${
+              className={`w-5 h-5 rounded-[calc(var(--kiosk-unit)*4)] flex items-center justify-center transition-all shrink-0 ${
                 isHot
                   ? "bg-[#101C38] border-2 border-[#101C38] text-white"
                   : "border-2 border-gray-900 bg-white group-hover:border-black"
@@ -168,12 +168,12 @@ export default function Sidebar({
         <div className="w-full bg-[#101C38] text-white p-2.5 rounded-2xl flex flex-col items-center gap-1 shadow-md text-center border border-gray-800 animate-in fade-in-50 duration-300">
           <div className="flex items-center justify-center gap-1 text-[#FABE2C]">
             <GlobeAltIcon className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-black uppercase tracking-wide">เว็บไซต์หลัก</span>
+            <span className="text-[calc(var(--kiosk-unit)*10)] font-black uppercase tracking-wide">เว็บไซต์หลัก</span>
           </div>
           <div className="p-1.5 bg-white rounded-xl shadow-xs border border-white/20">
-            <QRCodeSVG value={externalUrl} size={90} level="M" />
+            <QRCodeSVG className="kiosk-contact-qr" value={externalUrl} size={90} level="M" />
           </div>
-          <span className="text-[9px] text-gray-300 font-medium leading-tight px-1">
+          <span className="text-[calc(var(--kiosk-unit)*9)] text-gray-300 font-medium leading-tight px-1">
             สแกนเพื่อเข้าชมบนมือถือ
           </span>
         </div>
