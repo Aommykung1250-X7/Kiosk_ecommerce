@@ -7,12 +7,21 @@ types.setTypeParser(1114, (val) => {
     return new Date(val.replace(' ', 'T') + 'Z');
 });
 
+if (process.env.NODE_ENV === 'production') {
+    for (const key of ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']) {
+        if (!process.env[key]?.trim()) {
+            throw new Error(`${key} must be configured in production.`);
+        }
+    }
+}
+
 const pool = new Pool({
-    user: process.env.DB_USER || 'aommykung',
+    user: process.env.DB_USER,
     host: process.env.DB_HOST || 'localhost',
     database: process.env.DB_NAME || 'kiosk_db',
-    password: process.env.DB_PASSWORD || '1250Za',
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+    connectionTimeoutMillis: 5000
 });
 
 export const initDb = async () => {
@@ -532,6 +541,7 @@ export const initDb = async () => {
         // ตารางถูกสร้างขึ้นหรือมีอยู่แล้วในระบบเรียบร้อย
     } catch (err) {
         console.error('Error initializing database tables:', err);
+        throw err;
     }
 };
 

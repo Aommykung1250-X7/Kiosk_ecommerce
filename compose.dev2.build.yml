@@ -1,0 +1,8 @@
+# Local build override; do not paste this file into Portainer's Web editor.
+services:
+  web:
+    build:
+      context: ./frontend
+  backend:
+    build:
+      context: ./backend

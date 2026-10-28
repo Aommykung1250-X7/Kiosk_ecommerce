@@ -1,0 +1,95 @@
+name: Build dev2 images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: kiosk-dev2-ci
+      KIOSK_WEB_IMAGE: kiosk-web:validation
+      KIOSK_API_IMAGE: kiosk-api:validation
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+        working-directory: backend
+      - run: node --test backend/tests/*.test.js
+        env:
+          DOTENV_CONFIG_PATH: /dev/null
+      - name: Disposable test credentials
+        run: |
+          echo "DB_PASSWORD=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 48)" >> "$GITHUB_ENV"
+      - name: Validate production Compose
+        run: docker compose -f compose.dev2.yml config --quiet
+      - name: Build containers for runtime check
+        run: docker compose -f compose.dev2.yml -f compose.dev2.build.yml build
+      - name: Check full Stack startup
+        id: smoke
+        run: |
+          docker compose -f compose.dev2.yml up -d --wait --wait-timeout 180
+          curl --fail --retry 3 http://127.0.0.1:11780/api/health
+          curl --fail http://127.0.0.1:11780/dashboard/products > /dev/null
+          module_file=$(docker compose -f compose.dev2.yml exec -T web sh -c 'for f in /usr/share/nginx/html/assets/*.mjs; do basename "$f"; break; done')
+          curl --fail --head "http://127.0.0.1:11780/assets/$module_file" | grep -iq 'content-type: application/javascript'
+      - name: Container logs on failure
+        if: failure() && steps.smoke.outcome == 'failure'
+        run: docker compose -f compose.dev2.yml logs --no-color
+      - name: Remove disposable CI Stack
+        if: always() && (steps.smoke.outcome == 'success' || steps.smoke.outcome == 'failure')
+        run: docker compose -f compose.dev2.yml down --volumes --remove-orphans
+
+  images:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: frontend
+            suffix: web
+          - context: backend
+            suffix: api
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Image reference
+        id: image
+        env:
+          SUFFIX: ${{ matrix.suffix }}
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}-${SUFFIX}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./${{ matrix.context }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.ref }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - name: Image for Portainer
+        env:
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
+          SUFFIX: ${{ matrix.suffix }}
+        run: printf 'KIOSK_%s_IMAGE=%s\n' "${SUFFIX^^}" "$IMAGE_REF" >> "$GITHUB_STEP_SUMMARY"

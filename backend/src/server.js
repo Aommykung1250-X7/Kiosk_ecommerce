@@ -14,12 +14,16 @@ import screensaverRoutes from "./routes/screensaverRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import settingRoutes from "./routes/settingRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
-import { initDb } from "./data/db.js";
+import healthRoutes from "./routes/healthRoutes.js";
+import pool, { initDb } from "./data/db.js";
 import dailyReportService from "./services/dailyReportService.js";
 import { getAllowedOrigins } from "./config/security.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// The production API is reachable only through the Stack's Nginx proxy.
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 
 app.use(helmet());
 app.use(cors({
@@ -37,6 +41,7 @@ app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
 // Register API routes
+app.use("/api", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", productRoutes);
 app.use("/api", cartRoutes);
@@ -59,6 +64,22 @@ app.use((req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`[Server] Kiosk Backend is running on port ${PORT}`);
 });
+
+const shutdown = () => {
+  server.close(async () => {
+    try {
+      await pool.end();
+      process.exit(0);
+    } catch (error) {
+      console.error("[Server] Shutdown failed:", error);
+      process.exit(1);
+    }
+  });
+  setTimeout(() => process.exit(1), 10000).unref();
+};
+
+process.once("SIGTERM", shutdown);
+process.once("SIGINT", shutdown);

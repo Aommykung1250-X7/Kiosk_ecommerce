@@ -8,6 +8,9 @@ class OrderController {
    * Handle POST /api/orders
    */
   async createOrder(req, res) {
+    if (process.env.NODE_ENV === "production" && process.env.PAYMENTS_ENABLED !== "true") {
+      return res.status(503).json({ error: "ระบบชำระเงินยังไม่เปิดให้บริการ อยู่ระหว่างเตรียมเชื่อมต่อธนาคารกรุงไทย" });
+    }
     try {
       const { items, totalPrice, deliveryOption, shippingOption } = req.body;
 

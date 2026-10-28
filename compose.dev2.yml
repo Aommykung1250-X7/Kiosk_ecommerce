@@ -1,0 +1,87 @@
+# Paste this image-only file into a Docker Standalone Stack in Portainer.
+services:
+  web:
+    image: ${KIOSK_WEB_IMAGE:?Set KIOSK_WEB_IMAGE to a published release image}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-11780}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    image: ${KIOSK_API_IMAGE:?Set KIOSK_API_IMAGE to a published release image}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 15s
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-kiosk_db}
+      DB_USER: ${DB_USER:-ditc_kiosk}
+      DB_PASSWORD: ${DB_PASSWORD:?Set a new production DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set a random production JWT_SECRET}
+      FRONTEND_URL: ${APP_ORIGIN:-http://ditckiosk.camt.cmu.ac.th}
+      BACKEND_URL: ${APP_ORIGIN:-http://ditckiosk.camt.cmu.ac.th}
+      CORS_ORIGIN: ${APP_ORIGIN:-http://ditckiosk.camt.cmu.ac.th}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      # Keep checkout off until the Krungthai gateway is implemented and verified.
+      PAYMENTS_ENABLED: "false"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-kiosk_db}
+      POSTGRES_USER: ${DB_USER:-ditc_kiosk}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a new production DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  pgdata:
+  uploads:

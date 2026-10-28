@@ -1,0 +1,9 @@
+*
+!package.json
+!package-lock.json
+!src/
+!src/**
+!scripts/
+!scripts/**
+!assets/
+!assets/ditc_logo.png
