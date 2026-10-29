@@ -53,6 +53,10 @@ try {
     const bounds = await page.locator('.kiosk-app-container').boundingBox();
     assert.equal(bounds.width, width, `kiosk fills ${width}px width`);
     assert.equal(bounds.height, height, `kiosk fills ${height}px height`);
+    const firstRow = await page.locator('.kiosk-product-card').evaluateAll(cards => cards.slice(0, 4).map(card => ({ top: card.getBoundingClientRect().top })));
+    assert.equal(firstRow[0].top, firstRow[1].top, 'first two products share a row');
+    assert.equal(firstRow[0].top, firstRow[2].top, 'catalog shows three products per row');
+    assert.ok(firstRow[3].top > firstRow[0].top, 'fourth product starts the next row');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no horizontal document overflow');
     await fits(page.locator('.kiosk-header'), 'header');
     await fits(page.locator('.kiosk-footer'), 'footer');

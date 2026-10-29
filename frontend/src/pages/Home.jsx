@@ -539,7 +539,7 @@ export default function Home() {
                     {/* 3. Product Grid matching mockup */}
                     {filteredProducts.length > 0 ? (
                       <div
-                        className={`kiosk-product-grid grid grid-cols-2 gap-x-4 sm:gap-x-5 gap-y-6 sm:gap-y-7 p-4 sm:p-5 ${
+                        className={`kiosk-product-grid grid grid-cols-3 gap-x-4 sm:gap-x-5 gap-y-6 sm:gap-y-7 p-4 sm:p-5 ${
                           cart.totalItems > 0 ? "pb-36" : "pb-24"
                         }`}
                       >

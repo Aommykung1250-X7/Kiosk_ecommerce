@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Trash2 } from "lucide-react";
 import type { Screensaver } from "../../../types/admin";
+import { AdvertisementMedia } from "../../AdvertisementMedia";
+import { AD_MEDIA_TYPES, MAX_AD_MEDIA_BYTES, isVideoMedia } from "../../../utils/adMedia";
 import {
   Button,
   Checkbox,
@@ -9,7 +11,6 @@ import {
   Modal,
   NumberInput,
   TextInput,
-  resolveUploadUrl,
 } from "../ui";
 
 export interface ScreensaverDraft {
@@ -18,10 +19,9 @@ export interface ScreensaverDraft {
   displayOrder: number;
   isActive: boolean;
   mediaUrl: string;
+  mediaType: "image" | "video";
   file: File | null;
 }
-
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 interface ScreensaverFormModalProps {
   open: boolean;
@@ -33,7 +33,7 @@ interface ScreensaverFormModalProps {
   onInvalidFile: (message: string) => void;
 }
 
-/** ฟอร์มเพิ่ม/แก้ไขสื่อโฆษณา พร้อมกรอบพรีวิว 16:9 เท่าสัดส่วนจอตู้จริง */
+/** ฟอร์มเพิ่ม/แก้ไขภาพและวิดีโอโฆษณา แนะนำสื่อแนวตั้ง 9:16 */
 export function ScreensaverFormModal({
   open,
   onClose,
@@ -49,18 +49,24 @@ export function ScreensaverFormModal({
     displayOrder: defaultOrder,
     isActive: true,
     mediaUrl: "",
+    mediaType: "image",
     file: null,
   });
   const [localPreview, setLocalPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setLocalPreview(null);
+      setDraft((previous) => ({ ...previous, file: null }));
+      return;
+    }
     setDraft({
       title: editing?.title ?? "",
       duration: editing?.duration ?? 10,
       displayOrder: editing?.displayOrder ?? defaultOrder,
       isActive: editing?.isActive ?? true,
       mediaUrl: editing?.mediaUrl ?? "",
+      mediaType: isVideoMedia(editing?.mediaUrl, editing?.mediaType) ? "video" : "image",
       file: null,
     });
     setLocalPreview(null);
@@ -76,16 +82,20 @@ export function ScreensaverFormModal({
   const handleFiles = (files: File[]) => {
     const file = files[0];
     if (!file) return;
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      onInvalidFile("รองรับเฉพาะไฟล์ JPEG, PNG และ WebP");
+    if (!AD_MEDIA_TYPES.includes(file.type)) {
+      onInvalidFile("รองรับ JPEG, PNG, WebP, MP4 และ WebM");
+      return;
+    }
+    if (file.size > MAX_AD_MEDIA_BYTES) {
+      onInvalidFile("ไฟล์สื่อต้องมีขนาดไม่เกิน 50 MB");
       return;
     }
     if (localPreview) URL.revokeObjectURL(localPreview);
     setLocalPreview(URL.createObjectURL(file));
-    setDraft((previous) => ({ ...previous, file }));
+    setDraft((previous) => ({ ...previous, file, mediaType: file.type.startsWith("video/") ? "video" : "image" }));
   };
 
-  const preview = localPreview ?? resolveUploadUrl(draft.mediaUrl, "screensavers");
+  const preview = localPreview ?? draft.mediaUrl;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -98,7 +108,7 @@ export function ScreensaverFormModal({
       onClose={onClose}
       size="lg"
       title={editing ? "แก้ไขสื่อโฆษณา" : "เพิ่มสื่อโฆษณา"}
-      description="ภาพจะแสดงเต็มจอตู้ในอัตราส่วน 16:9"
+      description="แนะนำสื่อแนวตั้ง 9:16 ขนาด 1080 × 1920 พิกเซล แสดงเต็มภาพโดยไม่ยืดกรอบ"
       footer={
         <>
           <Button onClick={onClose}>ยกเลิก</Button>
@@ -116,12 +126,12 @@ export function ScreensaverFormModal({
       <form id="screensaver-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
         {preview ? (
           <div className="flex flex-col gap-2">
-            <div className="relative aspect-video overflow-hidden rounded-2xl border border-bo-line bg-slate-900">
-              <img src={preview} alt="ตัวอย่างสื่อโฆษณา" className="h-full w-full object-cover" />
+            <div className="relative mx-auto aspect-[9/16] w-full max-w-64 overflow-hidden rounded-2xl border border-bo-line bg-slate-900">
+              <AdvertisementMedia mediaUrl={preview} mediaType={draft.mediaType} alt="ตัวอย่างสื่อโฆษณา" controls className="h-full w-full object-contain" />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-bo-muted">
-                {draft.file ? draft.file.name : "ภาพปัจจุบัน"}
+                {draft.file ? draft.file.name : "สื่อปัจจุบัน"}
               </span>
               <Button
                 size="sm"
@@ -130,20 +140,20 @@ export function ScreensaverFormModal({
                 onClick={() => {
                   if (localPreview) URL.revokeObjectURL(localPreview);
                   setLocalPreview(null);
-                  setDraft((previous) => ({ ...previous, file: null, mediaUrl: "" }));
+                  setDraft((previous) => ({ ...previous, file: null, mediaUrl: "", mediaType: "image" }));
                 }}
               >
-                เลือกภาพใหม่
+                เลือกสื่อใหม่
               </Button>
             </div>
           </div>
         ) : (
           <Dropzone
-            aspect="16/9"
-            accept="image/jpeg,image/png,image/webp,image/jpg"
+            aspect="9/16"
+            accept={AD_MEDIA_TYPES.join(",")}
             onFiles={handleFiles}
-            title="ลากภาพมาวาง หรือคลิกเพื่อเลือกไฟล์"
-            hint="รองรับ JPEG, PNG และ WebP · แนะนำขนาด 1920 × 1080 พิกเซล"
+            title="ลากสื่อมาวาง หรือคลิกเพื่อเลือกไฟล์"
+            hint="JPEG, PNG, WebP, MP4 (H.264) และ WebM · ไม่เกิน 50 MB"
           />
         )}
 
@@ -162,7 +172,7 @@ export function ScreensaverFormModal({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="ระยะเวลาแสดงผล" required hint="ตั้งได้ระหว่าง 3 ถึง 60 วินาที">
+          <Field label="ระยะเวลาแสดงผล" required hint="ตั้งได้ 3–60 วินาที วิดีโอจะเล่นแบบปิดเสียงและวนตามเวลานี้">
             {(id) => (
               <NumberInput
                 id={id}

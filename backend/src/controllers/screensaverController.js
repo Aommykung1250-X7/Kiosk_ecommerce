@@ -2,6 +2,7 @@ import pool from "../data/db.js";
 import fs from "fs";
 import path from "path";
 import productService from "../services/productService.js";
+import { getScreensaverMediaType } from "../config/screensaverMedia.js";
 
 const FEATURED_SLOTS = 4;
 const DEFAULT_MAIN_IMAGE = "main_screen.jpeg";
@@ -56,13 +57,16 @@ class ScreensaverController {
       if (!mediaUrl) {
         return res.status(400).json({ error: "mediaUrl is required." });
       }
+      const mediaType = getScreensaverMediaType(mediaUrl);
+      if (!mediaType) return res.status(400).json({ error: "Unsupported screensaver media type." });
 
       const result = await pool.query(
         `INSERT INTO screensavers (title, type, file_url, duration, display_order, is_enabled)
-         VALUES ($1, 'image', $2, $3, $4, $5)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, type as "mediaType", file_url as "mediaUrl", is_enabled as "isActive", display_order as "displayOrder", duration, title`,
         [
           title || "Untitled Ad",
+          mediaType,
           mediaUrl,
           duration !== undefined ? parseInt(duration, 10) : 10,
           displayOrder !== undefined ? parseInt(displayOrder, 10) : 0,
@@ -85,6 +89,8 @@ class ScreensaverController {
     try {
       const { id } = req.params;
       const { title, mediaUrl, duration, displayOrder, isActive } = req.body;
+      const mediaType = mediaUrl !== undefined ? getScreensaverMediaType(mediaUrl) : null;
+      if (mediaUrl !== undefined && !mediaType) return res.status(400).json({ error: "Unsupported screensaver media type." });
 
       const check = await pool.query("SELECT * FROM screensavers WHERE id = $1", [id]);
       if (check.rows.length === 0) {
@@ -97,7 +103,8 @@ class ScreensaverController {
              file_url = COALESCE($2, file_url),
              duration = COALESCE($3, duration),
              display_order = COALESCE($4, display_order),
-             is_enabled = COALESCE($5, is_enabled)
+             is_enabled = COALESCE($5, is_enabled),
+             type = COALESCE($7, type)
          WHERE id = $6
          RETURNING id, type as "mediaType", file_url as "mediaUrl", is_enabled as "isActive", display_order as "displayOrder", duration, title`,
         [
@@ -106,7 +113,8 @@ class ScreensaverController {
           duration !== undefined ? parseInt(duration, 10) : null,
           displayOrder !== undefined ? parseInt(displayOrder, 10) : null,
           isActive !== undefined ? !!isActive : null,
-          id
+          id,
+          mediaType
         ]
       );
 

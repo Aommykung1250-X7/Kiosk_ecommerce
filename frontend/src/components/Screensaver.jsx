@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ShoppingCartIcon, QuestionMarkCircleIcon, SparklesIcon } from "@heroicons/react/24/solid";
 import { resolveUploadUrl } from "./admin/ui/format";
+import { AdvertisementMedia } from "./AdvertisementMedia";
 
 const FEATURED_SLOTS = 4;
 
@@ -135,26 +136,17 @@ export default function Screensaver({ onWake }) {
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#0E1B3E_2px,transparent_2px)] [background-size:20px_20px]" />
 
         {/* EXPANDED ADVERTISEMENT AREA (รองรับสื่อ 9:16 แนวตั้ง ขยายขึ้นเต็มพื้นที่ด้านบน) */}
-        <div className="kiosk-advert w-full max-w-[calc(var(--kiosk-unit)*530)] flex-1 rounded-3xl overflow-hidden shadow-lg relative bg-gray-100 border border-gray-150 flex items-center justify-center z-10 my-0.5">
+        <div className="kiosk-advert w-full max-w-[calc(var(--kiosk-unit)*530)] flex-1 rounded-3xl overflow-hidden shadow-lg relative bg-slate-900 border border-gray-150 flex items-center justify-center z-10 my-0.5">
           {slides.length > 0 && currentSlide ? (
             /* Active Screensaver / Promotional Ad */
-            <div className="w-full h-full relative">
-              {currentSlide.mediaType === "video" || currentSlide.type === "video" || (typeof currentSlide.mediaUrl === "string" && currentSlide.mediaUrl.endsWith(".mp4")) ? (
-                <video
-                  src={resolveUploadUrl(currentSlide.mediaUrl, "screensavers") ?? ""}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img
-                  src={resolveUploadUrl(currentSlide.mediaUrl, "screensavers") ?? ""}
-                  alt={currentSlide.title || "Advertisement"}
-                  className="w-full h-full object-cover transition-opacity duration-700"
-                />
-              )}
+            <div className="absolute inset-0">
+              <AdvertisementMedia
+                mediaUrl={currentSlide.mediaUrl}
+                mediaType={currentSlide.mediaType}
+                alt={currentSlide.title || "Advertisement"}
+                autoPlay
+                className="w-full h-full object-contain"
+              />
               {slides.length > 1 && (
                 <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5 z-10">
                   {slides.map((_, idx) => (
@@ -170,7 +162,7 @@ export default function Screensaver({ onWake }) {
             </div>
           ) : (
             /* Default Red Promotional Box matching mockup when no custom ads uploaded */
-            <div className="w-full h-full bg-[#E50914] flex flex-col items-center justify-center text-white p-6 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[#E50914] flex flex-col items-center justify-center text-white p-6 overflow-hidden group">
               <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10 blur-xl pointer-events-none" />
               <div className="absolute -left-10 -bottom-10 w-40 h-40 rounded-full bg-black/10 blur-xl pointer-events-none" />
               
@@ -222,7 +214,7 @@ export default function Screensaver({ onWake }) {
                 return (
                   <div
                     key={isObj ? (item.id ?? idx) : idx}
-                    className="aspect-square bg-[#F4F5F7] rounded-[calc(var(--kiosk-unit)*20)] p-2.5 flex items-center justify-center shadow-xs border border-slate-200/60 overflow-hidden relative"
+                    className="kiosk-featured-card aspect-square bg-[#F4F5F7] rounded-[calc(var(--kiosk-unit)*20)] p-2.5 flex items-center justify-center shadow-xs border border-slate-200/60 overflow-hidden relative"
                   >
                     {imageUrl ? (
                       <img
@@ -292,7 +284,7 @@ export default function Screensaver({ onWake }) {
       </main>
 
       {/* 3. BOTTOM TOUCH SCREEN INSTRUCTION (ใช้รูปภาพต้นฉบับโดยตรง) */}
-      <footer className="w-full flex items-center justify-center py-1 sm:py-2 select-none z-10">
+      <footer className="w-full flex shrink-0 items-center justify-center py-1 sm:py-2 select-none z-10">
         <img
           src="/touch_to_begin.png"
           alt="แตะหน้าจอเพื่อเริ่มใช้งาน - TOUCH SCREEN TO BEGIN"

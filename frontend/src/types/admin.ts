@@ -218,6 +218,7 @@ export interface Screensaver {
   id: number;
   title: string;
   mediaUrl: string;
+  mediaType?: "image" | "video";
   duration: number;
   displayOrder: number;
   isActive: boolean;
