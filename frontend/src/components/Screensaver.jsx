@@ -145,6 +145,7 @@ export default function Screensaver({ onWake }) {
                 mediaType={currentSlide.mediaType}
                 alt={currentSlide.title || "Advertisement"}
                 autoPlay
+                ambient
                 className="w-full h-full object-contain"
               />
               {slides.length > 1 && (
