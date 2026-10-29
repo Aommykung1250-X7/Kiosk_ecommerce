@@ -107,13 +107,16 @@ export default function Screensaver({ onWake }) {
     >
       {/* 1. TOP HEADER BAR (Outside Card) */}
       <header className="w-full flex items-center justify-between px-2 sm:px-4 py-1 shrink-0 z-10 select-none">
-        {/* Left: DITC Logo */}
-        <div className="flex items-center gap-3">
+        {/* Left: DITC Logo + SHOP */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <img
             src="/ditc_logo.png"
             alt="DITC"
             className="h-9 sm:h-10 w-auto object-contain mix-blend-screen"
           />
+          <span className="text-white font-bold text-lg sm:text-xl tracking-wider select-none font-['Prompt']">
+            SHOP
+          </span>
         </div>
 
         {/* Right: Help Button */}
@@ -127,92 +130,31 @@ export default function Screensaver({ onWake }) {
       </header>
 
       {/* 2. MAIN FLOATING WHITE CARD (Compact & Closer Spacing) */}
-      <main className="relative w-full max-w-[580px] mx-auto flex-1 bg-white rounded-[36px] sm:rounded-[42px] shadow-2xl p-4 sm:p-5 flex flex-col items-center justify-center gap-2 sm:gap-2.5 my-1 overflow-hidden border border-white/20">
+      <main className="relative w-full max-w-[580px] mx-auto flex-1 bg-white rounded-[36px] sm:rounded-[42px] shadow-2xl p-4 sm:p-5 flex flex-col items-center justify-between gap-2.5 sm:gap-3 my-1 overflow-hidden border border-white/20">
         {/* Subtle Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#0E1B3E_2px,transparent_2px)] [background-size:20px_20px]" />
 
-        {/* TOP SECTION: Cute Icon + WELCOME TO DITC STORE + Tagline (Extra Large) */}
-        <div className="flex flex-col items-center text-center z-10 w-full">
-          {/* Cute Smiling Shopping Bag with 2 Stars (Extra Large) */}
-          <div className="flex items-center justify-center gap-5 mt-1">
-            {/* Left Golden Star */}
-            <span className="text-[#FABE2C] text-3xl sm:text-4xl animate-pulse">✦</span>
-
-            {/* Cute Smiling Bag SVG */}
-            <div className="w-18 h-18 sm:w-22 sm:h-22 flex items-center justify-center text-[#0E1B3E]">
-              <svg
-                viewBox="0 0 48 48"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-full h-full stroke-[3] stroke-[#0E1B3E]"
-              >
-                <path
-                  d="M10 16h28l-2.5 24a3 3 0 0 1-3 2.7H15.5A3 3 0 0 1 12.5 40L10 16z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M18 18V12a6 6 0 0 1 12 0v6"
-                  strokeLinecap="round"
-                />
-                {/* Smiling Face */}
-                <circle cx="20" cy="28" r="2" fill="#0E1B3E" stroke="none" />
-                <circle cx="28" cy="28" r="2" fill="#0E1B3E" stroke="none" />
-                <path
-                  d="M21 32c1 1.8 5 1.8 6 0"
-                  strokeLinecap="round"
-                  strokeWidth="2.8"
-                />
-              </svg>
-            </div>
-
-            {/* Right Cyan Star */}
-            <span className="text-[#38BDF8] text-3xl sm:text-4xl animate-pulse">✦</span>
-          </div>
-
-          {/* WELCOME (Extra Large) */}
-          <h1 className="text-7xl sm:text-8xl md:text-9xl font-black text-[#0E1B3E] tracking-tight leading-none mt-2 select-none">
-            WELCOME
-          </h1>
-
-          {/* "TO" Divider (Extra Large) */}
-          <div className="flex items-center gap-4 w-60 sm:w-80 justify-center my-1.5 select-none">
-            <div className="h-1 bg-gray-300 rounded-full flex-1" />
-            <span className="text-base sm:text-xl font-black text-gray-800 tracking-widest">TO</span>
-            <div className="h-1 bg-gray-300 rounded-full flex-1" />
-          </div>
-
-          {/* DITC STORE (Extra Large) */}
-          <div className="flex items-center justify-center gap-3 select-none">
-            <span className="text-6xl sm:text-7xl md:text-8xl font-black text-[#0088CC] tracking-tight leading-none">
-              DIT<span className="text-[#0E1B3E]">C</span>
-            </span>
-            <span className="text-6xl sm:text-7xl md:text-8xl font-black text-[#0E1B3E] tracking-tight leading-none">
-              STORE
-            </span>
-          </div>
-
-          {/* Tagline: Discover • Select • Pay (Extra Large) */}
-          <p className="text-xl sm:text-3xl font-black text-gray-800 tracking-wider mt-2.5 select-none">
-            Discover <span className="text-[#FABE2C]">•</span> Select <span className="text-[#FABE2C]">•</span> Pay
-          </p>
-
-          {/* Thai Subtitle (Extra Large) */}
-          <p className="text-base sm:text-xl font-bold text-gray-600 mt-1.5 select-none">
-            เลือกสิ่งที่คุณชอบ จ่ายง่าย รับของได้ทันที
-          </p>
-        </div>
-
-        {/* MIDDLE SECTION: ADVERTISEMENT AREA (Larger & Prominent) */}
-        <div className="w-full max-w-[530px] aspect-[16/9.5] sm:aspect-[16/9] min-h-[210px] sm:min-h-[250px] rounded-3xl overflow-hidden shadow-lg relative bg-gray-100 border border-gray-150 flex items-center justify-center z-10 my-0.5">
+        {/* EXPANDED ADVERTISEMENT AREA (รองรับสื่อ 9:16 แนวตั้ง ขยายขึ้นเต็มพื้นที่ด้านบน) */}
+        <div className="w-full max-w-[530px] flex-1 min-h-[380px] rounded-3xl overflow-hidden shadow-lg relative bg-gray-100 border border-gray-150 flex items-center justify-center z-10 my-0.5">
           {slides.length > 0 && currentSlide ? (
             /* Active Screensaver / Promotional Ad */
             <div className="w-full h-full relative">
-              <img
-                src={resolveUploadUrl(currentSlide.mediaUrl, "screensavers") ?? ""}
-                alt={currentSlide.title || "Advertisement"}
-                className="w-full h-full object-cover transition-opacity duration-700"
-              />
+              {currentSlide.mediaType === "video" || currentSlide.type === "video" || (typeof currentSlide.mediaUrl === "string" && currentSlide.mediaUrl.endsWith(".mp4")) ? (
+                <video
+                  src={resolveUploadUrl(currentSlide.mediaUrl, "screensavers") ?? ""}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={resolveUploadUrl(currentSlide.mediaUrl, "screensavers") ?? ""}
+                  alt={currentSlide.title || "Advertisement"}
+                  className="w-full h-full object-cover transition-opacity duration-700"
+                />
+              )}
               {slides.length > 1 && (
                 <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5 z-10">
                   {slides.map((_, idx) => (
@@ -249,14 +191,14 @@ export default function Screensaver({ onWake }) {
         <button
           type="button"
           onClick={onWake}
-          className="w-full max-w-[440px] h-13 sm:h-14 rounded-full bg-gradient-to-b from-[#FCD24E] to-[#F5B41C] text-black font-black text-base sm:text-lg shadow-[0_10px_25px_rgba(245,180,28,0.45)] hover:shadow-[0_14px_30px_rgba(245,180,28,0.6)] border border-[#FFE885]/60 flex items-center justify-center gap-2.5 active:scale-[0.97] transition-all duration-200 cursor-pointer select-none z-10"
+          className="w-full max-w-[440px] h-13 sm:h-14 rounded-full bg-gradient-to-b from-[#FCD24E] to-[#F5B41C] text-black font-black text-base sm:text-lg shadow-[0_10px_25px_rgba(245,180,28,0.45)] hover:shadow-[0_14px_30px_rgba(245,180,28,0.6)] border border-[#FFE885]/60 flex items-center justify-center gap-2.5 active:scale-[0.97] transition-all duration-200 cursor-pointer select-none z-10 shrink-0"
         >
           <ShoppingCartIcon className="w-5 h-5 text-black stroke-[1.5]" />
           <span>START SHOPPING</span>
         </button>
 
         {/* BOTTOM SECTION: FEATURED PRODUCTS SHOWCASE (ชิดกับปุ่ม) */}
-        <div className="w-full pt-1.5 sm:pt-2 border-t border-gray-100 z-10 select-none">
+        <div className="w-full pt-1.5 sm:pt-2 border-t border-gray-100 z-10 select-none shrink-0">
           <div className="flex items-center justify-between px-1 mb-1">
             <span className="text-[11px] sm:text-xs font-bold text-gray-800 flex items-center gap-1.5">
               <SparklesIcon className="w-3.5 h-3.5 text-[#FABE2C]" />
@@ -299,7 +241,7 @@ export default function Screensaver({ onWake }) {
         </div>
 
         {/* STAFF CONTACT INFO STRIP (Inside Card, No Background, Separated by Dividing Lines) */}
-        <div className="w-full pt-2 border-t border-gray-150 grid grid-cols-3 divide-x divide-gray-200 z-10 select-none mt-0.5">
+        <div className="w-full pt-2 border-t border-gray-150 grid grid-cols-3 divide-x divide-gray-200 z-10 select-none mt-0.5 shrink-0">
           {/* 1. Website */}
           <div className="flex items-center justify-center gap-2 px-1">
             <div className="w-7 h-7 rounded-full border border-sky-500 bg-sky-50 flex items-center justify-center text-sky-600 shrink-0">
