@@ -13,13 +13,16 @@ export default function Header({
       className="kiosk-header w-full h-[calc(var(--kiosk-unit)*88)] bg-[#0E1B3E] flex items-center justify-between
                  px-6 sm:px-8 gap-4 shrink-0 font-['Prompt'] shadow-md z-20"
     >
-      {/* Left: DITC Logo */}
-      <div className="flex items-center gap-3 shrink-0 select-none pl-1">
+      {/* Left: DITC Logo + SHOP */}
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 select-none pl-1">
         <img
           src="/ditc_logo.png"
           alt="DITC"
           className="h-8 sm:h-9 w-auto object-contain mix-blend-screen"
         />
+        <span className="text-white font-bold text-lg sm:text-xl tracking-wider select-none font-['Prompt']">
+          SHOP
+        </span>
       </div>
 
       {/* Center: Search Bar */}

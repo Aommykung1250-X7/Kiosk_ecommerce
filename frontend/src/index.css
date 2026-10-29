@@ -436,7 +436,7 @@ body:has(.kiosk-app-container) {
 
 .kiosk-advert {
   max-width: min(100%, 120vh);
-  min-height: 0;
+  min-height: min(45dvh, calc(380 * var(--kiosk-unit)));
   flex-shrink: 0;
 }
 
