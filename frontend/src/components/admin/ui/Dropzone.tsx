@@ -8,7 +8,7 @@ interface DropzoneProps {
   multiple?: boolean;
   busy?: boolean;
   /** อัตราส่วนของกรอบพรีวิว ให้ตรงกับหน้าจอที่สื่อจะไปแสดงจริง */
-  aspect?: "16/9" | "4/3" | "1/1";
+  aspect?: "16/9" | "9/16" | "4/3" | "1/1";
   title: string;
   hint: string;
   disabled?: boolean;
@@ -16,6 +16,7 @@ interface DropzoneProps {
 
 const ASPECT: Record<NonNullable<DropzoneProps["aspect"]>, string> = {
   "16/9": "aspect-video",
+  "9/16": "mx-auto aspect-[9/16] max-w-64",
   "4/3": "aspect-4/3",
   "1/1": "aspect-square",
 };

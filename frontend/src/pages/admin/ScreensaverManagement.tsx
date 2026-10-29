@@ -34,6 +34,7 @@ import {
 } from "../../components/admin/screensavers/ScreensaverFormModal";
 import { FeaturedProductModal } from "../../components/admin/screensavers/FeaturedProductModal";
 import type { Product } from "../../types/admin";
+import { AdvertisementMedia } from "../../components/AdvertisementMedia";
 
 const FEATURED_SLOTS = 4;
 const ALLOWED_MAIN_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -156,7 +157,7 @@ export default function ScreensaverManagement() {
 
     setUploadingMainImage(true);
     try {
-      const filename = await uploadImage(file);
+      const filename = await uploadMedia(file);
       setMainImage(filename);
       await saveConfig(featuredProductIds, filename);
     } catch (uploadError) {
@@ -168,7 +169,7 @@ export default function ScreensaverManagement() {
 
   /* -------------------------------------------------------------- สื่อโฆษณา */
 
-  const uploadImage = async (file: File): Promise<string> => {
+  const uploadMedia = async (file: File): Promise<string> => {
     const body = new FormData();
     body.append("image", file);
 
@@ -178,19 +179,20 @@ export default function ScreensaverManagement() {
       body,
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "อัปโหลดรูปภาพไม่สำเร็จ");
+    if (!response.ok) throw new Error(data.error || "อัปโหลดสื่อไม่สำเร็จ");
     return data.image;
   };
 
   const handleSubmit = async (draft: ScreensaverDraft) => {
     setSaving(true);
     try {
-      const mediaUrl = draft.file ? await uploadImage(draft.file) : draft.mediaUrl;
-      if (!mediaUrl) throw new Error("เลือกไฟล์ภาพสำหรับสื่อโฆษณาก่อนบันทึก");
+      const mediaUrl = draft.file ? await uploadMedia(draft.file) : draft.mediaUrl;
+      if (!mediaUrl) throw new Error("เลือกสื่อโฆษณาก่อนบันทึก");
 
       const payload = {
         title: draft.title,
         mediaUrl,
+        mediaType: draft.mediaType,
         duration: draft.duration,
         displayOrder: draft.displayOrder,
         isActive: draft.isActive,
@@ -502,12 +504,12 @@ export default function ScreensaverManagement() {
               key={item.id}
               className="flex flex-col overflow-hidden rounded-2xl border border-bo-line bg-white shadow-[0_1px_2px_rgba(23,27,46,0.04)]"
             >
-              <div className="relative aspect-video bg-slate-900">
-                <img
-                  src={resolveUploadUrl(item.mediaUrl, "screensavers") ?? ""}
+              <div className="relative aspect-[9/16] max-h-80 bg-slate-900">
+                <AdvertisementMedia
+                  mediaUrl={item.mediaUrl}
+                  mediaType={item.mediaType}
                   alt={item.title}
-                  loading="lazy"
-                  className={`h-full w-full object-cover transition-opacity duration-200 ${
+                  className={`h-full w-full object-contain transition-opacity duration-200 ${
                     item.isActive ? "" : "opacity-40"
                   }`}
                 />
@@ -516,6 +518,7 @@ export default function ScreensaverManagement() {
                   <span className="bo-nums">ลำดับ {item.displayOrder}</span>
                   <span className="text-white/50">·</span>
                   <span className="bo-nums">{item.duration}s</span>
+                  <span>· {item.mediaType === "video" ? "วิดีโอ" : "ภาพ"}</span>
                 </span>
 
                 <span className="absolute top-3 right-3">

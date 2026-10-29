@@ -1,6 +1,7 @@
 import { Clock, MonitorPlay, RotateCcw } from "lucide-react";
 import type { Screensaver } from "../../../types/admin";
 import { cn, resolveUploadUrl } from "../ui";
+import { AdvertisementMedia } from "../../AdvertisementMedia";
 
 interface PlaylistTimelineProps {
   screensavers: Screensaver[];
@@ -37,6 +38,7 @@ export function PlaylistTimeline({
             duration: masterDuration,
             mediaUrl: (mainImage || null) as string | null,
             master: true,
+            mediaType: "image" as const,
           },
         ]
       : []),
@@ -47,6 +49,7 @@ export function PlaylistTimeline({
       duration: slide.duration,
       mediaUrl: slide.mediaUrl,
       master: false,
+      mediaType: slide.mediaType,
     })),
   ];
 
@@ -100,13 +103,13 @@ export function PlaylistTimeline({
               </div>
 
               <div className={cn("flex flex-1 items-center gap-3", !isLast && "pb-4")}>
-                <div className="h-11 w-16 shrink-0 overflow-hidden rounded-lg border border-bo-line bg-slate-100">
+                <div className="h-16 w-9 shrink-0 overflow-hidden rounded-lg border border-bo-line bg-slate-900">
                   {cover ? (
-                    <img
-                      src={cover}
+                    <AdvertisementMedia
+                      mediaUrl={cover}
+                      mediaType={segment.mediaType}
                       alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                     />
                   ) : segment.master ? (
                     <div className="flex h-full w-full items-center justify-center bg-bo-ink">

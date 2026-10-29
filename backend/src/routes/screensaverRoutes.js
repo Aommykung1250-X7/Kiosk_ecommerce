@@ -5,6 +5,8 @@ import path from "path";
 import fs from "fs";
 import screensaverController from "../controllers/screensaverController.js";
 import { authenticateJWT, checkRole } from "../middlewares/authMiddleware.js";
+import { unlink } from "node:fs/promises";
+import { getScreensaverMediaType, isAllowedScreensaverUpload, hasScreensaverSignature } from "../config/screensaverMedia.js";
 
 const router = Router();
 
@@ -22,9 +24,8 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-  if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error("Only image files (JPEG, PNG, WebP) are allowed."));
+  if (!isAllowedScreensaverUpload(file)) {
+    return cb(new Error("รองรับ JPEG, PNG, WebP, MP4 และ WebM โดยนามสกุลต้องตรงกับชนิดไฟล์"));
   }
   cb(null, true);
 };
@@ -46,7 +47,7 @@ router.put("/screensavers/config", authenticateJWT, checkRole(["admin"]), (req, 
 router.put("/screensavers/:id", authenticateJWT, checkRole(["admin"]), (req, res) => screensaverController.updateScreensaver(req, res));
 router.delete("/screensavers/:id", authenticateJWT, checkRole(["admin"]), (req, res) => screensaverController.deleteScreensaver(req, res));
 
-// Image Upload Endpoint (restricted to Admin/Staff)
+// Media upload remains admin-only; keep the legacy image field compatible.
 router.post(
   "/screensavers/upload",
   authenticateJWT,
@@ -59,11 +60,21 @@ router.post(
       next();
     });
   },
-  (req, res) => {
+  async (req, res) => {
     if (!req.file) {
-      return res.status(400).json({ error: "No image file provided." });
+      return res.status(400).json({ error: "No media file provided." });
     }
-    return res.json({ image: req.file.filename });
+    try {
+      if (!await hasScreensaverSignature(req.file)) {
+        await unlink(req.file.path);
+        return res.status(400).json({ error: "เนื้อหาไฟล์ไม่ตรงกับชนิดสื่อที่ระบุ" });
+      }
+      return res.json({ image: req.file.filename, mediaType: getScreensaverMediaType(req.file.filename) });
+    } catch (error) {
+      await unlink(req.file.path).catch(() => {});
+      console.error("Screensaver upload failed:", error);
+      return res.status(500).json({ error: "Unable to save media upload." });
+    }
   }
 );
 
