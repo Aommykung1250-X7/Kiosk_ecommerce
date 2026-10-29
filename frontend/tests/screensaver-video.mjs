@@ -82,12 +82,12 @@ try {
   await page.goto(`${base}/?kiosk=true`);
   await page.locator(".kiosk-product-card").first().waitFor();
   await page.clock.fastForward(61000);
-  await page.locator('.kiosk-advert video[src$="uploaded.webm"]').waitFor();
-  await page.waitForFunction(() => document.querySelector(".kiosk-advert video")?.currentTime > 0);
-  assert.equal(await page.locator(".kiosk-advert video").evaluate((el) => el.muted && el.autoplay && el.playsInline && !el.paused), true);
+  await page.locator('.kiosk-advert video:not([aria-hidden=true])[src$="uploaded.webm"]').waitFor();
+  await page.waitForFunction(() => document.querySelector(".kiosk-advert video:not([aria-hidden=true])")?.currentTime > 0);
+  assert.equal(await page.locator(".kiosk-advert video:not([aria-hidden=true])").evaluate((el) => el.muted && el.autoplay && el.playsInline && !el.paused), true);
   await page.clock.fastForward(3100);
-  await page.locator('.kiosk-advert video[src$="uploaded.mp4"]').waitFor();
-  await page.waitForFunction(() => document.querySelector(".kiosk-advert video")?.currentTime > 0);
+  await page.locator('.kiosk-advert video:not([aria-hidden=true])[src$="uploaded.mp4"]').waitFor();
+  await page.waitForFunction(() => document.querySelector(".kiosk-advert video:not([aria-hidden=true])")?.currentTime > 0);
   const featured = await page.locator(".kiosk-welcome > div").filter({ hasText: "สินค้าแนะนำพิเศษ" }).boundingBox();
   assert.ok(featured.y + featured.height <= 1920);
   console.log("PASS muted inline autoplay and timed WebM-to-MP4 rotation without pushing featured products off-screen");

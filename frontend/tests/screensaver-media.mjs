@@ -38,8 +38,8 @@ try {
       await page.locator(".kiosk-product-card").first().waitFor();
       await page.waitForTimeout(50);
       await page.clock.fastForward(61000);
-      await page.locator(".kiosk-advert img").waitFor();
-      await page.waitForFunction(() => document.querySelector(".kiosk-advert img")?.naturalWidth > 0);
+      await page.locator(".kiosk-advert img:not([aria-hidden=true])").waitFor();
+      await page.waitForFunction(() => document.querySelector(".kiosk-advert img:not([aria-hidden=true])")?.naturalWidth > 0);
       if (screenshots) await page.screenshot({ path: `${screenshots}/ad-${width}x${height}-${size[0]}x${size[1]}.png` });
       assert.ok((await page.locator(".kiosk-advert").boundingBox()).height >= 60, "advertisement keeps usable space");
       await inside(page.locator(".kiosk-advert"), width, height, "advertisement frame");
