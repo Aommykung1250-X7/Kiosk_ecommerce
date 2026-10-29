@@ -10,9 +10,11 @@
 - [x] Write failing config API tests, then add the new setting with range/type validation before any settings writes.
 - [x] Add a number field to advertisement management, persist it through the existing Save button, and replace Home's hardcoded timer with the loaded value.
 - [x] Verify API defaults/validation/persistence, browser save/reload and idle timing, frontend build/lint, and existing kiosk regressions.
-- [ ] Commit the shared feature, create `pm2` from the pre-Docker baseline, merge the same frontend design, and apply the shared feature.
-- [ ] Verify the branch separation and push main/pm2 without committing local secrets or deploying either server.
+- [x] Commit the shared feature, create `pm2` from the pre-Docker baseline, merge the same frontend design, and apply the shared feature.
+- [x] Verify the branch separation and prepare main/pm2 for publication without committing local secrets or deploying either server.
 
 **Compatibility:** An old DB with no new key returns four minutes. Startup adds the default key with `ON CONFLICT DO NOTHING`, preserving saved values. Existing partial config writes leave the timeout untouched. No destructive schema migration is needed for this feature.
 
 **Validation so far:** Main backend tests: 29 passed, one existing opt-in DB upgrade test skipped. Frontend build and TypeScript check passed; lint retains five pre-existing warnings. Both browser scripts passed, covering nine viewports, long carts, merged design idle/wakeup, admin save/reload/validation, five-minute timing, activity reset, refresh without reload, and offline defaults.
+
+**Branch validation:** PM2 backend tests: 21 passed, one existing opt-in DB upgrade test skipped. PM2 checkout/payment controllers, payment routes and provider files are unchanged from `8fcc80b`. Shared frontend source/public/tests and idle config controller/tests match main exactly. A disposable PostgreSQL 16 run verified default 4, save 7, reinitialization preserving 7, and config readback. Independent read-only review reported no actionable correctness findings. Both branches contain `origin/frontend` as an ancestor. The user's modified `backend/.env` stays outside all new commits.
