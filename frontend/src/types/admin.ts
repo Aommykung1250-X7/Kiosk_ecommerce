@@ -226,6 +226,7 @@ export interface Screensaver {
 export interface ScreensaverConfig {
   masterEnabled: boolean;
   masterDuration: number;
+  idleTimeoutMinutes: number;
   /** ชื่อไฟล์รูปหลักของหน้าจอหลัก (อยู่ใน uploads/screensavers) */
   mainImage: string;
   featuredProductIds: number[];

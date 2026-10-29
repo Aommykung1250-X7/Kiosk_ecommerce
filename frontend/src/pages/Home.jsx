@@ -29,6 +29,7 @@ export default function Home() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeOrder, setActiveOrder] = useState(null);
   const [isIdle, setIsIdle] = useState(false);
+  const [idleTimeoutMinutes, setIdleTimeoutMinutes] = useState(4);
   const [isWaking, setIsWaking] = useState(false);
   const [sessionViewedProductIds, setSessionViewedProductIds] = useState([]);
 
@@ -179,11 +180,35 @@ export default function Home() {
     }).id;
   }, [products]);
 
-  // Idle detection timer - ปรับเวลารอพักหน้าจอตรงนี้ (หน่วยเป็นมิลลิวินาที ms)
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadIdleTimeout = async () => {
+      try {
+        const response = await fetch("/api/screensavers/config", { signal: controller.signal });
+        if (!response.ok) return;
+        const config = await response.json();
+        const minutes = config.idleTimeoutMinutes;
+        if (!controller.signal.aborted) {
+          setIdleTimeoutMinutes(Number.isInteger(minutes) && minutes >= 1 && minutes <= 60 ? minutes : 4);
+        }
+      } catch {
+        // Keep the last valid setting (or the four-minute default) while offline.
+      }
+    };
+    void loadIdleTimeout();
+    const refresh = setInterval(loadIdleTimeout, 60000);
+    window.addEventListener("focus", loadIdleTimeout);
+    return () => {
+      controller.abort();
+      clearInterval(refresh);
+      window.removeEventListener("focus", loadIdleTimeout);
+    };
+  }, []);
+
+  // User activity restarts the configured inactivity countdown.
   useEffect(() => {
     let idleTimer;
-    // ตัวอย่าง: 30 * 1000 (30 วินาที), 60 * 1000 (1 นาที), 120 * 1000 (2 นาที)
-    const timeoutDuration = 240 * 1000; // 240 วินาที (4 นาที)
+    const timeoutDuration = idleTimeoutMinutes * 60 * 1000;
 
     const resetTimer = () => {
       clearTimeout(idleTimer);
@@ -211,7 +236,7 @@ export default function Home() {
         window.removeEventListener(event, resetTimer);
       });
     };
-  }, [isIdle, activeOrder]);
+  }, [isIdle, activeOrder, idleTimeoutMinutes]);
 
   // Clear cart and close active modals when entering screensaver mode
   useEffect(() => {

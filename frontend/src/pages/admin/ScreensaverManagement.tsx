@@ -51,6 +51,7 @@ export default function ScreensaverManagement() {
 
   const [masterEnabled, setMasterEnabled] = useState(true);
   const [masterDuration, setMasterDuration] = useState(10);
+  const [idleTimeoutMinutes, setIdleTimeoutMinutes] = useState<number | string>(4);
   const [mainImage, setMainImage] = useState("");
   const [uploadingMainImage, setUploadingMainImage] = useState(false);
   const [featuredProductIds, setFeaturedProductIds] = useState<number[]>([]);
@@ -67,6 +68,7 @@ export default function ScreensaverManagement() {
       const data = await response.json();
       setMasterEnabled(data.masterEnabled ?? true);
       setMasterDuration(data.masterDuration ?? 10);
+      setIdleTimeoutMinutes(data.idleTimeoutMinutes ?? 4);
       setMainImage(data.mainImage ?? "");
       setFeaturedProductIds(data.featuredProductIds ?? []);
       setFeaturedProducts(data.featuredProducts ?? []);
@@ -115,6 +117,11 @@ export default function ScreensaverManagement() {
     productIds: number[] = featuredProductIds,
     image: string = mainImage,
   ) => {
+    const idleMinutes = Number(idleTimeoutMinutes);
+    if (!Number.isInteger(idleMinutes) || idleMinutes < 1 || idleMinutes > 60) {
+      notify.error("กรุณากำหนดเวลาพักหน้าจอเป็นจำนวนเต็มตั้งแต่ 1 ถึง 60 นาที");
+      return;
+    }
     setSavingConfig(true);
     try {
       const response = await fetch("/api/screensavers/config", {
@@ -124,6 +131,7 @@ export default function ScreensaverManagement() {
         body: JSON.stringify({
           masterEnabled,
           masterDuration,
+          idleTimeoutMinutes: idleMinutes,
           featuredProductIds: productIds,
           mainImage: image,
         }),
@@ -327,6 +335,24 @@ export default function ScreensaverManagement() {
               </label>
             </div>
           </div>
+
+          <Field
+            label="พักหน้าจอเมื่อไม่มีการใช้งาน"
+            hint="ตั้งได้ 1–60 นาที ค่าเริ่มต้น 4 นาที ตู้จะรับค่าที่บันทึกไว้ภายใน 1 นาที"
+          >
+            {(id) => (
+              <NumberInput
+                id={id}
+                min={1}
+                max={60}
+                step={1}
+                suffix="นาที"
+                className="max-w-48"
+                value={idleTimeoutMinutes}
+                onChange={(event) => setIdleTimeoutMinutes(event.target.value)}
+              />
+            )}
+          </Field>
 
           <Field label="ระยะเวลาแสดงผลของหน้าจอหลัก" hint="ตั้งได้ระหว่าง 3 ถึง 60 วินาที">
             {(id) => (
