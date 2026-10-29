@@ -202,6 +202,7 @@ export const initDb = async () => {
             ('shipping_base_fee', '40.00'),
             ('screensaver_master_enabled', 'true'),
             ('screensaver_master_duration', '10'),
+            ('screensaver_idle_timeout_minutes', '4'),
             ('screensaver_featured_products', '[]'),
             ('screensaver_main_image', 'main_screen.jpeg'),
             ('popular_search_tags', '["น้ำดื่ม", "ชาเขียว", "เลย์", "KitKat", "แก้วน้ำ", "เสื้อ"]'),

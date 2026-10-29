@@ -5,6 +5,7 @@ import productService from "../services/productService.js";
 
 const FEATURED_SLOTS = 4;
 const DEFAULT_MAIN_IMAGE = "main_screen.jpeg";
+const isValidIdleTimeout = (value) => Number.isInteger(value) && value >= 1 && value <= 60;
 
 class ScreensaverController {
   /**
@@ -161,6 +162,9 @@ class ScreensaverController {
       const durationRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_master_duration'");
       const productsRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_featured_products'");
       const mainImageRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_main_image'");
+      const idleTimeoutRes = await pool.query("SELECT value FROM system_settings WHERE key = 'screensaver_idle_timeout_minutes'");
+      const savedIdleTimeout = Number(idleTimeoutRes.rows[0]?.value);
+      const idleTimeoutMinutes = isValidIdleTimeout(savedIdleTimeout) ? savedIdleTimeout : 4;
 
       const masterEnabled = enabledRes.rows.length > 0 ? enabledRes.rows[0].value === 'true' : true;
       const masterDuration = durationRes.rows.length > 0 ? parseInt(durationRes.rows[0].value, 10) || 10 : 10;
@@ -203,6 +207,7 @@ class ScreensaverController {
       return res.json({
         masterEnabled,
         masterDuration,
+        idleTimeoutMinutes,
         mainImage,
         featuredProductIds,
         featuredProducts,
@@ -220,7 +225,18 @@ class ScreensaverController {
    */
   async updateScreensaverConfig(req, res) {
     try {
-      const { masterEnabled, masterDuration, featuredProductIds, mainImage } = req.body;
+      const { masterEnabled, masterDuration, featuredProductIds, mainImage, idleTimeoutMinutes } = req.body;
+
+      if (idleTimeoutMinutes !== undefined && !isValidIdleTimeout(idleTimeoutMinutes)) {
+        return res.status(400).json({ error: "กรุณากำหนดเวลาพักหน้าจอเป็นจำนวนเต็มตั้งแต่ 1 ถึง 60 นาที" });
+      }
+
+      if (idleTimeoutMinutes !== undefined) {
+        await pool.query(
+          "INSERT INTO system_settings (key, value) VALUES ('screensaver_idle_timeout_minutes', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+          [String(idleTimeoutMinutes)]
+        );
+      }
 
       if (masterEnabled !== undefined) {
         await pool.query(
